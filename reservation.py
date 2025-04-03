@@ -1,6 +1,11 @@
+import logging
 import requests
 
-def send_reservation_request(start_time: int, end_time: int, duration: int, user_data: dict) -> dict:
+from validation import validate_user_data
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def set_reservation(start_time: int, end_time: int, duration: int, user_data: dict) -> dict:
     """
     Sends a reservation request to the library API.
 
@@ -17,7 +22,13 @@ def send_reservation_request(start_time: int, end_time: int, duration: int, user
     - dict: Response from the API with reservation details.
     """
     url = 'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/store'
-    
+
+    try:
+        validate_user_data(user_data)
+    except ValueError as e:
+        logging.error(f'User data validation failed: {e}')
+        raise
+
     payload = {
         "cliente": "biblio",
         "start_time": start_time,
@@ -40,16 +51,32 @@ def send_reservation_request(start_time: int, end_time: int, duration: int, user
     try:
         response = requests.post(url, json=payload)
         response.raise_for_status()
-        return response.json()
+        response_data = response.json()
+        if 'entry' in response_data: # entry = Booking Code
+            logging.info(f'Reservation successful. Booking Code: {response_data["entry"]}')
+            return response_data
+        else:
+            logging.error('Unexpected response format: "Booking Code" not found.')
+            raise ValueError('Unexpected response format: "Booking Code" not found.')
     except requests.exceptions.RequestException as e:
-        raise SystemExit(f"Request failed: {e}")
+        logging.error(f'Request failed: {e}')
+        raise SystemExit(f'Request failed: {e}')
+    except ValueError as e:
+        logging.error(f'Value error: {e}')
+        raise SystemExit(f'Value error: {e}')
 
-def confirm_reservation(entry_id: int) -> dict:
-    url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/confirm/{entry_id}'
+def confirm_reservation(booking_code: int) -> dict:
+
+    url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/confirm/{booking_code}'
     
     try:
         response = requests.post(url)
-        response.raise_for_status()  # Raise HTTPError for bad responses
+        response.raise_for_status()
+        logging.info(f'Reservation confirmed.')
         return response.json()
     except requests.exceptions.RequestException as e:
+        logging.error(f'Request failed: {e}')
         raise SystemExit(f'Request failed: {e}')
+    except ValueError as e:
+        logging.error(f'Value error: {e}')
+        raise SystemExit(f'Value error: {e}')
