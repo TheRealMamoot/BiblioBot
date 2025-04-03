@@ -1,5 +1,17 @@
 from datetime import datetime, timedelta, timezone
 
+import pytz
+
+def round_time_to_nearest_half_hour(time_obj: datetime) -> datetime:
+
+    minutes = time_obj.minute
+    if minutes >= 30:
+        time_obj += timedelta(minutes=(30 - minutes))
+    else:
+        time_obj -= timedelta(minutes=minutes)
+
+    return time_obj
+
 def reserve_datetime(date: str, start: str, duration: int) -> tuple[int, int, int]:
     """
     Converts user-provided date, start time, and duration into Unix timestamps.
@@ -27,6 +39,8 @@ def reserve_datetime(date: str, start: str, duration: int) -> tuple[int, int, in
     except ValueError:
         raise ValueError('Invalid time format. Use HH:MM (24-hour format).')
 
+    time_obj = round_time_to_nearest_half_hour(time_obj)
+
     # Saturday rules
     max_duration = 14  # Default max duration
     closing_hour = 23  # Default closing hour
@@ -38,7 +52,11 @@ def reserve_datetime(date: str, start: str, duration: int) -> tuple[int, int, in
     if not isinstance(duration, int) or duration < 1 or duration > max_duration:
         raise ValueError(f'Duration must be an between 1 and {max_duration} hours.')
 
-    start_time = datetime.combine(date_obj.date(), time_obj.time()).replace(tzinfo=timezone.utc)
+    # Convert GMT to CET
+    italy_tz = pytz.timezone('Europe/Rome')
+    start_time = datetime.combine(date_obj.date(), time_obj.time())
+    start_time = italy_tz.localize(start_time)
+
     opening_time = start_time.replace(hour=9, minute=0)
     if start_time < opening_time:
         raise ValueError('Start time cannot be before 09:00 AM.')
