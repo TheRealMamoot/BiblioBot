@@ -81,8 +81,8 @@ def generate_duration_keyboard(selected_time: str, context: ContextTypes.DEFAULT
     durations = list(range(1, durations))
 
     keyboard_buttons = [
-        [KeyboardButton(dur) for dur in durations[i:i+10]]
-        for i in range(0, len(durations), 10)
+        [KeyboardButton(dur) for dur in durations[i:i+8]]
+        for i in range(0, len(durations), 8)
     ]
     keyboard_buttons.insert(0, [KeyboardButton('⬅️')])
 
@@ -90,4 +90,8 @@ def generate_duration_keyboard(selected_time: str, context: ContextTypes.DEFAULT
 
 def generate_confirmation_keyboard():
    keyboard_buttons = [[KeyboardButton('⬅️ No, take me back.')], [KeyboardButton('✅ Yes, all looks good.')]]
+   return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+def generate_retry_keyboard():
+   keyboard_buttons = [[KeyboardButton("🆕 Let's go for another date.")], [KeyboardButton("👍 I'm done")]]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
