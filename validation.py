@@ -7,7 +7,7 @@ def validate_email(email: str) -> bool:
     return bool(re.match(email_pattern, email))
 
 def validate_codice_fiscale(codice_fiscale: str) -> bool:
-    
+
     codice_pattern = r'^[A-Za-z]{6}\d{2}[A-Za-z]\d{2}[A-Za-z]\d{3}[A-Za-z]$'
     return bool(re.match(codice_pattern, codice_fiscale))
 

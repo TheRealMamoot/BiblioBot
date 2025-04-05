@@ -1,36 +1,92 @@
 from datetime import datetime, timedelta
-from math import ceil
 
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram import Update, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, ContextTypes, filters
+import textwrap
 
-from utils import generate_days
+import utils
+from validation import validate_email, validate_codice_fiscale
 
-# states
-CHOOSING_DATE, CHOOSING_TIME, CHOOSING_DUR = range(3)
+# States
+CREDENTIALS, CHOOSING_DATE, CHOOSING_TIME, CHOOSING_DUR, CONFIRMING = range(5)
 
-TOKEN = '****'
+TOKEN = '7555618048:AAFJbtLFw17v5p_hwVj91HNyEv0ghE8oXP0'
 
 user_data = {}
 
-# Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text('Restarting the conversation...')
     context.user_data.clear()
 
     user = update.effective_user
     name = user.first_name if user.first_name else user.username
 
-    keyboard = generate_date_keyboard()
     await update.message.reply_text(
-        f"Ciao {name}! 👋 The name's Biblio. I'm here to make your bibliotecca reservations because you are too lazy and disorganized to do it yourself. 📚\nSo, when will it be ?", reply_markup=keyboard)
+        textwrap.dedent(
+            f"""
+            Ciao {name}! 👋 The name's *Biblio*.
+
+            I'm here to make your biblioteca reservations because you're too lazy and disorganized to do it yourself. 📚
+
+            First, tell me who exactly you are. I will need:
+             
+            your _Codice Fiscale_, _Full Name_, and _Email_.
+
+            Example: *ABCDEF12G34H567I*, *Mamoot Real*, *brain@rot.com*
+
+            Shouldn't be too hard.
+            """
+        ),
+        parse_mode='Markdown',
+        reply_markup=ReplyKeyboardRemove()
+    )
+    return CREDENTIALS
+
+async def handle_user_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if not update.message or not update.message.text:
+        await update.message.reply_text('Sure, waste your time why not ? I can do this all day. 🥱')
+        return CREDENTIALS
+    
+    user_input = update.message.text.strip()
+
+    try:
+        codice, name, email = [part.strip() for part in user_input.split(',')]
+    except ValueError:
+        await update.message.reply_text(
+            "Wow so it WAS too hard for you. 🙃\nTry again: `Codice, Full Name, Email`",
+            parse_mode='Markdown'
+        )
+        return CREDENTIALS
+    
+    if not validate_codice_fiscale(codice):
+        await update.message.reply_text("🚫 Nice try with a fake codice fiscale. Try again!")
+        return CREDENTIALS
+    
+    if not validate_email(email):
+        await update.message.reply_text("🚫 Nice try with a fake email. Try again!")
+        return CREDENTIALS
+
+    context.user_data['codice_fiscale'] = codice
+    context.user_data['name'] = name
+    context.user_data['email'] = email
+
+    keyboard = utils.generate_date_keyboard()
+    await update.message.reply_text(
+        f"There we go! Your data is saved. FOREVER! 😈\nSo, when will it be ? 📅", reply_markup=keyboard
+    )
     return CHOOSING_DATE
 
 async def handle_date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
+    if user_input == '⬅️ Edit credentials':
+        await update.message.reply_text(
+            'Messed it up already ?! _sighs_',
+            parse_mode='Markdown', 
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return CREDENTIALS
+
     try:
-        # Try to parse to ensure it's a valid date
         datetime.strptime(user_input.split(' ')[-1], '%Y-%m-%d')
     except ValueError:
         await update.message.reply_text(
@@ -38,7 +94,7 @@ async def handle_date_selection(update: Update, context: ContextTypes.DEFAULT_TY
         return CHOOSING_DATE
     
     context.user_data['selected_date'] = user_input
-    keyboard = generate_time_keyboard(user_input)
+    keyboard = utils.generate_time_keyboard(user_input)
     
     if not keyboard.keyboard or all(len(row) == 0 for row in keyboard.keyboard):
         await update.message.reply_text(
@@ -46,8 +102,9 @@ async def handle_date_selection(update: Update, context: ContextTypes.DEFAULT_TY
         return CHOOSING_DATE  
     
     await update.message.reply_text(
-        f'Fine. You picked {user_input} 📅\nNow choose a starting time',
-        reply_markup=keyboard
+        f'Fine. You picked *{user_input}*.\nNow choose a starting time',
+        reply_markup=keyboard,
+        parse_mode='Markdown'
     )
     return CHOOSING_TIME
 
@@ -55,7 +112,7 @@ async def handle_time_selection(update: Update, context: ContextTypes.DEFAULT_TY
     user_input = update.message.text.strip()
 
     if user_input == '⬅️':
-        keyboard = generate_date_keyboard()
+        keyboard = utils.generate_date_keyboard()
         await update.message.reply_text('Choose a date, AGAIN! 😒', reply_markup=keyboard)
         return CHOOSING_DATE
 
@@ -67,101 +124,94 @@ async def handle_time_selection(update: Update, context: ContextTypes.DEFAULT_TY
         return CHOOSING_TIME
 
     context.user_data['selected_time'] = user_input
-    keyboard = generate_duration_keyboard(user_input, context)
+    keyboard = utils.generate_duration_keyboard(user_input, context)[0] # [0] for the reply, [1] for the values
 
     await update.message.reply_text(
-        f'How long will you absolutely NOT be productive over there ? Gimme hours.', reply_markup=keyboard)
+        f'How long will you absolutely NOT be productive over there ? 🕦 Give me hours.', reply_markup=keyboard)
     return CHOOSING_DUR
 
 async def handle_duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
     if user_input == '⬅️':
-        keyboard = generate_time_keyboard(context.user_data.get('selected_date'))
+        keyboard = utils.generate_time_keyboard(context.user_data.get('selected_date'))
         await update.message.reply_text(
             'Make up your mind! choose a time ALREADY 🙄', reply_markup=keyboard)
         return CHOOSING_TIME
+
+    selected_time = context.user_data.get('selected_time')
+    duration_selection = utils.generate_duration_keyboard(selected_time, context)[1] # [0] for the reply, [1] for the values
+    max_dur = max(duration_selection)
 
     if not user_input.isdigit():
         await update.message.reply_text(
             "Now you're just messing with me. Just pick the damn time!")
         return CHOOSING_DUR
+    
+    if int(user_input) > max_dur:
+        await update.message.reply_text(
+            "Well they are not going to let you sleep there! Try again. 🤷‍♂️")
+        return CHOOSING_DUR
 
     context.user_data['selected_duration'] = user_input
+
+    start_time = context.user_data.get('selected_time')
+    end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
+    end_time = end_time.strftime('%H:%M')
+
+    keyboard = utils.generate_confirmation_keyboard()
     await update.message.reply_text(
-        f'✅ Reservation saved for {context.user_data["selected_date"]}.'
-    )
-    keyboard = generate_date_keyboard()
-    await update.message.reply_text(
-        "Finally! That's about it. Going for a second date ?\nI'm not that into you unfortunately but whatever.\nTry again if you want. 😏",
+        textwrap.dedent(
+            f"""
+            All looks good ?
+
+            Codice Fiscale: *{context.user_data.get('codice_fiscale')}*
+
+            Full Name: *{context.user_data.get('name')}*
+
+            Email: *{context.user_data.get('email')}*
+
+            On *{context.user_data.get('selected_date')}*
+
+            From *{start_time}* - *{end_time}* (*{context.user_data.get('selected_duration')} Hours*)
+            """
+        ),
+        parse_mode='Markdown',
         reply_markup=keyboard
     )
+    return CONFIRMING
 
-    return CHOOSING_DATE
+async def handle_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user_input = update.message.text.strip()
 
-# Responses
-async def fallback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Hey who or what do you think I am ? 😑 /start again.')
+    if user_input == '✅ Yes, all looks good.':
+        await update.message.reply_text(
+            "Finally! That's about it. Do you want a second date?\nI'm not that into you unfortunately, so don't /start again. Off you go now, Bye. 😘",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return ConversationHandler.END 
     
-# Utils
-def generate_date_keyboard():
-    dates = generate_days()
-    keyboard_buttons = []
-    for i in range(0, len(dates), 3):
-        row = [KeyboardButton(date) for date in dates[i:i+3]]
-        keyboard_buttons.append(row)
+    elif user_input == '⬅️ No, take me back.':
 
-    return ReplyKeyboardMarkup(keyboard_buttons)
-
-def generate_time_keyboard(selected_date: str):
-    date_obj = datetime.strptime(selected_date.split(' ')[-1], '%Y-%m-%d')
-    today = datetime.today()
-    year = today.year if today.month <= date_obj.month else today.year + 1
-    full_date = datetime(year, date_obj.month, date_obj.day)
-
-    end_hour = 13 if full_date.weekday() == 5 else 22 # Saturdays
-
-    # Check starting time.
-    if full_date.date() == today.date():
-        hour = today.hour
-        minute = 0 if today.minute < 30 else 30
-        current = datetime(year, date_obj.month, date_obj.day, hour, minute)
+        keyboard = utils.generate_duration_keyboard(context.user_data.get('selected_time'), context)[0]
+        await update.message.reply_text(
+            'I overestimated you it seems. 😬',
+            reply_markup=keyboard
+        )
+        return CHOOSING_DUR
+    
     else:
-        current = datetime(year, date_obj.month, date_obj.day, 9, 0)
-    
-    times = []
-    while current.hour < end_hour or (current.hour == end_hour and current.minute == 0):
-        times.append(current.strftime('%H:%M'))
-        current += timedelta(minutes=30)
+        await update.message.reply_text(
+            "JUST.CLICK...PLEASE!",
+            reply_markup=utils.generate_confirmation_keyboard()
+        )
+        return CONFIRMING 
 
-    keyboard_buttons = [
-        [KeyboardButton(time) for time in times[i:i+5]]
-        for i in range(0, len(times), 5)
-    ]
-    keyboard_buttons.insert(0, [KeyboardButton('⬅️')])
+async def fallback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Hey! who or what do you think I am ? 😑 /start again.')
 
-    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
-
-def generate_duration_keyboard(selected_time: str, context: ContextTypes.DEFAULT_TYPE):
-    selected_date = context.user_data.get('selected_date')
-    selected_date = datetime.strptime(selected_date.split(' ')[-1], '%Y-%m-%d')
-
-    time_obj = datetime.strptime(selected_time, '%H:%M')
-    date_obj = datetime(selected_date.year, selected_date.month, selected_date.day, time_obj.hour, time_obj.minute)
-
-    end_hour = 14 if selected_date.weekday() == 5 else 23 # Saturdays
-    selected_date = selected_date + timedelta(hours=end_hour)
-
-    durations = ceil((selected_date - date_obj + timedelta(minutes=30)).seconds / 3600) # ceil in case of **:30 start time formats
-    durations = list(range(1, durations))
-
-    keyboard_buttons = [
-        [KeyboardButton(dur) for dur in durations[i:i+10]]
-        for i in range(0, len(durations), 10)
-    ]
-    keyboard_buttons.insert(0, [KeyboardButton('⬅️')])
-
-    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print(f'Update {update} caused error {context.error}')
 
 def main():
     application = Application.builder().token(TOKEN).build()
@@ -169,9 +219,11 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
+            CREDENTIALS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_info)],
             CHOOSING_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_date_selection)],
             CHOOSING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time_selection)],
             CHOOSING_DUR: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_duration_selection)],
+            CONFIRMING: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_confirmation)],
         },
         fallbacks=[
             CommandHandler('start', start),  # Allows /start to reset everything
@@ -179,8 +231,9 @@ def main():
         ],
         allow_reentry=True
     )
-
     application.add_handler(conv_handler)
+
+    application.add_error_handler(error)
 
     application.run_polling()
 
