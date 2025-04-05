@@ -1,6 +1,7 @@
+import os
 from datetime import datetime, timedelta
 
-from telegram import Update, ReplyKeyboardRemove
+from telegram import Update, ReplyKeyboardRemove, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, ContextTypes, filters
 import textwrap
 
@@ -8,12 +9,13 @@ import utils
 from validation import validate_email, validate_codice_fiscale
 
 # States
-CREDENTIALS, CHOOSING_DATE, CHOOSING_TIME, CHOOSING_DUR, CONFIRMING = range(5)
+CREDENTIALS, RESERVE_TYPE, CHOOSING_DATE, CHOOSING_TIME, CHOOSING_DUR, CONFIRMING = range(6)
 
-TOKEN = '7555618048:AAFJbtLFw17v5p_hwVj91HNyEv0ghE8oXP0'
+TOKEN = os.getenv('TELEGRAM_TOKEN')
 
 user_data = {}
 
+# Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
 
@@ -27,7 +29,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
             I'm here to make your biblioteca reservations because you're too lazy and disorganized to do it yourself. 📚
 
-            First, tell me who exactly you are. I will need:
+            First, tell me who exactly you are. I will need: 
              
             your _Codice Fiscale_, _Full Name_, and _Email_.
 
@@ -41,6 +43,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
     return CREDENTIALS
 
+# Handlers
 async def handle_user_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if not update.message or not update.message.text:
         await update.message.reply_text('Sure, waste your time why not ? I can do this all day. 🥱')
@@ -69,22 +72,69 @@ async def handle_user_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     context.user_data['name'] = name
     context.user_data['email'] = email
 
-    keyboard = utils.generate_date_keyboard()
+    keyboard = utils.generate_reservation_type_keyboard()
     await update.message.reply_text(
-        f"There we go! Your data is saved. FOREVER! 😈\nSo, when will it be ? 📅", reply_markup=keyboard
+                textwrap.dedent(
+            f"""
+            There we go! Your data is saved. FOREVER! 😈
+            Now, you can plan ahead for future days or,
+            If you're so desperate and need a slot for today, try to book now. No promises!
+            """
+        ),
+        parse_mode='Markdown',
+        reply_markup=keyboard
     )
-    return CHOOSING_DATE
+    return RESERVE_TYPE
 
-async def handle_date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def handle_reservation_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
     if user_input == '⬅️ Edit credentials':
         await update.message.reply_text(
-            'Messed it up already ?! _sighs_',
+                textwrap.dedent(
+            f"""
+            Messed it up already ?! _sighs_
+            your _Codice Fiscale_, _Full Name_, and _Email_.
+            Example: *ABCDEF12G34H567I*, *Mamoot Real*, *brain@rot.com*
+            """
+        ),
             parse_mode='Markdown', 
             reply_markup=ReplyKeyboardRemove()
         )
         return CREDENTIALS
+    
+    elif user_input == '⏳ I need a slot for later.':
+        keyboard = utils.generate_date_keyboard()
+        await update.message.reply_text(
+            'So, when will it be ? 📅',
+            reply_markup=keyboard
+        )
+        return CHOOSING_DATE
+
+    elif user_input == '⚡️ I need a slot for today.':
+        await update.message.reply_text(
+            '🔧 In development 🔧 /start again.',
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return ConversationHandler.END
+    
+    else:
+        await update.message.reply_text(
+            "The options are right there you know. Pick one, that's it.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return RESERVE_TYPE
+
+async def handle_date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user_input = update.message.text.strip()
+
+    if user_input == '⬅️ Edit reservation':
+        await update.message.reply_text(
+            'Fine, just be quick. 🙄',
+            parse_mode='Markdown', 
+            reply_markup=utils.generate_reservation_type_keyboard()
+        )
+        return RESERVE_TYPE
 
     try:
         datetime.strptime(user_input.split(' ')[-1], '%Y-%m-%d')
@@ -102,7 +152,7 @@ async def handle_date_selection(update: Update, context: ContextTypes.DEFAULT_TY
         return CHOOSING_DATE  
     
     await update.message.reply_text(
-        f'Fine. You picked *{user_input}*.\nNow choose a starting time',
+        f'Fine. You picked *{user_input}*.\nNow choose a starting time.',
         reply_markup=keyboard,
         parse_mode='Markdown'
     )
@@ -145,7 +195,7 @@ async def handle_duration_selection(update: Update, context: ContextTypes.DEFAUL
 
     if not user_input.isdigit():
         await update.message.reply_text(
-            "Now you're just messing with me. Just pick the damn time!")
+            "Now you're just messing with me. Just pick the damn duration!")
         return CHOOSING_DUR
     
     if int(user_input) > max_dur:
@@ -207,19 +257,20 @@ async def handle_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return CONFIRMING 
 
-async def fallback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Hey! who or what do you think I am ? 😑 /start again.')
 
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'Update {update} caused error {context.error}')
 
 def main():
-    application = Application.builder().token(TOKEN).build()
+    app = Application.builder().token(TOKEN).build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
             CREDENTIALS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_info)],
+            RESERVE_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reservation_selection)],
             CHOOSING_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_date_selection)],
             CHOOSING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time_selection)],
             CHOOSING_DUR: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_duration_selection)],
@@ -227,15 +278,15 @@ def main():
         },
         fallbacks=[
             CommandHandler('start', start),  # Allows /start to reset everything
-            MessageHandler(filters.ALL, fallback_handler),
+            MessageHandler(filters.ALL, handle_fallback),
         ],
         allow_reentry=True
     )
-    application.add_handler(conv_handler)
+    app.add_handler(conv_handler)
 
-    application.add_error_handler(error)
+    app.add_error_handler(error)
 
-    application.run_polling()
+    app.run_polling()
 
 if __name__ == '__main__':
     main()

@@ -19,6 +19,14 @@ def generate_days():
 
     return days
 
+def generate_reservation_type_keyboard():
+   keyboard_buttons = [
+       [KeyboardButton('⬅️ Edit credentials')], 
+       [KeyboardButton('⏳ I need a slot for later.')], 
+       [KeyboardButton('⚡️ I need a slot for today.')]
+       ]
+   return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
 def generate_date_keyboard():
     dates = generate_days()
     keyboard_buttons = []
@@ -26,7 +34,7 @@ def generate_date_keyboard():
         row = [KeyboardButton(date) for date in dates[i:i+3]]
         keyboard_buttons.append(row)
     
-    keyboard_buttons.insert(0, [KeyboardButton('⬅️ Edit credentials')])
+    keyboard_buttons.insert(0, [KeyboardButton('⬅️ Edit reservation')])
 
     return ReplyKeyboardMarkup(keyboard_buttons)
 
