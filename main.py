@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-import json
 import logging
 import os
 
@@ -15,7 +14,7 @@ from validation import validate_email, validate_codice_fiscale, duration_overlap
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Env Vars
-gc = pygsheets.authorize(service_file=os.environ.get('GSHEETS'))    
+gc = pygsheets.authorize(service_file=os.environ['GSHEETS'])    
 wks = gc.open('Biblio-logs').worksheet_by_title('logs')
 
 load_dotenv()
