@@ -3,13 +3,13 @@ from math import ceil
 
 from telegram import ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ContextTypes
+import textwrap
 
 def generate_days():
     today = datetime.today()
     days = []
-
     for i in range(7):
-        next_day = today + timedelta(days=i)
+        next_day = today + timedelta(days=i+1)
         if next_day.weekday() != 6:  # Skip Sunday
             day_name = next_day.strftime('%A')
             formatted_date = next_day.strftime('%Y-%m-%d')
@@ -22,7 +22,7 @@ def generate_days():
 def generate_reservation_type_keyboard():
    keyboard_buttons = [
        [KeyboardButton('⬅️ Edit credentials')], 
-       [KeyboardButton('⏳ I need a slot for later.')], 
+       [KeyboardButton('⏳ I need a slot for future.')], 
        [KeyboardButton('⚡️ I need a slot for today.')]
        ]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
@@ -93,5 +93,28 @@ def generate_confirmation_keyboard():
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 def generate_retry_keyboard():
-   keyboard_buttons = [[KeyboardButton("🆕 Let's go for another date.")], [KeyboardButton("👍 I'm done")]]
+   keyboard_buttons = [[KeyboardButton("🆕 Let's go for another date.")], [KeyboardButton("💡 Suggestion ?")]]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+def generate_start_keyboard(edit_credential_stage: bool = False):
+   keyboard_buttons = [[KeyboardButton("🤝 Reach out!")]]
+   if edit_credential_stage:
+       keyboard_buttons = [[KeyboardButton("➡️ Changed my mind.")]]
+       
+   return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+def support_message(name):
+    text = f"""
+            Thank you *{name}* for using *Biblio*.
+            Tell your friends, but not all of them!
+            If anything was not to your liking, I don't really care. Blame this guy not me.
+
+            [Linkedin](https://www.linkedin.com/in/alireza-mahmoudian-5b0276246/)
+            [GitHub](https://github.com/TheRealMamoot)
+            alireza.mahmoudian.am@gmail.com
+
+            Cool person, you should check him out.
+            Don't you dare press /start again! 😠
+
+    """
+    return textwrap.dedent(text)

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import logging
 import os
 
+from dotenv import load_dotenv
 import numpy as np
 import pygsheets
 from telegram import Update, ReplyKeyboardRemove
@@ -16,6 +17,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # States
 CREDENTIALS, RESERVE_TYPE, CHOOSING_DATE, CHOOSING_TIME, CHOOSING_DUR, CONFIRMING, RETRY = range(7)
 
+load_dotenv()
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 
 # Commands
@@ -25,6 +27,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     name = user.first_name if user.first_name else user.username
     context.user_data['user'] = name
     logging.info(f"User {user} started chat at {datetime.now()}")
+
+    user_input = update.message.text.strip()
+    if user_input == "🤝 Reach out!":
+        await update.message.reply_text(
+        utils.support_message(name),
+            parse_mode='Markdown', 
+        )
+        return CREDENTIALS
 
     gif_url = 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ2F6cWowaG5oYjdkejhqamQxaWJ5bmxhcXQxY2w5azhieGlkZWwyNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xTiIzJSKB4l7xTouE8/giphy.gif' 
     await update.message.reply_animation(gif_url)
@@ -45,7 +55,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             """
         ),
         parse_mode='Markdown',
-        reply_markup=ReplyKeyboardRemove()
+        reply_markup=utils.generate_start_keyboard()
     )
     return CREDENTIALS
 
@@ -56,6 +66,23 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return CREDENTIALS
     
     user_input = update.message.text.strip()
+    name = update.effective_user.first_name if update.effective_user.first_name else update.effective_user.username
+
+    if user_input == "🤝 Reach out!":
+        await update.message.reply_text(
+            utils.support_message(name),
+            parse_mode='Markdown', 
+            reply_markup=utils.generate_start_keyboard()
+        )
+        return CREDENTIALS
+    
+    if user_input == "➡️ Changed my mind.":
+        await update.message.reply_text(
+        'Gotta be kidding me! 😑',
+            parse_mode='Markdown', 
+            reply_markup=utils.generate_reservation_type_keyboard()
+        )
+        return RESERVE_TYPE
 
     try:
         codice, name, email = [part.strip() for part in user_input.split(',')]
@@ -107,11 +134,11 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
             """
         ),
             parse_mode='Markdown', 
-            reply_markup=ReplyKeyboardRemove()
+            reply_markup=utils.generate_start_keyboard(edit_credential_stage=True)
         )
         return CREDENTIALS
     
-    elif user_input == '⏳ I need a slot for later.':
+    elif user_input == '⏳ I need a slot for future.':
         keyboard = utils.generate_date_keyboard()
         await update.message.reply_text(
             'So, when will it be ? 📅',
@@ -215,7 +242,7 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if not user_input.isdigit():
         await update.message.reply_text(
-            "Now you're just messing with me. Just pick the damn duration!")
+            "Now you're just messing with me. Just pick the duration!")
         return CHOOSING_DUR
     
     if int(user_input) > max_dur:
@@ -287,7 +314,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     elif user_input == '⬅️ No, take me back.':
         keyboard = utils.generate_duration_keyboard(context.user_data.get('selected_time'), context)[0]
         await update.message.reply_text(
-            'I overestimated you it seems. 😬',
+            'I overestimated you it seems. Duration please. 😬',
             reply_markup=keyboard
         )
         return CHOOSING_DUR
@@ -311,26 +338,14 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         logging.info(f"User {context.user_data['user']} reinitiated the process at {datetime.now()}")
         return CHOOSING_DATE
     
-    elif user_input == "👍 I'm done":
+    elif user_input == "💡 Suggestion ?":
         user = update.effective_user
         name = user.first_name if user.first_name else user.username
         await update.message.reply_text(
-        textwrap.dedent(
-            f"""
-            Great! Thank you *{name}* for using *Biblio*.
-            Now go tell your friends, but not all of them!
-            If anything was not to your liking, I don't really care. Blame the creator not me.
-            You should check him out though:
-            [Linkedin](https://www.linkedin.com/in/alireza-mahmoudian-5b0276246/)
-            [GitHub](https://github.com/TheRealMamoot)
-            alireza.mahmoudian.am@gmail.com 📧
-            Don't you dare press /start again! 😠
-            """
-        ),
+        utils.support_message(name),
         parse_mode='Markdown',
-        reply_markup=ReplyKeyboardRemove()
         )
-        return ConversationHandler.END
+        return RETRY
     else:
         await update.message.reply_text(
         textwrap.dedent(
@@ -340,9 +355,8 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             """
         ),
         parse_mode='Markdown',
-        reply_markup=ReplyKeyboardRemove()
         )
-        return ConversationHandler.END
+        return RETRY
 
 # Writer
 async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -386,11 +400,12 @@ async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     print(f'Update {update} caused error {context.error}')
 
+# App
 def main():
     app = Application.builder().token(TOKEN).build()
 
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
+        entry_points=[CommandHandler('start', start)], 
         states={
             CREDENTIALS: [MessageHandler(filters.TEXT & ~filters.COMMAND, user_validation)],
             RESERVE_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, reservation_selection)],
@@ -407,8 +422,11 @@ def main():
         allow_reentry=True
     )
     app.add_handler(conv_handler)
+
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, restart))
+
     app.add_error_handler(error)
+
     app.run_polling()
 
 if __name__ == '__main__':
