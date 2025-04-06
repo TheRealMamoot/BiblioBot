@@ -6,6 +6,8 @@ import pandas as pd
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from utils import italy_now
+
 def validate_email(email: str) -> bool:
 
     email_pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
@@ -31,7 +33,7 @@ def validate_user_data(user_data: dict):
     if not email or not validate_email(email):
         raise ValueError('Invalid email format. Please provide a valid email address.')
     
-    logging.info('User data validated successfully.')
+    logging.info(f'User data validated successfully at {italy_now()}')
 
 def duration_overlap(update:Update, context: ContextTypes.DEFAULT_TYPE, history: pd.DataFrame) -> bool:
 

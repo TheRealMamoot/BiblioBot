@@ -9,6 +9,7 @@
 
 # from reservation import set_reservation, confirm_reservation
 # from slot_datetime import reserve_datetime
+from utils import italy_now
 
 # def job(reservations: pd.DataFrame):
 
@@ -46,8 +47,8 @@
 #     schedule.every().day.at('07:32').do(job)
 
 #     while True:
-#         now = datetime.now()
-#         if now.hour > 9 or (now.hour == 9 and now.minute >= 30):
+#         now = italy_now()
+#         if italy_now().hour > 9 or (italy_now().hour == 9 and italy_now().minute >= 30):
 #             print("⏱️ It's after 09:30. Running job manually")
 #             job()
 #             time.sleep(60 * 60 * 24)
@@ -68,6 +69,7 @@ def test_job():
 
     print(f'⏰ UTC Now: {utc_now.strftime("%Y-%m-%d %H:%M:%S")}')
     print(f'🇮🇹 Italy Now: {italy_now.strftime("%Y-%m-%d %H:%M:%S")}')
+    print(italy_now())
     
 def run_job():
     schedule.every(5).seconds.do(test_job)
