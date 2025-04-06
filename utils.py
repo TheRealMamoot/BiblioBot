@@ -35,7 +35,8 @@ def generate_date_keyboard():
         row = [KeyboardButton(date) for date in dates[i:i+3]]
         keyboard_buttons.append(row)
     
-    keyboard_buttons.insert(0, [KeyboardButton('⬅️ Edit reservation')])
+    keyboard_buttons.insert(0, [KeyboardButton('⬅️ Edit reservation type')])
+    keyboard_buttons.insert(1, [KeyboardButton('🗓️ Show current reservations')])
 
     return ReplyKeyboardMarkup(keyboard_buttons)
 
@@ -146,5 +147,5 @@ def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYP
                 f"-----------------------\n"
             )
     else:
-        message += "\n_No upcoming reservations._"
+        message += "_No upcoming reservations._"
     return message

@@ -126,10 +126,10 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
     keyboard = utils.generate_reservation_type_keyboard()
-    await update.message.reply_text(
-        utils.show_existing_reservations(update, context, wks.get_as_df()),
-        parse_mode='Markdown'
-    )
+    # await update.message.reply_text(
+    #     utils.show_existing_reservations(update, context, wks.get_as_df()),
+    #     parse_mode='Markdown'
+    # )
 
     if user_input == '⬅️ Edit credentials':
         await update.message.reply_text(
@@ -171,13 +171,20 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
 async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
-    if user_input == '⬅️ Edit reservation':
+    if user_input == '⬅️ Edit reservation type':
         await update.message.reply_text(
             'Fine, just be quick. 🙄',
             parse_mode='Markdown', 
             reply_markup=utils.generate_reservation_type_keyboard()
         )
         return RESERVE_TYPE
+    
+    elif user_input == '🗓️ Show current reservations':
+        await update.message.reply_text(
+            utils.show_existing_reservations(update, context, wks.get_as_df()),
+            parse_mode='Markdown',
+        )
+        return CHOOSING_DATE
 
     try:
         datetime.strptime(user_input.split(' ')[-1], '%Y-%m-%d')
