@@ -3,16 +3,17 @@ import logging
 import os
 
 from dotenv import load_dotenv
-import numpy as np
 import pygsheets
 from telegram import Update, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, ContextTypes, filters
 import textwrap
 
 import utils
-from validation import validate_email, validate_codice_fiscale
+from validation import validate_email, validate_codice_fiscale, duration_overlap, time_overlap
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))    
+wks = gc.open('Biblio-logs').worksheet_by_title('logs')
 
 # States
 CREDENTIALS, RESERVE_TYPE, CHOOSING_DATE, CHOOSING_TIME, CHOOSING_DUR, CONFIRMING, RETRY = range(7)
@@ -25,7 +26,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
     user = update.effective_user
     name = user.first_name if user.first_name else user.username
-    context.user_data['user'] = name
+    context.user_data['username'] = user.username
+    context.user_data['user_firstname'] = user.first_name
+    context.user_data['user_lastname'] = user.last_name
     logging.info(f"User {user} started chat at {datetime.now()}")
 
     user_input = update.message.text.strip()
@@ -123,6 +126,10 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
     keyboard = utils.generate_reservation_type_keyboard()
+    await update.message.reply_text(
+        utils.show_existing_reservations(update, context, wks.get_as_df()),
+        parse_mode='Markdown'
+    )
 
     if user_input == '⬅️ Edit credentials':
         await update.message.reply_text(
@@ -211,12 +218,21 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         keyboard = utils.generate_date_keyboard()
         await update.message.reply_text('Choose a date, AGAIN! 😒', reply_markup=keyboard)
         return CHOOSING_DATE
-
     try:
         datetime.strptime(user_input, '%H:%M')
     except ValueError:
         await update.message.reply_text(
             'Not that difficult to pick an option form the list! Just saying. 🤷‍♂️')
+        return CHOOSING_TIME
+    
+    if not time_overlap(update, context, wks.get_as_df()): 
+        await update.message.reply_text(
+                textwrap.dedent(
+            f"""
+            ⚠️ Your reservation overlaps with an existing one! 
+            Choose a different time.
+            """
+        ))
         return CHOOSING_TIME
 
     context.user_data['selected_time'] = user_input
@@ -249,8 +265,19 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(
             "Well they are not going to let you sleep there! Try again. 🤷‍♂️")
         return CHOOSING_DUR
+    
+    if duration_overlap(update, context, wks.get_as_df()): 
+        await update.message.reply_text(
+                textwrap.dedent(
+            f"""
+            ⚠️ Your reservation overlaps with an existing one! 
+            Choose a different duration.
+            """
+        ))
+        return CHOOSING_DUR
 
     context.user_data['selected_duration'] = user_input
+
     logging.info(f"User {update.effective_user} selected duration at {datetime.now()}")
 
     start_time = context.user_data.get('selected_time')
@@ -335,7 +362,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             'Ah ****, here we go again! 😪',
             reply_markup=keyboard
         )
-        logging.info(f"User {context.user_data['user']} reinitiated the process at {datetime.now()}")
+        logging.info(f"User {update.effective_user} reinitiated the process at {datetime.now()}")
         return CHOOSING_DATE
     
     elif user_input == "💡 Suggestion ?":
@@ -364,14 +391,15 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
     end_time = end_time.strftime('%H:%M')
 
-    gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))    
-    wks = gc.open('Biblio-logs').worksheet_by_title('logs')
-    data = wks.get_all_values(include_tailing_empty_rows=False)
-    index = np.array(data).shape[0] - 1 # Checks the number of rows present in sheet. Adds as index.
+    history = wks.get_as_df()
+
+    index = len(history) 
 
     values=[
     index,
-    context.user_data['user'],
+    context.user_data['username'],
+    context.user_data['user_firstname'],
+    context.user_data['user_lastname'],
     context.user_data['codice_fiscale'],
     context.user_data['name'],
     context.user_data['email'],
@@ -381,8 +409,9 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['selected_duration'],
     datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     ]
+    values = list(map(str, values))
     wks.append_table(values=values, start='A1', overwrite=False)
-    logging.info(f"User {context.user_data['user']} data successfully added at {datetime.now()}")
+    logging.info(f"User {update.effective_user} data successfully added at {datetime.now()}")
 
 # Misc
 async def fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):

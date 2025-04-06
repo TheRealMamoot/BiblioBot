@@ -1,5 +1,10 @@
+from datetime import datetime, timedelta
 import logging
 import re
+
+import pandas as pd
+from telegram import Update
+from telegram.ext import ContextTypes
 
 def validate_email(email: str) -> bool:
 
@@ -11,7 +16,7 @@ def validate_codice_fiscale(codice_fiscale: str) -> bool:
     codice_pattern = r'^[A-Za-z]{6}\d{2}[A-Za-z]\d{2}[A-Za-z]\d{3}[A-Za-z]$'
     return bool(re.match(codice_pattern, codice_fiscale))
 
-def validate_user_data(user_data):
+def validate_user_data(user_data: dict):
 
     required_fields = ['codice_fiscale', 'cognome_nome', 'email']
     for field in required_fields:
@@ -27,3 +32,35 @@ def validate_user_data(user_data):
         raise ValueError('Invalid email format. Please provide a valid email address.')
     
     logging.info('User data validated successfully.')
+
+def duration_overlap(update:Update, context: ContextTypes.DEFAULT_TYPE, history: pd.DataFrame) -> bool:
+
+    filtered = history[(history['codice_fiscale'] == context.user_data['codice_fiscale']) & 
+                       (history['email'] == context.user_data['email']) & 
+                       (history['selected_date'] == context.user_data['selected_date'])
+    ]
+    if len(filtered) == 0:
+        return False
+    
+    reserving_start = datetime.strptime(context.user_data['selected_time'], '%H:%M')
+    reserving_end = reserving_start + timedelta(hours=int(update.message.text.strip()))
+    for _, row in filtered.iterrows():
+        existing_start = datetime.strptime(row['start'], '%H:%M')
+        existing_end = datetime.strptime(row['end'], '%H:%M')
+        if reserving_start < existing_end and reserving_end > existing_start:
+            return True
+    return False
+
+def time_overlap(update:Update, context: ContextTypes.DEFAULT_TYPE, history: pd.DataFrame) -> bool:
+
+    filtered = history[(history['codice_fiscale'] == context.user_data['codice_fiscale']) & 
+                       (history['email'] == context.user_data['email']) & 
+                       (history['selected_date'] == context.user_data['selected_date'])
+    ]
+    reserving_start = datetime.strptime(update.message.text.strip(), '%H:%M')
+    for _, row in filtered.iterrows():
+        existing_start = datetime.strptime(row['start'], '%H:%M')
+        existing_end = datetime.strptime(row['end'], '%H:%M')
+        if reserving_start >= existing_start - timedelta(minutes=30) and reserving_start < existing_end: 
+            return False
+    return True

@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 from math import ceil
 
-from telegram import ReplyKeyboardMarkup, KeyboardButton
+import pandas as pd
+from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
 from telegram.ext import ContextTypes
 import textwrap
 
@@ -118,3 +119,32 @@ def support_message(name):
 
     """
     return textwrap.dedent(text)
+
+def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYPE, history: pd.DataFrame) -> str:
+
+    coidce = context.user_data['codice_fiscale']
+    email = context.user_data['email']
+    filtered = history[(history['codice_fiscale'] == coidce) & 
+                       (history['email'] == email)
+    ].copy()
+    filtered['datetime'] = pd.to_datetime(filtered['selected_date'] + ' ' +filtered['end']) # ' ' acts as space
+    current = filtered[filtered['datetime'] > datetime.now()]
+    current = current.sort_values('datetime', ascending=True)
+    name = update.effective_user.username if update.effective_user.username else update.effective_user.first_name
+    message = textwrap.dedent(
+        f"Reservations for *{name}*\n"
+        f"Coidce Fiscale: *{coidce}*\n"
+        f"Email: {email}\n"
+        f"-----------------------\n"
+        )   
+    if len(current) != 0:
+        for _, row in current.iterrows():
+            message += textwrap.dedent(
+                f"Date: *{row['selected_date']}*\n"
+                f"Time: *{row['start']}* - *{row['end']}*\n"
+                f"Duration: *{row['selected_dur']}* *hours*\n"
+                f"-----------------------\n"
+            )
+    else:
+        message += "\n_No upcoming reservations._"
+    return message
