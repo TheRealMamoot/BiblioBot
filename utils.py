@@ -118,7 +118,6 @@ def support_message(name):
 
             Cool person, you should check him out.
             Don't you dare press /start again! 😠
-
     """
     return textwrap.dedent(text)
 

@@ -60,10 +60,10 @@ def set_reservation(start_time: int, end_time: int, duration: int, user_data: di
             raise ValueError('Unexpected response format: "Booking Code" not found.')
     except requests.exceptions.RequestException as e:
         logging.error(f'Request failed: {e}')
-        raise SystemExit(f'Request failed: {e}')
+        raise RuntimeError(f'Value error: {e}')
     except ValueError as e:
         logging.error(f'Value error: {e}')
-        raise SystemExit(f'Value error: {e}')
+        raise RuntimeError(f'Value error: {e}')
 
 def confirm_reservation(booking_code: int) -> dict:
 
@@ -76,7 +76,7 @@ def confirm_reservation(booking_code: int) -> dict:
         return response.json()
     except requests.exceptions.RequestException as e:
         logging.error(f'Request failed: {e}')
-        raise SystemExit(f'Request failed: {e}')
+        raise RuntimeError(f'Value error: {e}')
     except ValueError as e:
         logging.error(f'Value error: {e}')
-        raise SystemExit(f'Value error: {e}')
+        raise RuntimeError(f'Value error: {e}')

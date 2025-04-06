@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import logging
 import os
+import threading
 
 from dotenv import load_dotenv
 import pygsheets
@@ -9,6 +10,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, Conversati
 import textwrap
 
 import utils
+from jobs import run_job
 from validation import validate_email, validate_codice_fiscale, duration_overlap, time_overlap
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -122,7 +124,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         parse_mode='Markdown',
         reply_markup=keyboard
     )
-    logging.info(f"User {update.effective_user} info validated at {datetime.now()}")
+    logging.info(f"🔄 User {update.effective_user} info validated at {datetime.now()}")
     return RESERVE_TYPE
 
 async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -149,7 +151,7 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
             'So, when will it be ? 📅',
             reply_markup=keyboard
         )
-        logging.info(f"User {update.effective_user} selected slot at {datetime.now()}")
+        logging.info(f"🔄 User {update.effective_user} selected slot")
         return CHOOSING_DATE
 
     elif user_input == '⚡️ I need a slot for today.':
@@ -213,7 +215,7 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         reply_markup=keyboard,
         parse_mode='Markdown'
     )
-    logging.info(f"User {update.effective_user} selected date at {datetime.now()}")
+    logging.info(f"🔄 User {update.effective_user} selected date")
     return CHOOSING_TIME
 
 async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -245,7 +247,7 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     await update.message.reply_text(
         f'How long will you absolutely NOT be productive over there ? 🕦 Give me hours.', reply_markup=keyboard)
-    logging.info(f"User {update.effective_user} selected time at {datetime.now()}")
+    logging.info(f"🔄 User {update.effective_user} selected time at {datetime.now()}")
     return CHOOSING_DUR
 
 async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -283,7 +285,7 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     context.user_data['selected_duration'] = user_input
 
-    logging.info(f"User {update.effective_user} selected duration at {datetime.now()}")
+    logging.info(f"🔄 User {update.effective_user} selected duration")
 
     start_time = context.user_data.get('selected_time')
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
@@ -340,7 +342,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         parse_mode='Markdown',
         reply_markup=utils.generate_retry_keyboard()
     )
-        logging.info(f"User {update.effective_user} confirmed at {datetime.now()}")
+        logging.info(f"✅ User {update.effective_user} confirmed")
         return RETRY 
     
     elif user_input == '⬅️ No, take me back.':
@@ -367,7 +369,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             'Ah ****, here we go again! 😪',
             reply_markup=keyboard
         )
-        logging.info(f"User {update.effective_user} reinitiated the process at {datetime.now()}")
+        logging.info(f"⏳ User {update.effective_user} reinitiated the process")
         return CHOOSING_DATE
     
     elif user_input == "💡 Suggestion ?":
@@ -416,7 +418,7 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     values = list(map(str, values))
     wks.append_table(values=values, start='A1', overwrite=False)
-    logging.info(f"User {update.effective_user} data successfully added at {datetime.now()}")
+    logging.info(f"🟢 User {update.effective_user} data successfully added")
 
 # Misc
 async def fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -460,6 +462,8 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, restart))
 
     app.add_error_handler(error)
+
+    threading.Thread(target=run_job, daemon=True).start()
 
     app.run_polling()
 
