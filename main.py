@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import json
 import logging
 import os
 
@@ -12,14 +13,17 @@ import utils
 from validation import validate_email, validate_codice_fiscale, duration_overlap, time_overlap
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))    
-wks = gc.open('Biblio-logs').worksheet_by_title('logs')
 
-# States
-CREDENTIALS, RESERVE_TYPE, CHOOSING_DATE, CHOOSING_TIME, CHOOSING_DUR, CONFIRMING, RETRY = range(7)
+# Env Vars
+gc = os.environ.get('GSHEETS')
+gc = pygsheets.authorize(service_file=json.loads(gc))    
+wks = gc.open('Biblio-logs').worksheet_by_title('logs')
 
 load_dotenv()
 TOKEN = os.getenv('TELEGRAM_TOKEN')
+
+# States
+CREDENTIALS, RESERVE_TYPE, CHOOSING_DATE, CHOOSING_TIME, CHOOSING_DUR, CONFIRMING, RETRY = range(7)
 
 # Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -126,10 +130,6 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
     keyboard = utils.generate_reservation_type_keyboard()
-    # await update.message.reply_text(
-    #     utils.show_existing_reservations(update, context, wks.get_as_df()),
-    #     parse_mode='Markdown'
-    # )
 
     if user_input == '⬅️ Edit credentials':
         await update.message.reply_text(
