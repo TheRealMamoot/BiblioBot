@@ -33,7 +33,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['username'] = user.username
     context.user_data['user_firstname'] = user.first_name
     context.user_data['user_lastname'] = user.last_name
-    logging.info(f"User {user} started chat at {utils.italy_now()}")
+    logging.info(f"User {user} started chat at {datetime.now()}")
 
     user_input = update.message.text.strip()
     if user_input == "🤝 Reach out!":
@@ -124,7 +124,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         parse_mode='Markdown',
         reply_markup=keyboard
     )
-    logging.info(f"🔄 User {update.effective_user} info validated at {utils.italy_now()}")
+    logging.info(f"🔄 User {update.effective_user} info validated at {datetime.now()}")
     return RESERVE_TYPE
 
 async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -151,7 +151,7 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
             'So, when will it be ? 📅',
             reply_markup=keyboard
         )
-        logging.info(f"🔄 User {update.effective_user} selected slot at {utils.italy_now()}")
+        logging.info(f"🔄 User {update.effective_user} selected slot")
         return CHOOSING_DATE
 
     elif user_input == '⚡️ I need a slot for today.':
@@ -215,7 +215,7 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         reply_markup=keyboard,
         parse_mode='Markdown'
     )
-    logging.info(f"🔄 User {update.effective_user} selected date at {utils.italy_now()}")
+    logging.info(f"🔄 User {update.effective_user} selected date")
     return CHOOSING_TIME
 
 async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -247,7 +247,7 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     await update.message.reply_text(
         f'How long will you absolutely NOT be productive over there ? 🕦 Give me hours.', reply_markup=keyboard)
-    logging.info(f"🔄 User {update.effective_user} selected time at {utils.italy_now()}")
+    logging.info(f"🔄 User {update.effective_user} selected time at {datetime.now()}")
     return CHOOSING_DUR
 
 async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -285,7 +285,7 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     context.user_data['selected_duration'] = user_input
 
-    logging.info(f"🔄 User {update.effective_user} selected duration at {utils.italy_now()}")
+    logging.info(f"🔄 User {update.effective_user} selected duration")
 
     start_time = context.user_data.get('selected_time')
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
@@ -327,7 +327,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         textwrap.dedent(
             f"""
             ✅ Done! That's about it.
-            Reservation made at *{utils.italy_now().strftime('%Y-%m-%d %H:%M:%S')}*
+            Reservation made at *{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
 
             Codice Fiscale: *{context.user_data.get('codice_fiscale')}*
             Full Name: *{context.user_data.get('name')}*
@@ -342,7 +342,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         parse_mode='Markdown',
         reply_markup=utils.generate_retry_keyboard()
     )
-        logging.info(f"✅ User {update.effective_user} confirmed at {utils.italy_now()}")
+        logging.info(f"✅ User {update.effective_user} confirmed")
         return RETRY 
     
     elif user_input == '⬅️ No, take me back.':
@@ -369,7 +369,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             'Ah ****, here we go again! 😪',
             reply_markup=keyboard
         )
-        logging.info(f"⏳ User {update.effective_user} reinitiated the process at {utils.italy_now()}")
+        logging.info(f"⏳ User {update.effective_user} reinitiated the process")
         return CHOOSING_DATE
     
     elif user_input == "💡 Suggestion ?":
@@ -414,11 +414,11 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_time,
     end_time,
     context.user_data['selected_duration'],
-    utils.italy_now().strftime('%Y-%m-%d %H:%M:%S'),
+    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     ]
     values = list(map(str, values))
     wks.append_table(values=values, start='A1', overwrite=False)
-    logging.info(f"🟢 User {update.effective_user} data successfully added at {utils.italy_now()}")
+    logging.info(f"🟢 User {update.effective_user} data successfully added")
 
 # Misc
 async def fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):

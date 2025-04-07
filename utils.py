@@ -5,17 +5,13 @@ import pandas as pd
 from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
 from telegram.ext import ContextTypes
 import textwrap
-from zoneinfo import ZoneInfo
-
-def italy_now() -> datetime:
-    return datetime.now(ZoneInfo('Europe/Rome'))
 
 def generate_days():
-    today = italy_now().today()
+    today = datetime.today()
     days = []
     for i in range(7):
         next_day = today + timedelta(days=i)
-        if italy_now() < datetime(italy_now().year, italy_now().month, italy_now().day, 7, 30):
+        if datetime.now() < datetime(datetime.now().year, datetime.now().month, datetime.now().day, 7, 30):
             next_day = today + timedelta(days=i+1)
         if next_day.weekday() != 6:  # Skip Sunday
             day_name = next_day.strftime('%A')
@@ -47,7 +43,7 @@ def generate_date_keyboard():
 
 def generate_time_keyboard(selected_date: str):
     date_obj = datetime.strptime(selected_date.split(' ')[-1], '%Y-%m-%d')
-    today = italy_now().today()
+    today = datetime.today()
     year = today.year if today.month <= date_obj.month else today.year + 1
     full_date = datetime(year, date_obj.month, date_obj.day)
 
@@ -133,7 +129,7 @@ def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYP
                        (history['email'] == email)
     ].copy()
     filtered['datetime'] = pd.to_datetime(filtered['selected_date'] + ' ' +filtered['end']) # ' ' acts as space
-    current = filtered[filtered['datetime'] > italy_now()]
+    current = filtered[filtered['datetime'] > datetime.now()]
     current = current.sort_values('datetime', ascending=True)
     name = update.effective_user.username if update.effective_user.username else update.effective_user.first_name
     message = textwrap.dedent(

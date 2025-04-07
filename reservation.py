@@ -1,7 +1,6 @@
 import logging
 import requests
 
-from utils import italy_now
 from validation import validate_user_data
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -27,7 +26,7 @@ def set_reservation(start_time: int, end_time: int, duration: int, user_data: di
     try:
         validate_user_data(user_data)
     except ValueError as e:
-        logging.error(f'User data validation failed: {e} at {italy_now()}')
+        logging.error(f'User data validation failed: {e}')
         raise
 
     payload = {
@@ -54,17 +53,17 @@ def set_reservation(start_time: int, end_time: int, duration: int, user_data: di
         response.raise_for_status()
         response_data = response.json()
         if 'entry' in response_data: # entry = Booking Code
-            logging.info(f'Reservation successful. Booking Code: {response_data["entry"]} at {italy_now()}')
+            logging.info(f'Reservation successful. Booking Code: {response_data["entry"]}')
             return response_data
         else:
-            logging.error(f'Unexpected response format: "Booking Code" not found at {italy_now()}.')
+            logging.error('Unexpected response format: "Booking Code" not found.')
             raise ValueError('Unexpected response format: "Booking Code" not found.')
     except requests.exceptions.RequestException as e:
-        logging.error(f'Request failed: {e} -- at {italy_now()}')
-        raise RuntimeError(f'Value error: {e} -- at {italy_now()}')
+        logging.error(f'Request failed: {e}')
+        raise RuntimeError(f'Value error: {e}')
     except ValueError as e:
-        logging.error(f'Value error: {e} -- at {italy_now()}')
-        raise RuntimeError(f'Value error: {e} -- at {italy_now()}')
+        logging.error(f'Value error: {e}')
+        raise RuntimeError(f'Value error: {e}')
 
 def confirm_reservation(booking_code: int) -> dict:
 
@@ -76,8 +75,8 @@ def confirm_reservation(booking_code: int) -> dict:
         logging.info(f'Reservation confirmed.')
         return response.json()
     except requests.exceptions.RequestException as e:
-        logging.error(f'Request failed: {e} -- at {italy_now()}')
-        raise RuntimeError(f'Value error: {e} -- at {italy_now()}')
+        logging.error(f'Request failed: {e}')
+        raise RuntimeError(f'Value error: {e}')
     except ValueError as e:
-        logging.error(f'Value error: {e} -- at {italy_now()}')
-        raise RuntimeError(f'Value error: {e} -- at {italy_now()}')
+        logging.error(f'Value error: {e}')
+        raise RuntimeError(f'Value error: {e}')
