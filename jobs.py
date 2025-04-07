@@ -2,9 +2,7 @@ from datetime import datetime
 import logging
 import time
 import os
-from zoneinfo import ZoneInfo
 
-import pandas as pd
 import pygsheets
 import schedule
 
@@ -13,15 +11,16 @@ from slot_datetime import reserve_datetime
 
 def job():
 
-    if datetime.now(ZoneInfo('Europe/Rome')).today().weekday() == 6: # Sunday
+    if datetime.today().weekday() == 6: # Sunday
         logging.info("🟡 It's Sunday. Job skipped.")
         return
     
+    # gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json')) # Local    
     gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
     wks = gc.open('Biblio-logs').worksheet_by_title('logs')
     reservations = wks.get_as_df()
 
-    today = datetime.now(ZoneInfo('Europe/Rome')).today().strftime('%A, %Y-%m-%d')
+    today = datetime.today().strftime('%A, %Y-%m-%d')
     data = reservations.drop_duplicates(['codice_fiscale','name','email','selected_date','start','end'])
     data = data[data['selected_date'] == today]
 
@@ -29,9 +28,9 @@ def job():
         date = row['selected_date'].split(' ')[-1]
         start_time = row['start']
         selected_dur = row['selected_dur']
-        user_data = {'codice_fiscale':f'{row['codice_fiscale']}',
-                    'cognome_nome':f'{row['name']}',
-                    'email':f'{row['email']}'
+        user_data = {'codice_fiscale':row['codice_fiscale'],
+                    'cognome_nome':row['name'],
+                    'email':row['email']
                     }
         try:
             start, end, duration = reserve_datetime(date, start_time, selected_dur)
@@ -44,15 +43,15 @@ def job():
             logging.error(f'❌ Failed reservation for {user_data['cognome_nome']} — {e}')
 
 def run_job():
-    schedule.every().day.at('05:33').do(job) # UTC time
+
+    schedule.every().day.at('05:05').do(job) # UTC time
+    for minute in range(30, 36):  # 05:30 to 05:35
+        schedule.every().day.at(f'5:{minute:02d}').do(job)
+
+    for hour in range(7, 16):  # 6 to 18 inclusive
+        for minute in range(0,5):
+            schedule.every().day.at(f'{hour:02d}:{minute:02d}').do(job)
 
     while True:
-        now = datetime.now(ZoneInfo('Europe/Rome'))
-        if now.hour > 9 or now.hour == 9 and now.minute >= 30:
-            print("⏱️ It's after 09:30. Running job manually")
-            job()
-            time.sleep(60 * 60 * 24)
-            continue
-
         schedule.run_pending()
-        time.sleep(15 * 60)
+        time.sleep(1)

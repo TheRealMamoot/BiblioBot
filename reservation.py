@@ -36,7 +36,7 @@ def set_reservation(start_time: int, end_time: int, duration: int, user_data: di
         "durata": duration,
         "entry_type": 50,
         "area": 25,
-        "public_primary": "number",
+        "public_primary": user_data['codice_fiscale'],
         "utente": {
             "codice_fiscale": user_data['codice_fiscale'],
             "cognome_nome": user_data['cognome_nome'],
