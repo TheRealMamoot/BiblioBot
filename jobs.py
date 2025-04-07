@@ -9,7 +9,7 @@
 
 # from reservation import set_reservation, confirm_reservation
 # from slot_datetime import reserve_datetime
-from utils import italy_now
+# from utils import italy_now
 
 # def job(reservations: pd.DataFrame):
 
