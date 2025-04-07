@@ -1,19 +1,19 @@
-# from datetime import datetime
-# import logging
-# import time
-# import os
+from datetime import datetime
+import logging
+import time
+import os
+from zoneinfo import ZoneInfo
 
-# import pandas as pd
-# import pygsheets
-# import schedule
+import pandas as pd
+import pygsheets
+import schedule
 
-# from reservation import set_reservation, confirm_reservation
-# from slot_datetime import reserve_datetime
-# from utils import italy_now
+from reservation import set_reservation, confirm_reservation
+from slot_datetime import reserve_datetime
 
 # def job(reservations: pd.DataFrame):
 
-#     if italy_now.today().weekday() == 6: # Sunday
+#     if datetime.now(ZoneInfo('Europe/Rome')).today().weekday() == 6: # Sunday
 #         logging.info("🟡 It's Sunday. Job skipped.")
 #         return
     
@@ -21,7 +21,7 @@
 #     wks = gc.open('Biblio-logs').worksheet_by_title('logs')
 #     reservations = wks.get_as_df()
 
-#     today = italy_now.today().strftime('%A, %Y-%m-%d')
+#     today = datetime.now(ZoneInfo('Europe/Rome')).today().strftime('%A, %Y-%m-%d')
 #     data = reservations.drop_duplicates(['codice_fiscale','name','email','selected_date','start','end'])
 #     data = data[data['selected_date'] == today]
 
@@ -44,11 +44,11 @@
 #             logging.error(f'❌ Failed reservation for {user_data['cognome_nome']} — {e}')
 
 # def run_job():
-#     schedule.every().day.at('07:32').do(job)
+#     schedule.every().day.at('05:32').do(job) # UTC time
 
 #     while True:
-#         now = italy_now()
-#         if italy_now().hour > 9 or (italy_now().hour == 9 and italy_now().minute >= 30):
+#         now = datetime.now(ZoneInfo('Europe/Rome'))
+#         if datetime.now(ZoneInfo('Europe/Rome')).hour > 9 or (datetime.now(ZoneInfo('Europe/Rome')).hour == 9 and datetime.now(ZoneInfo('Europe/Rome')).minute >= 30):
 #             print("⏱️ It's after 09:30. Running job manually")
 #             job()
 #             time.sleep(60 * 60 * 24)
@@ -69,7 +69,7 @@ def test_job():
 
     print(f'⏰ UTC Now: {utc_now.strftime("%Y-%m-%d %H:%M:%S")}')
     print(f'🇮🇹 Italy Now: {italy_now.strftime("%Y-%m-%d %H:%M:%S")}')
-    print(italy_now())
+    print(italy_now)
     
 def run_job():
     schedule.every(5).seconds.do(test_job)
