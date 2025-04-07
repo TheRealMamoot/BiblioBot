@@ -126,7 +126,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         parse_mode='Markdown',
         reply_markup=keyboard
     )
-    logging.info(f"🔄 User {update.effective_user} info validated at {datetime.now(ZoneInfo('Europe/Rome'))}")
+    logging.info(f"🔄 {update.effective_user} info validated at {datetime.now(ZoneInfo('Europe/Rome'))}")
     return RESERVE_TYPE
 
 async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -153,7 +153,7 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
             'So, when will it be ? 📅',
             reply_markup=keyboard
         )
-        logging.info(f"🔄 User {update.effective_user} selected slot at {datetime.now(ZoneInfo('Europe/Rome'))}")
+        logging.info(f"🔄 {update.effective_user} selected slot at {datetime.now(ZoneInfo('Europe/Rome'))}")
         return CHOOSING_DATE
 
     elif user_input == '⚡️ I need a slot for today.':
@@ -217,7 +217,7 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         reply_markup=keyboard,
         parse_mode='Markdown'
     )
-    logging.info(f"🔄 User {update.effective_user} selected date at {datetime.now(ZoneInfo('Europe/Rome'))}")
+    logging.info(f"🔄 {update.effective_user} selected date at {datetime.now(ZoneInfo('Europe/Rome'))}")
     return CHOOSING_TIME
 
 async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -249,7 +249,7 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     await update.message.reply_text(
         f'How long will you absolutely NOT be productive over there ? 🕦 Give me hours.', reply_markup=keyboard)
-    logging.info(f"🔄 User {update.effective_user} selected time at {datetime.now(ZoneInfo('Europe/Rome'))}")
+    logging.info(f"🔄 {update.effective_user} selected time at {datetime.now(ZoneInfo('Europe/Rome'))}")
     return CHOOSING_DUR
 
 async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -287,7 +287,7 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     context.user_data['selected_duration'] = user_input
 
-    logging.info(f"🔄 User {update.effective_user} selected duration at {datetime.now(ZoneInfo('Europe/Rome'))}")
+    logging.info(f"🔄 {update.effective_user} selected duration at {datetime.now(ZoneInfo('Europe/Rome'))}")
 
     start_time = context.user_data.get('selected_time')
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
@@ -344,7 +344,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         parse_mode='Markdown',
         reply_markup=utils.generate_retry_keyboard()
     )
-        logging.info(f"✅ User {update.effective_user} confirmed at {datetime.now(ZoneInfo('Europe/Rome'))}")
+        logging.info(f"☑️ {update.effective_user} confirmed at {datetime.now(ZoneInfo('Europe/Rome'))}")
         return RETRY 
     
     elif user_input == '⬅️ No, take me back.':
@@ -371,7 +371,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             'Ah ****, here we go again! 😪',
             reply_markup=keyboard
         )
-        logging.info(f"⏳ User {update.effective_user} reinitiated the process at {datetime.now(ZoneInfo('Europe/Rome'))}")
+        logging.info(f"⏳ {update.effective_user} reinitiated the process at {datetime.now(ZoneInfo('Europe/Rome'))}")
         return CHOOSING_DATE
     
     elif user_input == "💡 Suggestion ?":
@@ -420,7 +420,7 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     values = list(map(str, values))
     wks.append_table(values=values, start='A1', overwrite=False)
-    logging.info(f"🟢 User {update.effective_user} data successfully added at {datetime.now(ZoneInfo('Europe/Rome'))}")
+    logging.info(f"✔️ {update.effective_user} data successfully added at {datetime.now(ZoneInfo('Europe/Rome'))}")
 
 # Misc
 async def fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -48,7 +48,7 @@ def run_job():
     for minute in range(30, 36):  # 05:30 to 05:35
         schedule.every().day.at(f'5:{minute:02d}').do(job)
 
-    for hour in range(7, 16):  # 6 to 18 inclusive
+    for hour in range(7, 17):  # 9 to 18 inclusive
         for minute in range(0,5):
             schedule.every().day.at(f'{hour:02d}:{minute:02d}').do(job)
 
