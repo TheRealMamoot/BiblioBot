@@ -11,7 +11,7 @@ def generate_days():
     days = []
     for i in range(7):
         next_day = today + timedelta(days=i)
-        if datetime.now() > datetime(datetime.now().year, datetime.now().month, datetime.now().day, 5, 30): # 5:30 for UTC. 7:30 for CET
+        if i==0 and datetime.now() > datetime(datetime.now().year, datetime.now().month, datetime.now().day, 5, 30): # 5:30 for UTC. 7:30 for CET
             next_day = today + timedelta(days=i+1)
         if next_day.weekday() != 6:  # Skip Sunday
             day_name = next_day.strftime('%A')
