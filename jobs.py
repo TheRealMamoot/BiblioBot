@@ -11,7 +11,7 @@ import schedule
 from reservation import set_reservation, confirm_reservation
 from slot_datetime import reserve_datetime
 
-def job(reservations: pd.DataFrame):
+def job():
 
     if datetime.now(ZoneInfo('Europe/Rome')).today().weekday() == 6: # Sunday
         logging.info("🟡 It's Sunday. Job skipped.")
@@ -44,7 +44,7 @@ def job(reservations: pd.DataFrame):
             logging.error(f'❌ Failed reservation for {user_data['cognome_nome']} — {e}')
 
 def run_job():
-    schedule.every().day.at('05:33').do(job) # UTC time
+    schedule.every().day.at('05:33').do(job()) # UTC time
 
     while True:
         now = datetime.now(ZoneInfo('Europe/Rome'))
