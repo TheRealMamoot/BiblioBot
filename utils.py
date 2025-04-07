@@ -11,7 +11,7 @@ def italy_now() -> datetime:
     return datetime.now(ZoneInfo('Europe/Rome'))
 
 def generate_days():
-    today = datetime.today()
+    today = italy_now().today()
     days = []
     for i in range(7):
         next_day = today + timedelta(days=i)
@@ -47,7 +47,7 @@ def generate_date_keyboard():
 
 def generate_time_keyboard(selected_date: str):
     date_obj = datetime.strptime(selected_date.split(' ')[-1], '%Y-%m-%d')
-    today = datetime.today()
+    today = italy_now().today()
     year = today.year if today.month <= date_obj.month else today.year + 1
     full_date = datetime(year, date_obj.month, date_obj.day)
 

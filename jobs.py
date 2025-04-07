@@ -13,7 +13,7 @@ from utils import italy_now
 
 # def job(reservations: pd.DataFrame):
 
-#     if datetime.today().weekday() == 6: # Sunday
+#     if italy_now.today().weekday() == 6: # Sunday
 #         logging.info("🟡 It's Sunday. Job skipped.")
 #         return
     
@@ -21,7 +21,7 @@ from utils import italy_now
 #     wks = gc.open('Biblio-logs').worksheet_by_title('logs')
 #     reservations = wks.get_as_df()
 
-#     today = datetime.today().strftime('%A, %Y-%m-%d')
+#     today = italy_now.today().strftime('%A, %Y-%m-%d')
 #     data = reservations.drop_duplicates(['codice_fiscale','name','email','selected_date','start','end'])
 #     data = data[data['selected_date'] == today]
 
