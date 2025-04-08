@@ -42,10 +42,10 @@ def job():
         except Exception as e:
             logging.error(f'❌ Failed reservation for {user_data['cognome_nome']} — {e}')
 
-def run_job():
+def run_job():  
 
-    # schedule.every().day.at('05:05').do(job) # UTC time
-    schedule.every(15).seconds.do(job) # UTC time
+    schedule.every().day.at('06:25').do(job) # UTC time
+    # schedule.every(15).seconds.do(job) # UTC time
     # for minute in range(30, 36):  # 05:30 to 05:35
     #     schedule.every().day.at(f'5:{minute:02d}').do(job)
 
