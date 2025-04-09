@@ -47,6 +47,7 @@ def job():
             confirm_reservation(reservation_response['entry'])
             logging.info(f'✅ **3** Reservation confirmed for {user_data['cognome_nome']}')
             data.loc[idx, 'status'] = 'success'
+            data.loc[idx, 'booking_code'] = reservation_response['entry']
             data.loc[idx, 'status_timestamp'] = datetime.now(ZoneInfo('Europe/Rome'))
         except Exception as e:
             logging.error(f'❌ Failed reservation for {user_data['cognome_nome']} — {e}')
@@ -59,7 +60,7 @@ def job():
     logging.info(f'🔄 Data refreshed at {datetime.now(ZoneInfo('Europe/Rome'))}')
 
 def run_job():  
-    hours = range(7, 24)  # 7 to 18 inclusive
+    hours = range(7, 23)  # 7 to 18 inclusive
     minutes = [0,1,2,3,30,31,32,33]
     seconds = range(0, 30, 6)
     for hour, minute, second in product(hours, minutes, seconds):

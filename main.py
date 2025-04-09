@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from enum import IntEnum, auto
 import json
 import logging
 import os
@@ -36,7 +37,18 @@ load_dotenv()
 TOKEN: str = os.getenv('TELEGRAM_TOKEN')
 
 # States
-AGREEMENT, CREDENTIALS, RESERVE_TYPE, CHOOSING_DATE, CHOOSING_TIME, CHOOSING_DUR, CONFIRMING, RETRY = range(8)
+class States(IntEnum):
+    AGREEMENT = auto()
+    CREDENTIALS = auto()
+    RESERVE_TYPE = auto()
+    CHOOSING_DATE = auto()
+    CHOOSING_TIME = auto()
+    CHOOSING_TIME_INSTANT = auto()
+    CHOOSING_DUR = auto()
+    CHOOSING_DUR_INSTANT = auto()
+    CONFIRMING = auto()
+    CONFIRMING_INSTANT = auto()
+    RETRY = auto()
 
 # Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -64,7 +76,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         parse_mode='Markdown', 
         reply_markup=utils.generate_agreement_keyboard()
     )
-    return AGREEMENT
+    return States.AGREEMENT
 
 # Handlers
 async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -91,7 +103,7 @@ async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             utils.support_message(name),
                 parse_mode='Markdown', 
             )
-            return CREDENTIALS
+            return States.CREDENTIALS
 
         gif_url = 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ2F6cWowaG5oYjdkejhqamQxaWJ5bmxhcXQxY2w5azhieGlkZWwyNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xTiIzJSKB4l7xTouE8/giphy.gif' 
         await update.message.reply_animation(gif_url)
@@ -118,18 +130,18 @@ async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             parse_mode='Markdown',
             reply_markup=utils.generate_start_keyboard()
         )
-        return CREDENTIALS
+        return States.CREDENTIALS
     
     else:
         await update.message.reply_text(
             "Please agree to the terms."
         )
-        return AGREEMENT
+        return States.AGREEMENT
 
 async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if not update.message or not update.message.text:
         await update.message.reply_text('Sure, waste your time why not? I can do this all day. 🥱')
-        return CREDENTIALS
+        return States.CREDENTIALS
     
     user_input = update.message.text.strip()
     name = update.effective_user.first_name if update.effective_user.first_name else update.effective_user.username
@@ -140,7 +152,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             parse_mode='Markdown', 
             reply_markup=utils.generate_start_keyboard()
         )
-        return CREDENTIALS
+        return States.CREDENTIALS
     
     if user_input == "➡️ Changed my mind.":
         await update.message.reply_text(
@@ -148,7 +160,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             parse_mode='Markdown', 
             reply_markup=utils.generate_reservation_type_keyboard()
         )
-        return RESERVE_TYPE
+        return States.RESERVE_TYPE
 
     try:
         codice, name, email = [part.strip() for part in user_input.split(',')]
@@ -157,15 +169,15 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "Wow so it WAS too hard for you. 🙃\nTry again: `Codice, Full Name, Email`",
             parse_mode='Markdown'
         )
-        return CREDENTIALS
+        return States.CREDENTIALS
     
     if not validate_codice_fiscale(codice):
         await update.message.reply_text("🚫 Nice try with a fake codice fiscale. Try again!")
-        return CREDENTIALS
+        return States.CREDENTIALS
     
     if not validate_email(email):
         await update.message.reply_text("🚫 Nice try with a fake email. Try again!")
-        return CREDENTIALS
+        return States.CREDENTIALS
 
     context.user_data['codice_fiscale'] = codice.upper()
     context.user_data['name'] = name
@@ -177,15 +189,15 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 textwrap.dedent(
             f"""
             There we go! Your data is saved. FOREVER! 😈 (JUST KIDDING!)
-            Now, you can plan ahead for future or,
-            If you're so desperate and need a slot for today, try to book now. No promises!
+            Now, you can plan ahead for later or,
+            If you're so desperate and need a slot now, try to book instantly. No promises!
             """
         ),
         parse_mode='Markdown',
         reply_markup=keyboard
     )
     logging.info(f"🔄 {update.effective_user} info validated at {datetime.now(ZoneInfo('Europe/Rome'))}")
-    return RESERVE_TYPE
+    return States.RESERVE_TYPE
 
 async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
@@ -203,30 +215,38 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
             parse_mode='Markdown', 
             reply_markup=utils.generate_start_keyboard(edit_credential_stage=True)
         )
-        return CREDENTIALS
+        return States.CREDENTIALS
     
-    elif user_input == '⏳ I need a slot for future.':
+    elif user_input == '⏳ I need a slot for later.':
         keyboard = utils.generate_date_keyboard()
         await update.message.reply_text(
             'So, when will it be? 📅',
             reply_markup=keyboard
         )
-        logging.info(f"🔄 {update.effective_user} selected slot at {datetime.now(ZoneInfo('Europe/Rome'))}")
-        return CHOOSING_DATE
+        context.user_data['instant'] = True
+        logging.info(f"🔄 {update.effective_user} selected REGULAR reservation at {datetime.now(ZoneInfo('Europe/Rome'))}")
+        return States.CHOOSING_DATE
 
-    elif user_input == '⚡️ I need a slot for today.':
+    elif user_input == '⚡️ I need a slot now.':
+        now = datetime.now(ZoneInfo('Europe/Rome'))
+        now_day = now.strftime('%A')
+        now_date = now.strftime('%Y-%m-%d')
+        date = f'{now_day}, {now_date}'
         await update.message.reply_text(
-            '🔧 In development 🔧',
-            reply_markup=keyboard
+            'So, when will it be? 🕑',
+            reply_markup=utils.generate_time_keyboard(date)
         )
-        return RESERVE_TYPE
+        context.user_data['instant'] = False
+        context['selected_date'] = date
+        logging.info(f"🔄 {update.effective_user} selected INSTANT reservation at {datetime.now(ZoneInfo('Europe/Rome'))}")
+        return States.CHOOSING_TIME_INSTANT
 
     else:
         await update.message.reply_text(
             "The options are right there you know. Pick one, that's it.",
             reply_markup=keyboard
         )
-        return RESERVE_TYPE
+        return States.RESERVE_TYPE
 
 async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
@@ -237,21 +257,21 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             parse_mode='Markdown', 
             reply_markup=utils.generate_reservation_type_keyboard()
         )
-        return RESERVE_TYPE
+        return States.RESERVE_TYPE
     
     elif user_input == '🗓️ Show current reservations':
         await update.message.reply_text(
             utils.show_existing_reservations(update, context, wks.get_as_df()),
             parse_mode='Markdown',
         )
-        return CHOOSING_DATE
+        return States.CHOOSING_DATE
 
     try:
         datetime.strptime(user_input.split(' ')[-1], '%Y-%m-%d')
     except ValueError:
         await update.message.reply_text(
             'Umm, that does not look like a date to me. 🤨 Just pick one from the list.')
-        return CHOOSING_DATE
+        return States.CHOOSING_DATE
     
     available_dates = utils.generate_days()
     available_dates = [datetime.strptime(date.split(' ')[-1], '%Y-%m-%d') for date in available_dates]
@@ -260,7 +280,7 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             '🚫 Not available! Choose again from the list.'
         )
-        return CHOOSING_DATE
+        return States.CHOOSING_DATE
     
     context.user_data['selected_date'] = user_input
     keyboard = utils.generate_time_keyboard(user_input)
@@ -268,7 +288,7 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if len(keyboard.keyboard) <= 1:
         await update.message.reply_text(
             'Oops! There are no available time slots for that date.\nCry about it ☺️. Choose another one.')
-        return CHOOSING_DATE  
+        return States.CHOOSING_DATE  
     
     await update.message.reply_text(
         f'Fine. You picked *{user_input}*.\nNow choose a starting time.',
@@ -276,15 +296,28 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         parse_mode='Markdown'
     )
     logging.info(f"🔄 {update.effective_user} selected date at {datetime.now(ZoneInfo('Europe/Rome'))}")
-    return CHOOSING_TIME
+    return States.CHOOSING_TIME
 
 async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
     if user_input == '⬅️':
+        if context.user_data['instant']:
+            await update.message.reply_text(
+                    textwrap.dedent(
+                f"""
+                Just decide already!
+                """
+            ),
+                parse_mode='Markdown', 
+                reply_markup=utils.generate_reservation_type_keyboard()
+            )
+            return States.RESERVE_TYPE
+        
         keyboard = utils.generate_date_keyboard()
         await update.message.reply_text('Choose a date, AGAIN! 😒', reply_markup=keyboard)
-        return CHOOSING_DATE
+        return States.CHOOSING_DATE
+    
     try:
         datetime.strptime(user_input, '%H:%M')
         time_obj = datetime.strptime(user_input, '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
@@ -296,12 +329,16 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 Choose a different time.
                 """
             ))
-            return CHOOSING_TIME
+            if context.user_data['instant']:
+                return States.CHOOSING_TIME_INSTANT
+            return States.CHOOSING_TIME
         
     except ValueError:
         await update.message.reply_text(
             'Not that difficult to pick an option form the list! Just saying. 🤷‍♂️')
-        return CHOOSING_TIME
+        if context.user_data['instant']:
+            return States.CHOOSING_TIME_INSTANT
+        return States.CHOOSING_TIME
     
     if not time_not_overlap(update, context, wks.get_as_df()): 
         await update.message.reply_text(
@@ -311,16 +348,22 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             Choose a different time.
             """
         ))
-        return CHOOSING_TIME
-    
+        if context.user_data['instant']:
+            return States.CHOOSING_TIME_INSTANT
+        return States.CHOOSING_TIME
 
     context.user_data['selected_time'] = user_input
     keyboard = utils.generate_duration_keyboard(user_input, context)[0] # [0] for the reply, [1] for the values
 
     await update.message.reply_text(
         f'How long will you absolutely NOT be productive over there? 🕦 Give me hours.', reply_markup=keyboard)
-    logging.info(f"🔄 {update.effective_user} selected time at {datetime.now(ZoneInfo('Europe/Rome'))}")
-    return CHOOSING_DUR
+    
+    if context.user_data['instant']:
+        logging.info(f"🔄 {update.effective_user} selected INSTANT time at {datetime.now(ZoneInfo('Europe/Rome'))}")
+        return States.CHOOSING_DUR_INSTANT
+    
+    logging.info(f"🔄 {update.effective_user} selected REGULAR time at {datetime.now(ZoneInfo('Europe/Rome'))}")
+    return States.CHOOSING_DUR
 
 async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
@@ -329,7 +372,9 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
         keyboard = utils.generate_time_keyboard(context.user_data.get('selected_date'))
         await update.message.reply_text(
             'Make up your mind! choose a time ALREADY 🙄', reply_markup=keyboard)
-        return CHOOSING_TIME
+        if context.user_data['instant']:
+            return States.CHOOSING_TIME_INSTANT
+        return States.CHOOSING_TIME
 
     selected_time = context.user_data.get('selected_time')
     duration_selection = utils.generate_duration_keyboard(selected_time, context)[1] # [0] for the reply, [1] for the values
@@ -338,12 +383,16 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not user_input.isdigit():
         await update.message.reply_text(
             "Now you're just messing with me. Just pick the duration!")
-        return CHOOSING_DUR
+        if context.user_data['instant']:
+            return States.CHOOSING_DUR_INSTANT
+        return States.CHOOSING_DUR
     
     if int(user_input) > max_dur:
         await update.message.reply_text(
             "Well they are not going to let you sleep there! Try again. 🤷‍♂️")
-        return CHOOSING_DUR
+        if context.user_data['instant']:
+            return States.CHOOSING_DUR_INSTANT
+        return States.CHOOSING_DUR
     
     if duration_overlap(update, context, wks.get_as_df()): 
         await update.message.reply_text(
@@ -353,11 +402,13 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
             Choose a different duration.
             """
         ))
-        return CHOOSING_DUR
+        if context.user_data['instant']:
+            return States.CHOOSING_DUR_INSTANT
+        return States.CHOOSING_DUR
 
     context.user_data['selected_duration'] = user_input
-
-    logging.info(f"🔄 {update.effective_user} selected duration at {datetime.now(ZoneInfo('Europe/Rome'))}")
+    flow = 'INSTANT' if context.user_data['instant'] else 'REGULAR '
+    logging.info(f"🔄 {update.effective_user} selected {flow} duration at {datetime.now(ZoneInfo('Europe/Rome'))}")
 
     start_time = context.user_data.get('selected_time')
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
@@ -383,7 +434,9 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
         parse_mode='Markdown',
         reply_markup=keyboard
     )
-    return CONFIRMING
+    if context.user_data['instant']:
+        return States.CONFIRMING_INSTANT
+    return States.CONFIRMING
 
 async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
@@ -393,7 +446,6 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     end_time = end_time.strftime('%H:%M')
 
     if user_input == '✅ Yes, all looks good.':
-        await writer(update, context)
         await update.message.reply_text(
         textwrap.dedent(
             f"""
@@ -413,8 +465,9 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         parse_mode='Markdown',
         reply_markup=utils.generate_retry_keyboard()
     )
+        await writer(update, context)
         logging.info(f"☑️ {update.effective_user} confirmed at {datetime.now(ZoneInfo('Europe/Rome'))}")
-        return RETRY 
+        return States.RETRY 
     
     elif user_input == '⬅️ No, take me back.':
         keyboard = utils.generate_duration_keyboard(context.user_data.get('selected_time'), context)[0]
@@ -422,14 +475,16 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             'I overestimated you it seems. Duration please. 😬',
             reply_markup=keyboard
         )
-        return CHOOSING_DUR
+        if context.user_data['instant']:
+            return States.CHOOSING_DUR_INSTANT
+        return States.CHOOSING_DUR
     
     else:
         await update.message.reply_text(
             "JUST.CLICK...PLEASE!",
             reply_markup=utils.generate_confirmation_keyboard()
         )
-        return CONFIRMING 
+        return States.CONFIRMING 
     
 async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
@@ -441,7 +496,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             reply_markup=keyboard
         )
         logging.info(f"⏳ {update.effective_user} reinitiated the process at {datetime.now(ZoneInfo('Europe/Rome'))}")
-        return CHOOSING_DATE
+        return States.CHOOSING_DATE
     
     elif user_input == "💡 Feedback":
         user = update.effective_user
@@ -450,14 +505,14 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         utils.support_message(name),
         parse_mode='Markdown',
         )
-        return RETRY
+        return States.RETRY
 
     elif user_input == '🗓️ Show current reservations':
         await update.message.reply_text(
             utils.show_existing_reservations(update, context, wks.get_as_df()),
             parse_mode='Markdown',
         )
-        return RETRY
+        return States.RETRY
 
     else:
         await update.message.reply_text(
@@ -469,8 +524,8 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         ),
         parse_mode='Markdown',
         )
-        return RETRY
-
+        return States.RETRY
+    
 # Writer
 async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_time = context.user_data.get('selected_time')
@@ -480,6 +535,8 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status = 'pending'
     status_timestamp = datetime.now(ZoneInfo('Europe/Rome'))
     retries='0'
+    booking_code='TBD'
+    instant=str(context.user_data.get('instant') )
     unique_id = str(uuid.uuid4())
 
     values=[
@@ -495,10 +552,12 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_time,
     end_time,
     context.user_data['selected_duration'],
+    booking_code,
     input_timestamp,
-    status,
     retries,
-    status_timestamp
+    status,
+    status_timestamp,
+    instant
     ]
     values = list(map(str, values))
     wks.append_table(values=values, start='A1', overwrite=False)
@@ -527,14 +586,14 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)], 
         states={
-            AGREEMENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, user_agreement)],
-            CREDENTIALS: [MessageHandler(filters.TEXT & ~filters.COMMAND, user_validation)],
-            RESERVE_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, reservation_selection)],
-            CHOOSING_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, date_selection)],
-            CHOOSING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, time_selection)],
-            CHOOSING_DUR: [MessageHandler(filters.TEXT & ~filters.COMMAND, duration_selection)],
-            CONFIRMING: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirmation)],
-            RETRY: [MessageHandler(filters.TEXT & ~filters.COMMAND, retry)],
+            States.AGREEMENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, user_agreement)],
+            States.CREDENTIALS: [MessageHandler(filters.TEXT & ~filters.COMMAND, user_validation)],
+            States.RESERVE_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, reservation_selection)],
+            States.CHOOSING_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, date_selection)],
+            States.CHOOSING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, time_selection)],
+            States.CHOOSING_DUR: [MessageHandler(filters.TEXT & ~filters.COMMAND, duration_selection)],
+            States.CONFIRMING: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirmation)],
+            States.RETRY: [MessageHandler(filters.TEXT & ~filters.COMMAND, retry)],
         },
         fallbacks=[
             CommandHandler('start', start),  # Allows /start to reset everything

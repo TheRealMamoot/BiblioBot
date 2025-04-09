@@ -22,8 +22,8 @@ def generate_days():
 
 def generate_reservation_type_keyboard():
    keyboard_buttons = [
-       [KeyboardButton('⏳ I need a slot for future.')], 
-       [KeyboardButton('⚡️ I need a slot for today.')],
+       [KeyboardButton('⏳ I need a slot for later.')], 
+       [KeyboardButton('⚡️ I need a slot now.')],
        [KeyboardButton('⬅️ Edit credentials')]
        ]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
@@ -148,12 +148,14 @@ def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYP
                 else f'⚠️ {row['status']}' if row['status']=='fail' \
                 else f'❌ {row['status']}' if row['status']=='terminated' \
                 else 'undefined'
-            retry = f" - Will try again at ##:00 and ##:30 hours for maximum 3 retries." if row['status'] =='fail' else ''
+            booking_code: str = row['booking_code']
+            retry = f" - Will try again at ##:00 and ##:30 hours" if row['status'] =='fail' else ''
             message += textwrap.dedent(
                 f"Date: *{row['selected_date']}*\n"
                 f"Time: *{row['start']}* - *{row['end']}*\n"
                 f"Duration: *{row['selected_dur']}* *hours*\n"
-                f"Status: *{status.capitalize()}*_{retry}_\n"
+                f"Booking Code: *{booking_code.upper()}*\n"
+                f"Status: *{status.title()}*_{retry}_\n"
                 f"-----------------------\n"
             )
     else:
