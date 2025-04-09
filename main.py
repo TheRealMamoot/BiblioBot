@@ -277,6 +277,16 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return CHOOSING_DATE
     try:
         datetime.strptime(user_input, '%H:%M')
+        time_obj = datetime.strptime(user_input, '%H:%M')
+        if (time_obj.hour + time_obj.minute / 60) < 9:
+            await update.message.reply_text(
+                    textwrap.dedent(
+                f"""
+                ⚠️ Starting time can't be before 09:00! 
+                Choose a different time.
+                """
+            ))
+            return CHOOSING_TIME
     except ValueError:
         await update.message.reply_text(
             'Not that difficult to pick an option form the list! Just saying. 🤷‍♂️')
@@ -292,16 +302,6 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         ))
         return CHOOSING_TIME
     
-    time_obj = datetime.strptime(user_input, '%H:%M')
-    if (time_obj.hour + time_obj.minute / 60) < 9:
-        await update.message.reply_text(
-                textwrap.dedent(
-            f"""
-            ⚠️ Starting time can't be before 09:00! 
-            Choose a different time.
-            """
-        ))
-        return CHOOSING_TIME
 
     context.user_data['selected_time'] = user_input
     keyboard = utils.generate_duration_keyboard(user_input, context)[0] # [0] for the reply, [1] for the values
