@@ -28,7 +28,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # ~Global~
 PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
 PRIORITY_CODES = json.loads(PRIORITY_CODES)
-gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
+gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
+
 wks = gc.open('Biblio-logs').worksheet_by_title('logs')
 
 load_dotenv()
