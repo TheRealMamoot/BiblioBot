@@ -65,7 +65,7 @@ def generate_time_keyboard(selected_date: str):
         [KeyboardButton(time) for time in times[i:i+5]]
         for i in range(0, len(times), 5)
     ]
-    keyboard_buttons.insert(0, [KeyboardButton('⬅️')])
+    keyboard_buttons.append([KeyboardButton('⬅️')])
 
     return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
@@ -86,7 +86,7 @@ def generate_duration_keyboard(selected_time: str, context: ContextTypes.DEFAULT
         [KeyboardButton(dur) for dur in durations[i:i+8]]
         for i in range(0, len(durations), 8)
     ]
-    keyboard_buttons.insert(0, [KeyboardButton('⬅️')])
+    keyboard_buttons.insert([KeyboardButton('⬅️')], 0)
 
     return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True), durations
 
@@ -159,5 +159,3 @@ def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYP
     else:
         message += "_No upcoming reservations._"
     return message
-
-#%%

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import json
 import logging
 import os
 import threading
@@ -20,13 +21,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Env Vars
 
 # ~Local~
-# import json
 # with open(os.path.join(os.getcwd(), 'priorities.json'), 'r') as f:
 #     PRIORITY_CODES = json.load(f)  # NOT json.loads
 # gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))
 
 # ~Global~
 PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
+PRIORITY_CODES = json.loads(PRIORITY_CODES)
 gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
 wks = gc.open('Biblio-logs').worksheet_by_title('logs')
 
