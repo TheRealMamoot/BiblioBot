@@ -5,6 +5,7 @@ import pandas as pd
 from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
 from telegram.ext import ContextTypes
 import textwrap
+from zoneinfo import ZoneInfo
 
 def generate_days():
     today = datetime.today()
@@ -40,20 +41,20 @@ def generate_date_keyboard():
     return ReplyKeyboardMarkup(keyboard_buttons)
 
 def generate_time_keyboard(selected_date: str):
+    today = datetime.now(ZoneInfo('Europe/Rome')).today()
     date_obj = datetime.strptime(selected_date.split(' ')[-1], '%Y-%m-%d')
-    today = datetime.today()
+    date_obj = date_obj.replace(tzinfo=ZoneInfo('Europe/Rome'))
     year = today.year if today.month <= date_obj.month else today.year + 1
-    full_date = datetime(year, date_obj.month, date_obj.day)
-
+    full_date = datetime(year, date_obj.month, date_obj.day, tzinfo=ZoneInfo('Europe/Rome'))
     end_hour = 13 if full_date.weekday() == 5 else 22 # Saturdays
 
     # Check starting time.
     if full_date.date() == today.date():
         hour = today.hour
         minute = 0 if today.minute < 30 else 30
-        current = datetime(year, date_obj.month, date_obj.day, hour, minute)
+        current = datetime(year, date_obj.month, date_obj.day, hour, minute, tzinfo=ZoneInfo('Europe/Rome'))
     else:
-        current = datetime(year, date_obj.month, date_obj.day, 9, 0)
+        current = datetime(year, date_obj.month, date_obj.day, 9, 0, tzinfo=ZoneInfo('Europe/Rome'))
     
     times = []
     while current.hour < end_hour or (current.hour == end_hour and current.minute == 0):

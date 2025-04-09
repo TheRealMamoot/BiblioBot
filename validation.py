@@ -5,6 +5,7 @@ import re
 import pandas as pd
 from telegram import Update
 from telegram.ext import ContextTypes
+from zoneinfo import ZoneInfo
 
 def validate_email(email: str) -> bool:
 
@@ -51,16 +52,16 @@ def duration_overlap(update:Update, context: ContextTypes.DEFAULT_TYPE, history:
             return True
     return False
 
-def time_overlap(update:Update, context: ContextTypes.DEFAULT_TYPE, history: pd.DataFrame) -> bool:
+def time_not_overlap(update:Update, context: ContextTypes.DEFAULT_TYPE, history: pd.DataFrame) -> bool:
 
     filtered = history[(history['codice_fiscale'] == context.user_data['codice_fiscale']) & 
                        (history['email'] == context.user_data['email']) & 
                        (history['selected_date'] == context.user_data['selected_date'])
     ]
-    reserving_start = datetime.strptime(update.message.text.strip(), '%H:%M')
+    reserving_start = datetime.strptime(update.message.text.strip(), '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
     for _, row in filtered.iterrows():
-        existing_start = datetime.strptime(row['start'], '%H:%M')
-        existing_end = datetime.strptime(row['end'], '%H:%M')
+        existing_start = datetime.strptime(row['start'], '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
+        existing_end = datetime.strptime(row['end'], '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
         if reserving_start >= existing_start - timedelta(minutes=30) and reserving_start < existing_end: 
             return False
     return True

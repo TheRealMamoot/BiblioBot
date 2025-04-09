@@ -13,17 +13,25 @@ from zoneinfo import ZoneInfo
 
 import utils
 from jobs import run_job
-from validation import validate_email, validate_codice_fiscale, duration_overlap, time_overlap
+from validation import validate_email, validate_codice_fiscale, duration_overlap, time_not_overlap
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Env Vars
-# gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))  # Local
-gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
+
+# ~Local~
+# import json
+# with open(os.path.join(os.getcwd(), 'priorities.json'), 'r') as f:
+#     PRIORITY_CODES = json.load(f)  # NOT json.loads
+# gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))
+
+# ~Global~
+PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
+gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
 wks = gc.open('Biblio-logs').worksheet_by_title('logs')
 
 load_dotenv()
-TOKEN = os.getenv('TELEGRAM_TOKEN')
+TOKEN: str = os.getenv('TELEGRAM_TOKEN')
 
 # States
 AGREEMENT, CREDENTIALS, RESERVE_TYPE, CHOOSING_DATE, CHOOSING_TIME, CHOOSING_DUR, CONFIRMING, RETRY = range(8)
@@ -68,7 +76,6 @@ async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return ConversationHandler.END
 
     elif user_input == "👍 Yes, I agree.":
-        
         user = update.effective_user
         name = user.first_name if user.first_name else user.username
         context.user_data['username'] = user.username
@@ -161,6 +168,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     context.user_data['codice_fiscale'] = codice.upper()
     context.user_data['name'] = name
     context.user_data['email'] = email.lower()
+    context.user_data['priority'] = PRIORITY_CODES.get(codice.upper(), 2)
 
     keyboard = utils.generate_reservation_type_keyboard()
     await update.message.reply_text(
@@ -277,7 +285,7 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return CHOOSING_DATE
     try:
         datetime.strptime(user_input, '%H:%M')
-        time_obj = datetime.strptime(user_input, '%H:%M')
+        time_obj = datetime.strptime(user_input, '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
         if (time_obj.hour + time_obj.minute / 60) < 9:
             await update.message.reply_text(
                     textwrap.dedent(
@@ -287,12 +295,13 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 """
             ))
             return CHOOSING_TIME
+        
     except ValueError:
         await update.message.reply_text(
             'Not that difficult to pick an option form the list! Just saying. 🤷‍♂️')
         return CHOOSING_TIME
     
-    if not time_overlap(update, context, wks.get_as_df()): 
+    if not time_not_overlap(update, context, wks.get_as_df()): 
         await update.message.reply_text(
                 textwrap.dedent(
             f"""
@@ -382,7 +391,6 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     end_time = end_time.strftime('%H:%M')
 
     if user_input == '✅ Yes, all looks good.':
-
         await writer(update, context)
         await update.message.reply_text(
         textwrap.dedent(
@@ -478,6 +486,7 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['user_firstname'],
     context.user_data['user_lastname'],
     context.user_data['codice_fiscale'],
+    context.user_data['priority'],
     context.user_data['name'],
     context.user_data['email'],
     context.user_data['selected_date'],
