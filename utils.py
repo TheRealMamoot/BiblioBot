@@ -86,7 +86,7 @@ def generate_duration_keyboard(selected_time: str, context: ContextTypes.DEFAULT
         [KeyboardButton(dur) for dur in durations[i:i+8]]
         for i in range(0, len(durations), 8)
     ]
-    keyboard_buttons.insert([KeyboardButton('⬅️')], 0)
+    keyboard_buttons.append([KeyboardButton('⬅️')])
 
     return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True), durations
 
