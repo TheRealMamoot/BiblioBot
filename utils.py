@@ -41,17 +41,17 @@ def generate_date_keyboard():
     return ReplyKeyboardMarkup(keyboard_buttons)
 
 def generate_time_keyboard(selected_date: str):
-    today = datetime.now(ZoneInfo('Europe/Rome')).today()
+    now = datetime.now(ZoneInfo('Europe/Rome'))
     date_obj = datetime.strptime(selected_date.split(' ')[-1], '%Y-%m-%d')
     date_obj = date_obj.replace(tzinfo=ZoneInfo('Europe/Rome'))
-    year = today.year if today.month <= date_obj.month else today.year + 1
+    year = now.year if now.month <= date_obj.month else now.year + 1
     full_date = datetime(year, date_obj.month, date_obj.day, tzinfo=ZoneInfo('Europe/Rome'))
     end_hour = 13 if full_date.weekday() == 5 else 22 # Saturdays
 
     # Check starting time.
-    if full_date.date() == today.date():
-        hour = today.hour
-        minute = 0 if today.minute < 30 else 30
+    if full_date.date() == now.date():
+        hour = now.hour
+        minute = 0 if now.minute < 30 else 30
         current = datetime(year, date_obj.month, date_obj.day, hour, minute, tzinfo=ZoneInfo('Europe/Rome'))
     else:
         current = datetime(year, date_obj.month, date_obj.day, 9, 0, tzinfo=ZoneInfo('Europe/Rome'))
