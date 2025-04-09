@@ -45,6 +45,7 @@ Make sure to make the following changes in `main.py` and `jobs.py`
 ```python
 gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'<your_json_file>')) # Uncomment this line    
 gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS']) # Delete or comment this line
+wks = gc.open('<your_spreadsheet_name>').worksheet_by_title('<spreadsheet_tab_name>') # Create a new Google sheet beforehand
 ```
 And finally:
 ```bash

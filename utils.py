@@ -21,9 +21,9 @@ def generate_days():
 
 def generate_reservation_type_keyboard():
    keyboard_buttons = [
-       [KeyboardButton('⬅️ Edit credentials')], 
        [KeyboardButton('⏳ I need a slot for future.')], 
-       [KeyboardButton('⚡️ I need a slot for today.')]
+       [KeyboardButton('⚡️ I need a slot for today.')],
+       [KeyboardButton('⬅️ Edit credentials')]
        ]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
@@ -34,8 +34,8 @@ def generate_date_keyboard():
         row = [KeyboardButton(date) for date in dates[i:i+3]]
         keyboard_buttons.append(row)
     
-    keyboard_buttons.insert(0, [KeyboardButton('⬅️ Edit reservation type')])
-    keyboard_buttons.insert(1, [KeyboardButton('🗓️ Show current reservations')])
+    keyboard_buttons.insert(0, [KeyboardButton('🗓️ Show current reservations')])
+    keyboard_buttons.append([KeyboardButton('⬅️ Edit reservation type')])
 
     return ReplyKeyboardMarkup(keyboard_buttons)
 
@@ -90,11 +90,11 @@ def generate_duration_keyboard(selected_time: str, context: ContextTypes.DEFAULT
     return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True), durations
 
 def generate_confirmation_keyboard():
-   keyboard_buttons = [[KeyboardButton('⬅️ No, take me back.')], [KeyboardButton('✅ Yes, all looks good.')]]
+   keyboard_buttons = [[KeyboardButton('✅ Yes, all looks good.')], [KeyboardButton('⬅️ No, take me back.')]]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 def generate_retry_keyboard():
-   keyboard_buttons = [[KeyboardButton("🆕 Let's go for another date.")], [KeyboardButton("💡 Suggestion ?")]]
+   keyboard_buttons = [[KeyboardButton("🆕 Let's go for another date.")], [KeyboardButton('🗓️ Show current reservations')], [KeyboardButton("💡 Feedback")]]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 def generate_start_keyboard(edit_credential_stage: bool = False):
@@ -102,6 +102,10 @@ def generate_start_keyboard(edit_credential_stage: bool = False):
    if edit_credential_stage:
        keyboard_buttons = [[KeyboardButton("➡️ Changed my mind.")]]
        
+   return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+def generate_agreement_keyboard():
+   keyboard_buttons = [[KeyboardButton("👍 Yes, I agree.")], [KeyboardButton("👎 No, I don't agree.")]]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 def support_message(name):
@@ -115,7 +119,7 @@ def support_message(name):
             alireza.mahmoudian.am@gmail.com
 
             Cool person, you should check him out.
-            Don't you dare press /start again! 😠
+            Don't you dare /start again! 😠
     """
     return textwrap.dedent(text)
 
@@ -138,12 +142,21 @@ def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYP
         )   
     if len(current) != 0:
         for _, row in current.iterrows():
+            status = f'✅ {row['status']}' if row['status']=='success' \
+                else f'🔄 {row['status']}' if row['status']=='pending' \
+                else f'⚠️ {row['status']}' if row['status']=='fail' \
+                else f'❌ {row['status']}' if row['status']=='terminated' \
+                else 'undefined'
+            retry = f" - Will try again at ##:00 and ##:30 hours for maximum 3 retries." if row['status'] =='fail' else ''
             message += textwrap.dedent(
                 f"Date: *{row['selected_date']}*\n"
                 f"Time: *{row['start']}* - *{row['end']}*\n"
                 f"Duration: *{row['selected_dur']}* *hours*\n"
+                f"Status: *{status.capitalize()}*_{retry}_\n"
                 f"-----------------------\n"
             )
     else:
         message += "_No upcoming reservations._"
     return message
+
+#%%

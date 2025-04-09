@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import logging
 import os
 import threading
+import uuid
 
 from dotenv import load_dotenv
 import pygsheets
@@ -25,53 +26,100 @@ load_dotenv()
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 
 # States
-CREDENTIALS, RESERVE_TYPE, CHOOSING_DATE, CHOOSING_TIME, CHOOSING_DUR, CONFIRMING, RETRY = range(7)
+AGREEMENT, CREDENTIALS, RESERVE_TYPE, CHOOSING_DATE, CHOOSING_TIME, CHOOSING_DUR, CONFIRMING, RETRY = range(8)
 
 # Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
-    user = update.effective_user
-    name = user.first_name if user.first_name else user.username
-    context.user_data['username'] = user.username
-    context.user_data['user_firstname'] = user.first_name
-    context.user_data['user_lastname'] = user.last_name
-    logging.info(f"User {user} started chat at {datetime.now(ZoneInfo('Europe/Rome'))}")
-
-    user_input = update.message.text.strip()
-    if user_input == "🤝 Reach out!":
-        await update.message.reply_text(
-        utils.support_message(name),
-            parse_mode='Markdown', 
-        )
-        return CREDENTIALS
-
-    gif_url = 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ2F6cWowaG5oYjdkejhqamQxaWJ5bmxhcXQxY2w5azhieGlkZWwyNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xTiIzJSKB4l7xTouE8/giphy.gif' 
-    await update.message.reply_animation(gif_url)
     await update.message.reply_text(
         textwrap.dedent(
-            f"""
-            Ciao {name}! 👋 The name's *Biblio*.
+        """
+        *📄 User Agreement*
+        *📣 Data Usage Notice*
 
-            I'm here to make your biblioteca reservations because you're too lazy and disorganized to do it yourself. 📚
+        ❗ By using this bot, you agree to the collection and temporary storage of the following *data*:
 
-            First, tell me who exactly you are. I will need: 
-             
-            your _Codice Fiscale_, _Full Name_, and _Email_.
+        📌 Your *Telegram username*, *first name*, and *last name* (if available)
+        📌 Your provided *Codice Fiscale*, *full name*, and *email address*
+        📌 Your selected *reservation date*, *time*, and *duration* at Università degli Studi di Milano's Library of Biology, Computer Science, Chemistry and Physics (*BICF*)
+        📌 The *status* of your reservation (*active* or *cancelled*) 
+        📌 *General activity data*, including your *interactions* with the bot during the reservation process
 
-            Example: *ABCDEF12G34H567I*, *Mamoot Real*, *brain@rot.com*
+        ❕ This data is used *exclusively* for making and managing *BICF reservations* more easily on your behalf.
+        ❕ Your data is *never shared* with third parties and is used solely to assist with *reservation automation* and *troubleshooting*.
 
-            Shouldn't be too hard.
-            """
+        🤝🏻 By continuing to use this bot, you *agree to these terms*.
+        """
         ),
-        parse_mode='Markdown',
-        reply_markup=utils.generate_start_keyboard()
+        parse_mode='Markdown', 
+        reply_markup=utils.generate_agreement_keyboard()
     )
-    return CREDENTIALS
+    return AGREEMENT
 
 # Handlers
+async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user_input = update.message.text.strip()
+
+    if user_input == "👎 No, I don't agree.":
+        await update.message.reply_text(
+            "Sorry to see you go! Hope you change your mind. Use /start again in case you do.",
+            reply_markup=ReplyKeyboardRemove()
+        ),
+        return ConversationHandler.END
+
+    elif user_input == "👍 Yes, I agree.":
+        
+        user = update.effective_user
+        name = user.first_name if user.first_name else user.username
+        context.user_data['username'] = user.username
+        context.user_data['user_firstname'] = user.first_name
+        context.user_data['user_lastname'] = user.last_name
+        logging.info(f"{user} started chat at {datetime.now(ZoneInfo('Europe/Rome'))}")
+
+        user_input = update.message.text.strip()
+        if user_input == "🤝 Reach out!":
+            await update.message.reply_text(
+            utils.support_message(name),
+                parse_mode='Markdown', 
+            )
+            return CREDENTIALS
+
+        gif_url = 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ2F6cWowaG5oYjdkejhqamQxaWJ5bmxhcXQxY2w5azhieGlkZWwyNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xTiIzJSKB4l7xTouE8/giphy.gif' 
+        await update.message.reply_animation(gif_url)
+        await update.message.reply_text(
+            textwrap.dedent(
+                f"""
+                Ciao *{name}*! 
+                👋 The name's *Biblio*.
+                I'm here to make your BICF reservations because you're too lazy and disorganized to do it yourself. 📚
+
+                First, tell me who exactly you are. I will need: 
+                your _Codice Fiscale_, _Full Name_, and _Email_.
+
+                Example: 
+                *ABCDEF12G34H567I*, 
+                *Mamoot Real*, 
+                *brain@rot.com*
+
+                📌_Comma placement matters. Spacing does not._
+
+                Shouldn't be too hard.
+                """
+            ),
+            parse_mode='Markdown',
+            reply_markup=utils.generate_start_keyboard()
+        )
+        return CREDENTIALS
+    
+    else:
+        await update.message.reply_text(
+            "Please agree to the terms."
+        )
+        return AGREEMENT
+
 async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if not update.message or not update.message.text:
-        await update.message.reply_text('Sure, waste your time why not ? I can do this all day. 🥱')
+        await update.message.reply_text('Sure, waste your time why not? I can do this all day. 🥱')
         return CREDENTIALS
     
     user_input = update.message.text.strip()
@@ -110,16 +158,16 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("🚫 Nice try with a fake email. Try again!")
         return CREDENTIALS
 
-    context.user_data['codice_fiscale'] = codice
+    context.user_data['codice_fiscale'] = codice.upper()
     context.user_data['name'] = name
-    context.user_data['email'] = email
+    context.user_data['email'] = email.lower()
 
     keyboard = utils.generate_reservation_type_keyboard()
     await update.message.reply_text(
                 textwrap.dedent(
             f"""
-            There we go! Your data is saved. FOREVER! 😈
-            Now, you can plan ahead for future days or,
+            There we go! Your data is saved. FOREVER! 😈 (JUST KIDDING!)
+            Now, you can plan ahead for future or,
             If you're so desperate and need a slot for today, try to book now. No promises!
             """
         ),
@@ -137,7 +185,7 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(
                 textwrap.dedent(
             f"""
-            Messed it up already ?! _sighs_
+            Messed it up already?! _sighs_
             your _Codice Fiscale_, _Full Name_, and _Email_.
             Example: *ABCDEF12G34H567I*, *Mamoot Real*, *brain@rot.com*
             """
@@ -150,7 +198,7 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
     elif user_input == '⏳ I need a slot for future.':
         keyboard = utils.generate_date_keyboard()
         await update.message.reply_text(
-            'So, when will it be ? 📅',
+            'So, when will it be? 📅',
             reply_markup=keyboard
         )
         logging.info(f"🔄 {update.effective_user} selected slot at {datetime.now(ZoneInfo('Europe/Rome'))}")
@@ -162,7 +210,7 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
             reply_markup=keyboard
         )
         return RESERVE_TYPE
-    
+
     else:
         await update.message.reply_text(
             "The options are right there you know. Pick one, that's it.",
@@ -243,12 +291,23 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             """
         ))
         return CHOOSING_TIME
+    
+    time_obj = datetime.strptime(user_input, '%H:%M')
+    if (time_obj.hour + time_obj.minute / 60) < 9:
+        await update.message.reply_text(
+                textwrap.dedent(
+            f"""
+            ⚠️ Starting time can't be before 09:00! 
+            Choose a different time.
+            """
+        ))
+        return CHOOSING_TIME
 
     context.user_data['selected_time'] = user_input
     keyboard = utils.generate_duration_keyboard(user_input, context)[0] # [0] for the reply, [1] for the values
 
     await update.message.reply_text(
-        f'How long will you absolutely NOT be productive over there ? 🕦 Give me hours.', reply_markup=keyboard)
+        f'How long will you absolutely NOT be productive over there? 🕦 Give me hours.', reply_markup=keyboard)
     logging.info(f"🔄 {update.effective_user} selected time at {datetime.now(ZoneInfo('Europe/Rome'))}")
     return CHOOSING_DUR
 
@@ -297,7 +356,7 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_text(
         textwrap.dedent(
             f"""
-            All looks good ?
+            All looks good?
 
             Codice Fiscale: *{context.user_data.get('codice_fiscale')}*
 
@@ -328,7 +387,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         await update.message.reply_text(
         textwrap.dedent(
             f"""
-            ✅ Done! That's about it.
+            ☑️ Done! That's about it.
             Reservation made at *{datetime.now(ZoneInfo('Europe/Rome')).strftime('%Y-%m-%d %H:%M:%S')}*
 
             Codice Fiscale: *{context.user_data.get('codice_fiscale')}*
@@ -337,8 +396,8 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             On *{context.user_data.get('selected_date')}*
             From *{start_time}* - *{end_time}* (*{context.user_data.get('selected_duration')} hours*)
 
-            Do you want to go for a another date?
-            I'm not that into you unfortunately, so don't 🚶.
+            Do you want to go for another date?
+            I'm not that into you unfortunately, so don't. 🚶
             """
         ),
         parse_mode='Markdown',
@@ -374,7 +433,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         logging.info(f"⏳ {update.effective_user} reinitiated the process at {datetime.now(ZoneInfo('Europe/Rome'))}")
         return CHOOSING_DATE
     
-    elif user_input == "💡 Suggestion ?":
+    elif user_input == "💡 Feedback":
         user = update.effective_user
         name = user.first_name if user.first_name else user.username
         await update.message.reply_text(
@@ -382,12 +441,20 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         parse_mode='Markdown',
         )
         return RETRY
+
+    elif user_input == '🗓️ Show current reservations':
+        await update.message.reply_text(
+            utils.show_existing_reservations(update, context, wks.get_as_df()),
+            parse_mode='Markdown',
+        )
+        return RETRY
+
     else:
         await update.message.reply_text(
         textwrap.dedent(
             f"""
             Off you go now, Bye. 😘
-            Don't you dare press /start again 😠!
+            Don't you dare /start again 😠!
             """
         ),
         parse_mode='Markdown',
@@ -399,13 +466,14 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_time = context.user_data.get('selected_time')
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
     end_time = end_time.strftime('%H:%M')
-
-    history = wks.get_as_df()
-
-    index = len(history) 
+    input_timestamp = datetime.now(ZoneInfo('Europe/Rome'))
+    status = 'pending'
+    status_timestamp = datetime.now(ZoneInfo('Europe/Rome'))
+    retries='0'
+    unique_id = str(uuid.uuid4())
 
     values=[
-    index,
+    unique_id,
     context.user_data['username'],
     context.user_data['user_firstname'],
     context.user_data['user_lastname'],
@@ -416,7 +484,10 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_time,
     end_time,
     context.user_data['selected_duration'],
-    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+    input_timestamp,
+    status,
+    retries,
+    status_timestamp
     ]
     values = list(map(str, values))
     wks.append_table(values=values, start='A1', overwrite=False)
@@ -424,10 +495,10 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Misc
 async def fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Hey! who or what do you think I am ? 😑 /start again.')
+    await update.message.reply_text('Hey! who or what do you think I am? 😑 /start again.')
 
 async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Piano Piano eh ? use /start first.')
+    await update.message.reply_text('Piano piano eh? use /start first.')
 
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update and hasattr(update, 'message'):
@@ -445,6 +516,7 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)], 
         states={
+            AGREEMENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, user_agreement)],
             CREDENTIALS: [MessageHandler(filters.TEXT & ~filters.COMMAND, user_validation)],
             RESERVE_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, reservation_selection)],
             CHOOSING_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, date_selection)],
