@@ -30,52 +30,29 @@ touch .env
 Paste the following in `.env` (replace the placeholders with your actual values):
 ```bash
 TELEGRAM_TOKEN=your_telegram_bot_token
-GSHEETS='{
-  "type": "service_account",
-  "project_id": "...",
-  "private_key_id": "...",
-  "private_key": "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n",
-  "client_email": "...",
-  "client_id": "...",
-  ...
-}'
 ```
-Or you can place your google service account credential JSON directly in your directory. 
-Make sure to make the following changes in `main.py` and `jobs.py`
+You can place your Google service account credential and priority JSON directly in your directory. 
+Make sure to make the following changes in `main.py` and `jobs.py`. You must create a user priority list and a Google spreadsheet beforehand. Remember to replace your sheet and tab name in ```wks = gc.open('<your_sheet_name>').worksheet_by_title('<your_tab_name>')```
 ```python
-gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'<your_json_file>')) # Uncomment this line    
-gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS']) # Delete or comment this line
-wks = gc.open('<your_spreadsheet_name>').worksheet_by_title('<spreadsheet_tab_name>') # Create a new Google sheet beforehand
+# Uncomment these
+with open(os.path.join(os.getcwd(), '<user_priority_codes.json'), 'r') as f:
+    PRIORITY_CODES = json.load(f)  # NOT json.loads
+gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'<your_google_credentials.json>'))
+
+# Comment or delete these
+PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
+PRIORITY_CODES = json.loads(PRIORITY_CODES)
+gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
 ```
+User priorities for getting slots are based on Coidce Fiscale. Certan codes can have different priorities, Highest being 0.
+```bash
+PRIORITY_LIST={
+  "ABCDEF12G34H567I": 0,
+  "LMNOPQ98R76T543U": 1,
+  "XYZABC00A00B000C": 2}
+```
+
 And finally:
 ```bash
 python main.py
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

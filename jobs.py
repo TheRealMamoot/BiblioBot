@@ -53,7 +53,7 @@ def job():
             data.loc[idx, 'retries'] = str(int(row['retries'])+1)
             data.loc[idx, 'status'] = 'terminated' if int(row['retries']) > 14 else 'fail'
             data.loc[idx, 'status_timestamp'] = datetime.now(ZoneInfo('Europe/Rome'))
-    del data['temp_duration_int']
+    del data['temp_duration_int'], data['temp_datetime']
     wks.clear()
     wks.set_dataframe(data, start='A1', copy_head=True, copy_index=False)
     logging.info(f'🔄 Data refreshed at {datetime.now(ZoneInfo('Europe/Rome'))}')
