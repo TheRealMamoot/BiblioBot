@@ -15,6 +15,8 @@ from zoneinfo import ZoneInfo
 
 import utils
 from jobs import run_job
+from reservation import set_reservation, confirm_reservation
+from slot_datetime import reserve_datetime
 from validation import validate_email, validate_codice_fiscale, duration_overlap, time_not_overlap
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -22,19 +24,19 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Env Vars
 
 # ~Local~
-# with open(os.path.join(os.getcwd(), 'priorities.json'), 'r') as f:
-#     PRIORITY_CODES = json.load(f)  # NOT json.loads
-# gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))
+with open(os.path.join(os.getcwd(), 'priorities.json'), 'r') as f:
+    PRIORITY_CODES = json.load(f)  # NOT json.loads
+gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))
 
 # ~Global~
-PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
-PRIORITY_CODES = json.loads(PRIORITY_CODES)
-gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
+# PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
+# PRIORITY_CODES = json.loads(PRIORITY_CODES)
+# gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
 
-wks = gc.open('Biblio-logs').worksheet_by_title('logs')
+wks = gc.open('Biblio-logs').worksheet_by_title('tests')
 
 load_dotenv()
-TOKEN: str = os.getenv('TELEGRAM_TOKEN')
+TOKEN: str = os.getenv('TELEGRAM_TOKEN_S')
 
 # States
 class States(IntEnum):
@@ -43,11 +45,8 @@ class States(IntEnum):
     RESERVE_TYPE = auto()
     CHOOSING_DATE = auto()
     CHOOSING_TIME = auto()
-    CHOOSING_TIME_INSTANT = auto()
     CHOOSING_DUR = auto()
-    CHOOSING_DUR_INSTANT = auto()
     CONFIRMING = auto()
-    CONFIRMING_INSTANT = auto()
     RETRY = auto()
 
 # Commands
@@ -117,7 +116,7 @@ async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 First, tell me who exactly you are. I will need: 
                 your _Codice Fiscale_, _Full Name_, and _Email_.
 
-                Example: 
+                E.g. 
                 *ABCDEF12G34H567I*, 
                 *Mamoot Real*, 
                 *brain@rot.com*
@@ -217,13 +216,14 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
         )
         return States.CREDENTIALS
     
+
     elif user_input == '⏳ I need a slot for later.':
         keyboard = utils.generate_date_keyboard()
         await update.message.reply_text(
             'So, when will it be? 📅',
             reply_markup=keyboard
         )
-        context.user_data['instant'] = True
+        context.user_data['instant'] = False
         logging.info(f"🔄 {update.effective_user} selected REGULAR reservation at {datetime.now(ZoneInfo('Europe/Rome'))}")
         return States.CHOOSING_DATE
 
@@ -234,12 +234,12 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
         date = f'{now_day}, {now_date}'
         await update.message.reply_text(
             'So, when will it be? 🕑',
-            reply_markup=utils.generate_time_keyboard(date)
+            reply_markup=utils.generate_time_keyboard(date, instant=True)
         )
-        context.user_data['instant'] = False
-        context['selected_date'] = date
+        context.user_data['instant'] = True
+        context.user_data['selected_date'] = date
         logging.info(f"🔄 {update.effective_user} selected INSTANT reservation at {datetime.now(ZoneInfo('Europe/Rome'))}")
-        return States.CHOOSING_TIME_INSTANT
+        return States.CHOOSING_TIME
 
     else:
         await update.message.reply_text(
@@ -318,6 +318,13 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text('Choose a date, AGAIN! 😒', reply_markup=keyboard)
         return States.CHOOSING_DATE
     
+    elif user_input == '🗓️ Show current reservations':
+        await update.message.reply_text(
+            utils.show_existing_reservations(update, context, wks.get_as_df()),
+            parse_mode='Markdown',
+        )
+        return States.CHOOSING_TIME
+    
     try:
         datetime.strptime(user_input, '%H:%M')
         time_obj = datetime.strptime(user_input, '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
@@ -329,15 +336,11 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 Choose a different time.
                 """
             ))
-            if context.user_data['instant']:
-                return States.CHOOSING_TIME_INSTANT
             return States.CHOOSING_TIME
         
     except ValueError:
         await update.message.reply_text(
             'Not that difficult to pick an option form the list! Just saying. 🤷‍♂️')
-        if context.user_data['instant']:
-            return States.CHOOSING_TIME_INSTANT
         return States.CHOOSING_TIME
     
     if not time_not_overlap(update, context, wks.get_as_df()): 
@@ -348,8 +351,6 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             Choose a different time.
             """
         ))
-        if context.user_data['instant']:
-            return States.CHOOSING_TIME_INSTANT
         return States.CHOOSING_TIME
 
     context.user_data['selected_time'] = user_input
@@ -358,22 +359,18 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text(
         f'How long will you absolutely NOT be productive over there? 🕦 Give me hours.', reply_markup=keyboard)
     
-    if context.user_data['instant']:
-        logging.info(f"🔄 {update.effective_user} selected INSTANT time at {datetime.now(ZoneInfo('Europe/Rome'))}")
-        return States.CHOOSING_DUR_INSTANT
-    
-    logging.info(f"🔄 {update.effective_user} selected REGULAR time at {datetime.now(ZoneInfo('Europe/Rome'))}")
+    res_type = 'INSTANT' if context.user_data['instant'] else 'REGULAR'
+    logging.info(f"🔄 {update.effective_user} selected {res_type} time at {datetime.now(ZoneInfo('Europe/Rome'))}")
     return States.CHOOSING_DUR
 
 async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
     if user_input == '⬅️':
-        keyboard = utils.generate_time_keyboard(context.user_data.get('selected_date'))
+        keyboard = utils.generate_time_keyboard(context.user_data.get('selected_date'), 
+                                                instant=context.user_data['instant'])
         await update.message.reply_text(
             'Make up your mind! choose a time ALREADY 🙄', reply_markup=keyboard)
-        if context.user_data['instant']:
-            return States.CHOOSING_TIME_INSTANT
         return States.CHOOSING_TIME
 
     selected_time = context.user_data.get('selected_time')
@@ -383,15 +380,11 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not user_input.isdigit():
         await update.message.reply_text(
             "Now you're just messing with me. Just pick the duration!")
-        if context.user_data['instant']:
-            return States.CHOOSING_DUR_INSTANT
         return States.CHOOSING_DUR
     
     if int(user_input) > max_dur:
         await update.message.reply_text(
             "Well they are not going to let you sleep there! Try again. 🤷‍♂️")
-        if context.user_data['instant']:
-            return States.CHOOSING_DUR_INSTANT
         return States.CHOOSING_DUR
     
     if duration_overlap(update, context, wks.get_as_df()): 
@@ -402,13 +395,11 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
             Choose a different duration.
             """
         ))
-        if context.user_data['instant']:
-            return States.CHOOSING_DUR_INSTANT
         return States.CHOOSING_DUR
 
     context.user_data['selected_duration'] = user_input
-    flow = 'INSTANT' if context.user_data['instant'] else 'REGULAR '
-    logging.info(f"🔄 {update.effective_user} selected {flow} duration at {datetime.now(ZoneInfo('Europe/Rome'))}")
+    res_type = 'INSTANT' if context.user_data['instant'] else 'REGULAR'
+    logging.info(f"🔄 {update.effective_user} selected {res_type} duration at {datetime.now(ZoneInfo('Europe/Rome'))}")
 
     start_time = context.user_data.get('selected_time')
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
@@ -419,23 +410,16 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
         textwrap.dedent(
             f"""
             All looks good?
-
             Codice Fiscale: *{context.user_data.get('codice_fiscale')}*
-
             Full Name: *{context.user_data.get('name')}*
-
             Email: *{context.user_data.get('email')}*
-
             On *{context.user_data.get('selected_date')}*
-
             From *{start_time}* - *{end_time}* (*{context.user_data.get('selected_duration')} Hours*)
             """
         ),
         parse_mode='Markdown',
         reply_markup=keyboard
     )
-    if context.user_data['instant']:
-        return States.CONFIRMING_INSTANT
     return States.CONFIRMING
 
 async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -444,39 +428,79 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     start_time = context.user_data.get('selected_time')
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
     end_time = end_time.strftime('%H:%M')
+    date = context.user_data['selected_date'].split(' ')[-1]
+    selected_dur = int(context.user_data['selected_duration'])
+    start, end, duration = reserve_datetime(date, start_time, selected_dur)
 
     if user_input == '✅ Yes, all looks good.':
+        user_data = {
+            'codice_fiscale': context.user_data['codice_fiscale'],
+            'cognome_nome': context.user_data['name'],
+            'email': context.user_data['email']
+        }
+        request_status_message = f"📌 Registration for slot *successful*!"
+        retry_status_message = f'‼️ Reservation request will be processed when slots *reset*. *Be patient!* you will be notified.'
+        res_type = 'INSTANT' if context.user_data['instant'] else 'REGULAR'
+
+        logging.info(f'✅ **1** {res_type} Slot identified for {user_data['cognome_nome']}')
+        logging.info(f"{update.effective_user} request confirmed at {datetime.now(ZoneInfo('Europe/Rome'))}")
+        context.user_data['created_at'] = datetime.now(ZoneInfo('Europe/Rome'))
+        context.user_data['status'] = 'pending'
+        context.user_data['booking_code'] = 'TBD'
+        context.user_data['retries'] = '0'
+        if context.user_data['instant']:
+            try:
+                reservation_response = set_reservation(start, end, duration, user_data)
+                logging.info(f'✅ **2** {res_type} Reservation set for {user_data['cognome_nome']}')
+                confirm_reservation(reservation_response['entry'])
+                logging.info(f'✅ **3** {res_type} Reservation confirmed for {user_data['cognome_nome']}')
+                context.user_data['status'] = 'success'
+                context.user_data['booking_code'] = reservation_response['codice_prenotazione']
+                context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
+                # context.user_data['retries'] = '0'
+                request_status_message = f"✅ Reservation *successful*!"
+                retry_status_message=''
+
+            except Exception as e:
+                logging.error(f'❌ {res_type} Reservation failed for {user_data['cognome_nome']} — {e}')
+                context.user_data['retries'] = '1'
+                context.user_data['status'] = 'fail'
+                context.user_data['booking_code'] = 'NA'
+                context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
+                request_status_message = f"⛔ Reservation *failed*! *Slot not available*."
+                retry_status_message = f'‼️ *No need to try again!* I will automatically try to get it when slots open, unless the time for the requested slot *has passed*.'
+
         await update.message.reply_text(
-        textwrap.dedent(
-            f"""
-            ☑️ Done! That's about it.
-            Reservation made at *{datetime.now(ZoneInfo('Europe/Rome')).strftime('%Y-%m-%d %H:%M:%S')}*
+                textwrap.dedent(
+                    f"""
+                    {request_status_message}
+                    Requested at *{datetime.now(ZoneInfo('Europe/Rome')).strftime('%Y-%m-%d %H:%M:%S')}*
 
-            Codice Fiscale: *{context.user_data.get('codice_fiscale')}*
-            Full Name: *{context.user_data.get('name')}*
-            Email: *{context.user_data.get('email')}*
-            On *{context.user_data.get('selected_date')}*
-            From *{start_time}* - *{end_time}* (*{context.user_data.get('selected_duration')} hours*)
+                    Codice Fiscale: *{context.user_data.get('codice_fiscale')}*
+                    Full Name: *{context.user_data.get('name')}*
+                    Email: *{context.user_data.get('email')}*
+                    On: *{context.user_data.get('selected_date')}*
+                    From: *{start_time}* - *{end_time}* (*{context.user_data.get('selected_duration')} hours*)
+                    Booking Code: *{context.user_data['booking_code'].upper()}*
+                    Reservation Type: *{res_type.title()}*
+                    {retry_status_message}
 
-            Do you want to go for another date?
-            I'm not that into you unfortunately, so don't. 🚶
-            """
-        ),
-        parse_mode='Markdown',
-        reply_markup=utils.generate_retry_keyboard()
-    )
+                    Do you want to go for another slot?
+                    """
+                ),
+            parse_mode='Markdown',
+            reply_markup=utils.generate_retry_keyboard()
+        )
+
         await writer(update, context)
-        logging.info(f"☑️ {update.effective_user} confirmed at {datetime.now(ZoneInfo('Europe/Rome'))}")
         return States.RETRY 
-    
+
     elif user_input == '⬅️ No, take me back.':
         keyboard = utils.generate_duration_keyboard(context.user_data.get('selected_time'), context)[0]
         await update.message.reply_text(
             'I overestimated you it seems. Duration please. 😬',
             reply_markup=keyboard
         )
-        if context.user_data['instant']:
-            return States.CHOOSING_DUR_INSTANT
         return States.CHOOSING_DUR
     
     else:
@@ -489,14 +513,19 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
-    if user_input == "🆕 Let's go for another date.":
+    if user_input == "🆕 Let's go again!":
         keyboard = utils.generate_date_keyboard()
+        result = States.CHOOSING_DATE
+        if context.user_data['instant']:
+            keyboard = utils.generate_reservation_type_keyboard()
+            result = States.RESERVE_TYPE
+
         await update.message.reply_text(
             'Ah ****, here we go again! 😪',
             reply_markup=keyboard
         )
         logging.info(f"⏳ {update.effective_user} reinitiated the process at {datetime.now(ZoneInfo('Europe/Rome'))}")
-        return States.CHOOSING_DATE
+        return result
     
     elif user_input == "💡 Feedback":
         user = update.effective_user
@@ -531,12 +560,11 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_time = context.user_data.get('selected_time')
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
     end_time = end_time.strftime('%H:%M')
-    input_timestamp = datetime.now(ZoneInfo('Europe/Rome'))
-    status = 'pending'
-    status_timestamp = datetime.now(ZoneInfo('Europe/Rome'))
-    retries='0'
-    booking_code='TBD'
-    instant=str(context.user_data.get('instant') )
+    # context.user_data['status'] = context.user_data.get('status') is None else context.user_data.get('status')
+    context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome')) if context.user_data.get('updated_at') is None else context.user_data.get('updated_at')
+    # context.user_data['retries'] = '0' if context.user_data.get('retries') is None else context.user_data.get('retries')
+    # booking_code = 'TBD' if context.user_data.get('booking_code') is None else context.user_data.get('booking_code') 
+    instant = str(context.user_data.get('instant'))
     unique_id = str(uuid.uuid4())
 
     values=[
@@ -552,11 +580,11 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_time,
     end_time,
     context.user_data['selected_duration'],
-    booking_code,
-    input_timestamp,
-    retries,
-    status,
-    status_timestamp,
+    context.user_data['booking_code'],
+    context.user_data['created_at'],
+    context.user_data['retries'],
+    context.user_data['status'],
+    context.user_data['updated_at'],
     instant
     ]
     values = list(map(str, values))

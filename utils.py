@@ -8,7 +8,7 @@ import textwrap
 from zoneinfo import ZoneInfo
 
 def generate_days():
-    today = datetime.today()
+    today = datetime.now(ZoneInfo('Europe/Rome')).today()
     days = []
     for i in range(7):
         next_day = today + timedelta(days=i)
@@ -40,7 +40,7 @@ def generate_date_keyboard():
 
     return ReplyKeyboardMarkup(keyboard_buttons)
 
-def generate_time_keyboard(selected_date: str):
+def generate_time_keyboard(selected_date: str, instant: bool=False):
     now = datetime.now(ZoneInfo('Europe/Rome'))
     date_obj = datetime.strptime(selected_date.split(' ')[-1], '%Y-%m-%d')
     date_obj = date_obj.replace(tzinfo=ZoneInfo('Europe/Rome'))
@@ -66,6 +66,9 @@ def generate_time_keyboard(selected_date: str):
         for i in range(0, len(times), 5)
     ]
     keyboard_buttons.append([KeyboardButton('⬅️')])
+
+    if instant:
+        keyboard_buttons.insert(0, [KeyboardButton('🗓️ Show current reservations')])
 
     return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
@@ -95,7 +98,7 @@ def generate_confirmation_keyboard():
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 def generate_retry_keyboard():
-   keyboard_buttons = [[KeyboardButton("🆕 Let's go for another date.")], [KeyboardButton('🗓️ Show current reservations')], [KeyboardButton("💡 Feedback")]]
+   keyboard_buttons = [[KeyboardButton("🆕 Let's go again!")], [KeyboardButton('🗓️ Show current reservations')], [KeyboardButton("💡 Feedback")]]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 def generate_start_keyboard(edit_credential_stage: bool = False):
@@ -142,22 +145,25 @@ def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYP
         f"-----------------------\n"
         )   
     if len(current) != 0:
-        for _, row in current.iterrows():
+        for idx, row in current.iterrows():
             status = f'✅ {row['status']}' if row['status']=='success' \
                 else f'🔄 {row['status']}' if row['status']=='pending' \
                 else f'⚠️ {row['status']}' if row['status']=='fail' \
                 else f'❌ {row['status']}' if row['status']=='terminated' \
                 else 'undefined'
             booking_code: str = row['booking_code']
-            retry = f" - Will try again at ##:00 and ##:30 hours" if row['status'] =='fail' else ''
+            res_type = 'Instant' if row['instant']=='True' else 'Regular'
+            retry = f" - Retry at :00 and :30 of every hour." if row['status'] =='fail' else ''
             message += textwrap.dedent(
+                # f"Reservation NO: *{idx+1:02d}*\n"
                 f"Date: *{row['selected_date']}*\n"
                 f"Time: *{row['start']}* - *{row['end']}*\n"
                 f"Duration: *{row['selected_dur']}* *hours*\n"
                 f"Booking Code: *{booking_code.upper()}*\n"
+                f"Reservation Type: *{res_type}*\n"
                 f"Status: *{status.title()}*_{retry}_\n"
                 f"-----------------------\n"
             )
     else:
-        message += "_No upcoming reservations._"
+        message += "_Your have no reservations at the moment._"
     return message
