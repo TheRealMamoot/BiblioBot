@@ -48,6 +48,8 @@ def duration_overlap(update:Update, context: ContextTypes.DEFAULT_TYPE, history:
     for _, row in filtered.iterrows():
         existing_start = datetime.strptime(row['start'], '%H:%M')
         existing_end = datetime.strptime(row['end'], '%H:%M')
+        if row['status']=='terminated':
+            continue
         if reserving_start < existing_end and reserving_end > existing_start:
             return True
     return False
@@ -62,6 +64,8 @@ def time_not_overlap(update:Update, context: ContextTypes.DEFAULT_TYPE, history:
     for _, row in filtered.iterrows():
         existing_start = datetime.strptime(row['start'], '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
         existing_end = datetime.strptime(row['end'], '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
+        if row['status']=='terminated':
+            continue
         if reserving_start >= existing_start - timedelta(minutes=30) and reserving_start < existing_end: 
             return False
     return True

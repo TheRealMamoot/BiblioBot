@@ -2,8 +2,8 @@ from reservation import set_reservation, confirm_reservation
 from slot_datetime import reserve_datetime
 
 def main():
-    date = '2025-04-10'
-    start_time = '21:00'
+    date = '2025-04-11'
+    start_time = '20:00'
     duration = 1
     user_data = {'codice_fiscale':'***',
                 'cognome_nome':'***',

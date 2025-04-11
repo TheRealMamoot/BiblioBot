@@ -9,12 +9,12 @@ import uuid
 from dotenv import load_dotenv
 import pygsheets
 from telegram import Update, ReplyKeyboardRemove
-from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, ContextTypes, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, ContextTypes, CallbackContext, filters
 import textwrap
 from zoneinfo import ZoneInfo
 
 import utils
-from jobs import run_job
+from jobs import run_reserve_job, run_notify_job
 from reservation import set_reservation, confirm_reservation
 from slot_datetime import reserve_datetime
 from validation import validate_email, validate_codice_fiscale, duration_overlap, time_not_overlap
@@ -24,19 +24,19 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Env Vars
 
 # ~Local~
-with open(os.path.join(os.getcwd(), 'priorities.json'), 'r') as f:
-    PRIORITY_CODES = json.load(f)  # NOT json.loads
-gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))
+# with open(os.path.join(os.getcwd(), 'priorities.json'), 'r') as f:
+#     PRIORITY_CODES = json.load(f)  # NOT json.loads
+# gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))
 
 # ~Global~
-# PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
-# PRIORITY_CODES = json.loads(PRIORITY_CODES)
-# gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
+PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
+PRIORITY_CODES = json.loads(PRIORITY_CODES)
+gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
 
-wks = gc.open('Biblio-logs').worksheet_by_title('tests')
+wks = gc.open('Biblio-logs').worksheet_by_title('logs')
 
 load_dotenv()
-TOKEN: str = os.getenv('TELEGRAM_TOKEN_S')
+TOKEN: str = os.getenv('TELEGRAM_TOKEN')
 
 # States
 class States(IntEnum):
@@ -51,6 +51,8 @@ class States(IntEnum):
 
 # Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    chat_id = update.effective_chat.id
+    context.bot_data['chat_id'] = chat_id 
     context.user_data.clear()
     await update.message.reply_text(
         textwrap.dedent(
@@ -571,6 +573,8 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     end_time = end_time.strftime('%H:%M')
     context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome')) if context.user_data.get('updated_at') is None else context.user_data.get('updated_at')
     instant = str(context.user_data.get('instant'))
+    status_change = 'False'
+    notifed = 'False'
     unique_id = str(uuid.uuid4())
 
     values=[
@@ -591,11 +595,40 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['retries'],
     context.user_data['status'],
     context.user_data['updated_at'],
-    instant
+    instant,
+    status_change,
+    notifed
     ]
     values = list(map(str, values))
     wks.append_table(values=values, start='A1', overwrite=False)
     logging.info(f"✔️ {update.effective_user} data successfully added at {datetime.now(ZoneInfo('Europe/Rome'))}")
+
+# Notif
+async def send_reservation_update(context: CallbackContext):
+    history = wks.get_as_df()
+    for idx, row in history.iterrows():
+        if row['notified']=='True':
+            continue
+
+        if row['status_change']=='True':
+            id = context.bot_data['chat_id']
+            state = f"SUCCESFUL! ✅" if row['status']=='success' else f"TERMINATED! ❌" if row['status']=='terminated' else ''
+            retry_message = f"❗️ _You should try reserving another slot. No more retries will be made for this slot!_" if row['status']=='terminated' else \
+            f"❇️ _You should now be able to go to the library now._" if row['status']=='success' else ''
+            notification = textwrap.dedent(
+                f"""
+                Reservation for
+                *{row['name']}*
+                on: *{row['selected_date']}*
+                at: *{row['start']}* - *{row['end']}* (*{row['selected_dur']}* *hours*)
+                was *{state}*
+                {retry_message}
+                """
+            )
+            await context.bot.send_message(chat_id=id, text=notification, parse_mode='Markdown')
+            history.loc[idx, 'notified'] = 'True'
+    wks.clear()
+    wks.set_dataframe(history, start='A1', copy_head=True, copy_index=False)
 
 # Misc
 async def fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -613,13 +646,12 @@ async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     print(f'Update {update} caused error {context.error}')
 
-# async def push_notif(update: Update, context: ContextTypes.DEFAULT_TYPE, message: str, status_change: bool) -> str:
-#     if status_change:
-#         await update.message.reply_text(message)
+async def post_init(application):
+    run_notify_job(application, send_reservation_update)
 
 # App
 def main():
-    app = Application.builder().token(TOKEN).build()
+    app = Application.builder().token(TOKEN).post_init(post_init).build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)], 
@@ -644,8 +676,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, restart))
 
     app.add_error_handler(error)
-
-    threading.Thread(target=run_job, daemon=True).start()
+    threading.Thread(target=run_reserve_job, daemon=True).start()
 
     app.run_polling()
 
