@@ -145,7 +145,8 @@ def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYP
         f"-----------------------\n"
         )   
     if len(current) != 0:
-        for idx, row in current.iterrows():
+        idx = 1
+        for _, row in current.iterrows():
             status = f'✅ {row['status']}' if row['status']=='success' \
                 else f'🔄 {row['status']}' if row['status']=='pending' \
                 else f'⚠️ {row['status']}' if row['status']=='fail' \
@@ -155,7 +156,7 @@ def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYP
             res_type = 'Instant' if row['instant']=='True' else 'Regular'
             retry = f" - Retry at :00 and :30 of every hour." if row['status'] =='fail' else ''
             message += textwrap.dedent(
-                # f"Reservation NO: *{idx+1:02d}*\n"
+                f"Reservation NO: *{idx:02d}*\n"
                 f"Date: *{row['selected_date']}*\n"
                 f"Time: *{row['start']}* - *{row['end']}*\n"
                 f"Duration: *{row['selected_dur']}* *hours*\n"
@@ -164,6 +165,7 @@ def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYP
                 f"Status: *{status.title()}*_{retry}_\n"
                 f"-----------------------\n"
             )
+            idx += 1
     else:
         message += "_Your have no reservations at the moment._"
     return message

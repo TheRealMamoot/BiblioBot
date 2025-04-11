@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytz
 
@@ -25,7 +26,7 @@ def reserve_datetime(date: str, start: str, duration: int) -> tuple[int, int, in
     - tuple[int, int, int]: (start_time, end_time, duration in seconds)
     """
     try:
-        date_obj = datetime.strptime(date, '%Y-%m-%d')
+        date_obj = datetime.strptime(date, '%Y-%m-%d').replace(tzinfo=ZoneInfo('Europe/Rome'))
     except ValueError:
         raise ValueError('Invalid date format. Use YYYY-MM-DD.')
 
@@ -35,7 +36,7 @@ def reserve_datetime(date: str, start: str, duration: int) -> tuple[int, int, in
         raise ValueError('Reservations are not allowed on Sundays.')
 
     try:
-        time_obj = datetime.strptime(start, '%H:%M')
+        time_obj = datetime.strptime(start, '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
     except ValueError:
         raise ValueError('Invalid time format. Use HH:MM (24-hour format).')
 

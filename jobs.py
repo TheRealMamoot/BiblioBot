@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from itertools import product
 import logging
 import time
@@ -9,6 +9,7 @@ import pygsheets
 import pandas as pd
 import schedule
 
+# from main import push_notif
 from reservation import set_reservation, confirm_reservation
 from slot_datetime import reserve_datetime
 
@@ -18,16 +19,31 @@ def job():
     wks = gc.open('Biblio-logs').worksheet_by_title('tests')
     data = wks.get_as_df()
     data['temp_duration_int'] = pd.to_numeric(data['selected_dur'])
-    data['temp_datetime'] = pd.to_datetime(data['selected_date'])
-    data['temp_datetime'] = data['temp_datetime'].dt.tz_localize('UTC').dt.tz_convert('Europe/Rome')
+    data['temp_date'] = pd.to_datetime(data['selected_date'])
+    data['temp_date'] = data['temp_date'].dt.tz_localize('UTC').dt.tz_convert('Europe/Rome')
     data['temp_start'] = pd.to_datetime(data['start'], format='%H:%M').dt.time
+    data['temp_datetime'] = data.apply(
+        lambda row: datetime.combine(
+            row['temp_date'].date(), row['temp_start']
+        ).replace(tzinfo=ZoneInfo('Europe/Rome')),
+        axis=1
+    )
     data['retries'] = data['retries'].astype(str)
-
     data: pd.DataFrame = data.sort_values(['temp_datetime','priority','temp_duration_int', 'temp_start'], ascending=[True, True, False, True])
     today = datetime.now(ZoneInfo('Europe/Rome')).today().strftime('%A, %Y-%m-%d')
     for idx, row in data.iterrows():
+        # status_change = False
+        # old_status = row['status']
         if row['selected_date'] != today:
             continue
+
+        now = datetime.now(ZoneInfo('Europe/Rome'))
+        print(f"{row['temp_datetime'] + timedelta(minutes=3)}")
+        print(f'{now}')
+        if row['temp_datetime'] + timedelta(minutes=3) < now and row['status']=='fail':
+            data.loc[idx, 'status'] = 'terminated'
+            continue
+
         if row['status']=='success' or row['status']=='terminated':
             continue
 
@@ -55,8 +71,15 @@ def job():
             data.loc[idx, 'retries'] = str(int(row['retries'])+1)
             data.loc[idx, 'status'] = 'terminated' if int(row['retries']) > 18 else 'fail'
             data.loc[idx, 'updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
-    del data['temp_duration_int'], data['temp_datetime'], data['temp_start']
+
+        # new_status = row['status']
+        # if (old_status=='fail' or old_status=='pending') and old_status!=new_status:
+        #     status_change = True
+        
+    del data['temp_duration_int'], data['temp_date'], data['temp_start'], data['temp_datetime']
+
     wks.clear()
+    data['instant'] = data['instant'].astype(str).apply(lambda x: x.title())
     wks.set_dataframe(data, start='A1', copy_head=True, copy_index=False)
     logging.info(f'🔄 Data refreshed at {datetime.now(ZoneInfo('Europe/Rome'))}')
 
@@ -67,6 +90,7 @@ def run_job():
     for hour, minute, second in product(hours, minutes, seconds):
         time_str = f'{hour:02d}:{minute:02d}:{second:02d}'
         schedule.every().day.at(time_str, 'Europe/Rome').do(job)
+    # schedule.every(10).seconds.do(job)
     while True:
         schedule.run_pending()
         time.sleep(1)

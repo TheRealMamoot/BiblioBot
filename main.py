@@ -215,7 +215,6 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
             reply_markup=utils.generate_start_keyboard(edit_credential_stage=True)
         )
         return States.CREDENTIALS
-    
 
     elif user_input == '⏳ I need a slot for later.':
         keyboard = utils.generate_date_keyboard()
@@ -231,6 +230,15 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
         now = datetime.now(ZoneInfo('Europe/Rome'))
         now_day = now.strftime('%A')
         now_date = now.strftime('%Y-%m-%d')
+        week_day = now.weekday()
+
+        if week_day == 6: #Sunday
+            await update.message.reply_text(
+                "It's Sunday! Come on, chill. 😌", 
+                reply_markup=utils.generate_reservation_type_keyboard()
+                )
+            return States.RESERVE_TYPE
+        
         date = f'{now_day}, {now_date}'
         await update.message.reply_text(
             'So, when will it be? 🕑',
@@ -448,6 +456,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         context.user_data['status'] = 'pending'
         context.user_data['booking_code'] = 'TBD'
         context.user_data['retries'] = '0'
+
         if context.user_data['instant']:
             try:
                 reservation_response = set_reservation(start, end, duration, user_data)
@@ -457,7 +466,6 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 context.user_data['status'] = 'success'
                 context.user_data['booking_code'] = reservation_response['codice_prenotazione']
                 context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
-                # context.user_data['retries'] = '0'
                 request_status_message = f"✅ Reservation *successful*!"
                 retry_status_message=''
 
@@ -516,6 +524,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if user_input == "🆕 Let's go again!":
         keyboard = utils.generate_date_keyboard()
         result = States.CHOOSING_DATE
+
         if context.user_data['instant']:
             keyboard = utils.generate_reservation_type_keyboard()
             result = States.RESERVE_TYPE
@@ -560,10 +569,7 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_time = context.user_data.get('selected_time')
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
     end_time = end_time.strftime('%H:%M')
-    # context.user_data['status'] = context.user_data.get('status') is None else context.user_data.get('status')
     context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome')) if context.user_data.get('updated_at') is None else context.user_data.get('updated_at')
-    # context.user_data['retries'] = '0' if context.user_data.get('retries') is None else context.user_data.get('retries')
-    # booking_code = 'TBD' if context.user_data.get('booking_code') is None else context.user_data.get('booking_code') 
     instant = str(context.user_data.get('instant'))
     unique_id = str(uuid.uuid4())
 
@@ -606,6 +612,10 @@ async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=ReplyKeyboardRemove()
         )
     print(f'Update {update} caused error {context.error}')
+
+# async def push_notif(update: Update, context: ContextTypes.DEFAULT_TYPE, message: str, status_change: bool) -> str:
+#     if status_change:
+#         await update.message.reply_text(message)
 
 # App
 def main():
