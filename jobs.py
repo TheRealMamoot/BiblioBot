@@ -14,9 +14,9 @@ from reservation import set_reservation, confirm_reservation
 from slot_datetime import reserve_datetime
 
 def reserve_job():
-    gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json')) # Local - Must be commented by default.    
-    # gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
-    wks = gc.open('Biblio-logs').worksheet_by_title('tests')
+    # gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json')) # Local - Must be commented by default.    
+    gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
+    wks = gc.open('Biblio-logs').worksheet_by_title('logs')
     data = wks.get_as_df()
     data['temp_duration_int'] = pd.to_numeric(data['selected_dur'])
     data['temp_date'] = pd.to_datetime(data['selected_date'])
