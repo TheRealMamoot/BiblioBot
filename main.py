@@ -499,6 +499,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 context.user_data['status'] = 'success'
                 context.user_data['booking_code'] = reservation_response['codice_prenotazione']
                 context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
+                context.user_data['notifed'] = 'True'
                 request_status_message = f"✅ Reservation *successful*!"
                 retry_status_message=''
 
@@ -605,7 +606,7 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome')) if context.user_data.get('updated_at') is None else context.user_data.get('updated_at')
     instant = str(context.user_data.get('instant'))
     status_change = 'False'
-    notifed = 'False'
+    notifed = 'False' if context.user_data.get('notified') is None else context.user_data.get('notified')
     unique_id = str(uuid.uuid4())
 
     values=[
@@ -636,16 +637,22 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Notif
 async def send_reservation_update(context: CallbackContext):
+    id = context.bot_data['chat_id']
     history = wks.get_as_df()
     for idx, row in history.iterrows():
+        
         if row['notified']=='True':
             continue
+        now = datetime.now(ZoneInfo('Europe/Rome'))
+        today = datetime(year=now.year, month=now.month, day=now.day, tzinfo= ZoneInfo('Europe/Rome'))
+        date = datetime.strptime(row['selected_date'].split(' ')[-1], '%Y-%m-%d').replace(tzinfo=ZoneInfo('Europe/Rome'))
 
         if row['status_change']=='True':
-            id = context.bot_data['chat_id']
+            if today > date:
+                continue
             state = f"SUCCESFUL! ✅" if row['status']=='success' else f"TERMINATED! ❌" if row['status']=='terminated' else ''
             retry_message = f"❗️ _You should try reserving another slot. No more retries will be made for this slot!_" if row['status']=='terminated' else \
-            f"❇️ _You should now be able to go to the library now._" if row['status']=='success' else ''
+            f"❇️ _You should be able to go to the library now._" if row['status']=='success' else ''
             notification = textwrap.dedent(
                 f"""
                 Reservation for
