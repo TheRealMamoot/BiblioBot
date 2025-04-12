@@ -91,10 +91,10 @@ def reserve_job():
 
 def run_reserve_job():  
     hours = range(7, 23)  # 7 to 18 inclusive
-    minutes = [0,1,2,30,31,32]
+    minutes = [0,1,30,31,32]
     seconds = range(2, 30, 6)
     for hour, minute, second in product(hours, minutes, seconds):
-        time_str = f'{hour:02d}:{minute:02d}:{second:02d}'
+        time_str = f'{hour:02d}:{minute:02d}:{second:02d}'  
         schedule.every().day.at(time_str, 'Europe/Rome').do(reserve_job)
     while True:
         schedule.run_pending()
@@ -102,7 +102,7 @@ def run_reserve_job():
 
 def run_notify_job(application: Application, function):
     for hour in range(7, 23):
-        for minute in [5,7,15,34,36,45]:
+        for minute in [3,5,15,33,35,45]:
             job_time = dt_time(hour=hour, minute=minute, tzinfo=ZoneInfo('Europe/Rome'))
             application.job_queue.run_daily(
                 function,
