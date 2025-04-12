@@ -80,3 +80,19 @@ def confirm_reservation(booking_code: int) -> dict:
     except ValueError as e:
         logging.error(f'Value error: {e}')
         raise RuntimeError(f'Value error: {e}')
+    
+def cancel_reservation(codice: str, booking_code: str) -> dict:
+
+    url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/manage/{booking_code}?chiave={codice}'
+
+    try:
+        response = requests.post(url)
+        response.raise_for_status()
+        logging.info(f'Reservation canceled.')
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logging.error(f'Request failed: {e}')
+        raise RuntimeError(f'Value error: {e}')
+    except ValueError as e:
+        logging.error(f'Value error: {e}')
+        raise RuntimeError(f'Value error: {e}')

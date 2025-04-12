@@ -7,6 +7,13 @@ from telegram.ext import ContextTypes
 import textwrap
 from zoneinfo import ZoneInfo
 
+def generate_start_keyboard(edit_credential_stage: bool = False):
+   keyboard_buttons = [[KeyboardButton("🤝 Reach out!")], [KeyboardButton('❓ Help')]]
+   if edit_credential_stage:
+       keyboard_buttons = [[KeyboardButton("➡️ Changed my mind.")]]
+       
+   return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
 def generate_days():
     today = datetime.now(ZoneInfo('Europe/Rome')).today()
     days = []
@@ -22,8 +29,10 @@ def generate_days():
 
 def generate_reservation_type_keyboard():
    keyboard_buttons = [
+       [KeyboardButton('🗓️ Current reservations')],
        [KeyboardButton('⏳ I need a slot for later.')], 
-       [KeyboardButton('⚡️ I need a slot now.')],
+       [KeyboardButton('⚡️ I need a slot for now.')], 
+       [KeyboardButton('🚫 Cancel reservation')], 
        [KeyboardButton('⬅️ Edit credentials')]
        ]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
@@ -35,7 +44,7 @@ def generate_date_keyboard():
         row = [KeyboardButton(date) for date in dates[i:i+3]]
         keyboard_buttons.append(row)
     
-    keyboard_buttons.insert(0, [KeyboardButton('🗓️ Show current reservations')])
+    keyboard_buttons.insert(0, [KeyboardButton('🗓️ Current reservations')])
     keyboard_buttons.append([KeyboardButton('⬅️ Edit reservation type')])
 
     return ReplyKeyboardMarkup(keyboard_buttons)
@@ -49,13 +58,14 @@ def generate_time_keyboard(selected_date: str, instant: bool=False):
     end_hour = 13 if full_date.weekday() == 5 else 22 # Saturdays
 
     # Check starting time.
+    current = datetime(year, date_obj.month, date_obj.day, 9, 0, tzinfo=ZoneInfo('Europe/Rome'))
     if full_date.date() == now.date():
-        hour = now.hour
-        minute = 0 if now.minute < 30 else 30
-        current = datetime(year, date_obj.month, date_obj.day, hour, minute, tzinfo=ZoneInfo('Europe/Rome'))
-    else:
-        current = datetime(year, date_obj.month, date_obj.day, 9, 0, tzinfo=ZoneInfo('Europe/Rome'))
-    
+        if now.hour < 9:
+            current = datetime(year, date_obj.month, date_obj.day, 9, 0, tzinfo=ZoneInfo('Europe/Rome'))
+        else:
+            hour = now.hour
+            minute = 0 if now.minute < 30 else 30
+            current = datetime(year, date_obj.month, date_obj.day, hour, minute, tzinfo=ZoneInfo('Europe/Rome'))
     times = []
     while current.hour < end_hour or (current.hour == end_hour and current.minute == 0):
         times.append(current.strftime('%H:%M'))
@@ -68,7 +78,7 @@ def generate_time_keyboard(selected_date: str, instant: bool=False):
     keyboard_buttons.append([KeyboardButton('⬅️')])
 
     if instant:
-        keyboard_buttons.insert(0, [KeyboardButton('🗓️ Show current reservations')])
+        keyboard_buttons.insert(0, [KeyboardButton('🗓️ Current reservations')])
 
     return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
@@ -98,19 +108,16 @@ def generate_confirmation_keyboard():
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 def generate_retry_keyboard():
-   keyboard_buttons = [[KeyboardButton("🆕 Let's go again!")], [KeyboardButton('🗓️ Show current reservations')], [KeyboardButton("💡 Feedback")]]
-   return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
-
-def generate_start_keyboard(edit_credential_stage: bool = False):
-   keyboard_buttons = [[KeyboardButton("🤝 Reach out!")]]
-   if edit_credential_stage:
-       keyboard_buttons = [[KeyboardButton("➡️ Changed my mind.")]]
-       
+   keyboard_buttons = [[KeyboardButton("🆕 Let's go again!")], [KeyboardButton('🗓️ Current reservations')], [KeyboardButton("💡 Feedback")]]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 def generate_agreement_keyboard():
    keyboard_buttons = [[KeyboardButton("👍 Yes, I agree.")], [KeyboardButton("👎 No, I don't agree.")]]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+def generate_cancelation_keyboard():
+    keyboard_buttons = [[KeyboardButton("📅❌ Yes, I'm sure.")], [KeyboardButton("⬅️ No, take me back.")]]
+    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 def support_message(name):
     text = f"""

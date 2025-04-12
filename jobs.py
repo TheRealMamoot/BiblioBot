@@ -14,7 +14,7 @@ from reservation import set_reservation, confirm_reservation
 from slot_datetime import reserve_datetime
 
 def reserve_job():
-    # gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json')) # Local - Should be commented by default    
+    # gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json')) # Local - Must be commented by default.    
     gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
     wks = gc.open('Biblio-logs').worksheet_by_title('tests')
     data = wks.get_as_df()
@@ -102,7 +102,7 @@ def run_reserve_job():
 
 def run_notify_job(application: Application, function):
     for hour in range(7, 23):
-        for minute in [5,7,15,35,37,45]:
+        for minute in [4,6,15,34,36,45]:
             job_time = dt_time(hour=hour, minute=minute, tzinfo=ZoneInfo('Europe/Rome'))
             application.job_queue.run_daily(
                 function,

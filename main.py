@@ -34,6 +34,7 @@ PRIORITY_CODES = json.loads(PRIORITY_CODES)
 gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
 
 wks = gc.open('Biblio-logs').worksheet_by_title('logs')
+# wks = gc.open('Biblio-logs').worksheet_by_title('tests') # Only for tests. Must be commented.
 
 load_dotenv()
 TOKEN: str = os.getenv('TELEGRAM_TOKEN')
@@ -99,12 +100,6 @@ async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logging.info(f"{user} started chat at {datetime.now(ZoneInfo('Europe/Rome'))}")
 
         user_input = update.message.text.strip()
-        if user_input == "🤝 Reach out!":
-            await update.message.reply_text(
-            utils.support_message(name),
-                parse_mode='Markdown', 
-            )
-            return States.CREDENTIALS
 
         gif_url = 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ2F6cWowaG5oYjdkejhqamQxaWJ5bmxhcXQxY2w5azhieGlkZWwyNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xTiIzJSKB4l7xTouE8/giphy.gif' 
         await update.message.reply_animation(gif_url)
@@ -150,6 +145,14 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if user_input == "🤝 Reach out!":
         await update.message.reply_text(
             utils.support_message(name),
+            parse_mode='Markdown', 
+            reply_markup=utils.generate_start_keyboard()
+        )
+        return States.CREDENTIALS
+    
+    if user_input == "❓ Help":
+        await update.message.reply_text(
+            '⚒️ In development 🛠️',
             parse_mode='Markdown', 
             reply_markup=utils.generate_start_keyboard()
         )
@@ -210,7 +213,10 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
             f"""
             Messed it up already?! _sighs_
             your _Codice Fiscale_, _Full Name_, and _Email_.
-            Example: *ABCDEF12G34H567I*, *Mamoot Real*, *brain@rot.com*
+            Example: 
+            *ABCDEF12G34H567I*, 
+            *Mamoot Real*, 
+            *brain@rot.com*
             """
         ),
             parse_mode='Markdown', 
@@ -228,11 +234,22 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
         logging.info(f"🔄 {update.effective_user} selected REGULAR reservation at {datetime.now(ZoneInfo('Europe/Rome'))}")
         return States.CHOOSING_DATE
 
-    elif user_input == '⚡️ I need a slot now.':
+    elif user_input == '⚡️ I need a slot for now.':
         now = datetime.now(ZoneInfo('Europe/Rome'))
         now_day = now.strftime('%A')
         now_date = now.strftime('%Y-%m-%d')
         week_day = now.weekday()
+
+        open_time = 9
+        close_time = 22
+        if week_day == 5:
+            close_time = 13
+        if now.hour < open_time or now.hour >= close_time:
+            await update.message.reply_text(
+                "It's over for today! Go home. 😌", 
+                reply_markup=utils.generate_reservation_type_keyboard()
+                )
+            return States.RESERVE_TYPE
 
         if week_day == 6: #Sunday
             await update.message.reply_text(
@@ -250,6 +267,20 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
         context.user_data['selected_date'] = date
         logging.info(f"🔄 {update.effective_user} selected INSTANT reservation at {datetime.now(ZoneInfo('Europe/Rome'))}")
         return States.CHOOSING_TIME
+    
+    elif user_input == '🗓️ Current reservations':
+        await update.message.reply_text(
+            utils.show_existing_reservations(update, context, wks.get_as_df()),
+            parse_mode='Markdown',
+        )
+        return States.RESERVE_TYPE
+    
+    elif user_input == '🚫 Cancel reservation':
+        await update.message.reply_text(
+            '⚒️ In development 🛠️',
+            parse_mode='Markdown',
+        )
+        return States.RESERVE_TYPE
 
     else:
         await update.message.reply_text(
@@ -269,7 +300,7 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return States.RESERVE_TYPE
     
-    elif user_input == '🗓️ Show current reservations':
+    elif user_input == '🗓️ Current reservations':
         await update.message.reply_text(
             utils.show_existing_reservations(update, context, wks.get_as_df()),
             parse_mode='Markdown',
@@ -328,7 +359,7 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text('Choose a date, AGAIN! 😒', reply_markup=keyboard)
         return States.CHOOSING_DATE
     
-    elif user_input == '🗓️ Show current reservations':
+    elif user_input == '🗓️ Current reservations':
         await update.message.reply_text(
             utils.show_existing_reservations(update, context, wks.get_as_df()),
             parse_mode='Markdown',
@@ -547,7 +578,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         )
         return States.RETRY
 
-    elif user_input == '🗓️ Show current reservations':
+    elif user_input == '🗓️ Current reservations':
         await update.message.reply_text(
             utils.show_existing_reservations(update, context, wks.get_as_df()),
             parse_mode='Markdown',
@@ -622,6 +653,7 @@ async def send_reservation_update(context: CallbackContext):
                 on: *{row['selected_date']}*
                 at: *{row['start']}* - *{row['end']}* (*{row['selected_dur']}* *hours*)
                 was *{state}*
+                Booking Code: *{row['booking_code']}*
                 {retry_message}
                 """
             )
@@ -632,7 +664,7 @@ async def send_reservation_update(context: CallbackContext):
 
 # Misc
 async def fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Hey! who or what do you think I am? 😑 /start again.')
+    await update.message.reply_text('Hey! who or what do you think I am? 😑 use /start again if NOTHING is working.')
 
 async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Piano piano eh? use /start first.')
