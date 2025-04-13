@@ -7,6 +7,7 @@ from telegram.ext import ContextTypes
 import textwrap
 from zoneinfo import ZoneInfo
 
+# Keyboards
 def generate_start_keyboard(edit_credential_stage: bool = False):
    keyboard_buttons = [[KeyboardButton("🤝 Reach out!")], [KeyboardButton('❓ Help')]]
    if edit_credential_stage:
@@ -14,26 +15,14 @@ def generate_start_keyboard(edit_credential_stage: bool = False):
        
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
-def generate_days():
-    today = datetime.now(ZoneInfo('Europe/Rome')).today()
-    days = []
-    for i in range(7):
-        next_day = today + timedelta(days=i)
-        if next_day.weekday() != 6:  # Skip Sunday
-            day_name = next_day.strftime('%A')
-            formatted_date = next_day.strftime('%Y-%m-%d')
-            days.append(f'{day_name}, {formatted_date}')
-        if len(days) == 6:
-            break
-    return days
-
 def generate_reservation_type_keyboard():
    keyboard_buttons = [
        [KeyboardButton('🗓️ Current reservations')],
        [KeyboardButton('⏳ I need a slot for later.')], 
        [KeyboardButton('⚡️ I need a slot for now.')], 
        [KeyboardButton('🚫 Cancel reservation')], 
-       [KeyboardButton('⬅️ Edit credentials')]
+       [KeyboardButton('⬅️ Edit credentials')],
+       [KeyboardButton('❓ Help')],
        ]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
@@ -115,9 +104,28 @@ def generate_agreement_keyboard():
    keyboard_buttons = [[KeyboardButton("👍 Yes, I agree.")], [KeyboardButton("👎 No, I don't agree.")]]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
-def generate_cancelation_keyboard():
+def generate_cancelation_options_keyboard(reservations: list):
+    keyboard_buttons = [[KeyboardButton(slot)] for slot in reservations]
+    keyboard_buttons.append([KeyboardButton('⬅️ Back to reservation type')])
+    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+def generate_cancelation_confirm_keyboard():
     keyboard_buttons = [[KeyboardButton("📅❌ Yes, I'm sure.")], [KeyboardButton("⬅️ No, take me back.")]]
     return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+# Misc
+def generate_days():
+    today = datetime.now(ZoneInfo('Europe/Rome')).today()
+    days = []
+    for i in range(7):
+        next_day = today + timedelta(days=i)
+        if next_day.weekday() != 6:  # Skip Sunday
+            day_name = next_day.strftime('%A')
+            formatted_date = next_day.strftime('%Y-%m-%d')
+            days.append(f'{day_name}, {formatted_date}')
+        if len(days) == 6:
+            break
+    return days
 
 def support_message(name):
     text = f"""
@@ -134,15 +142,16 @@ def support_message(name):
     """
     return textwrap.dedent(text)
 
-def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYPE, history: pd.DataFrame) -> str:
+def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYPE, history: pd.DataFrame, cancel_stage: bool=False) -> str:
 
     coidce = context.user_data['codice_fiscale']
     email = context.user_data['email']
-    filtered = history[(history['codice_fiscale'] == coidce) & 
-                       (history['email'] == email)
+    filtered: pd.DataFrame = history[(history['codice_fiscale'] == coidce) & 
+                                     (history['email'] == email)
     ].copy()
     filtered['datetime'] = pd.to_datetime(filtered['selected_date'] + ' ' +filtered['end']) # ' ' acts as space
-    current = filtered[filtered['datetime'] > datetime.now()]
+    filtered['datetime'] = filtered['datetime'].dt.tz_localize('UTC').dt.tz_convert('Europe/Rome')
+    current = filtered[filtered['datetime'] > datetime.now(ZoneInfo('Europe/Rome'))]
     current = current.sort_values('datetime', ascending=True)
     name = update.effective_user.username if update.effective_user.username else update.effective_user.first_name
     message = textwrap.dedent(
@@ -152,6 +161,9 @@ def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYP
         f"-----------------------\n"
         )   
     if len(current) != 0:
+        if cancel_stage:
+            return current
+
         idx = 1
         for _, row in current.iterrows():
             status = f'✅ {row['status']}' if row['status']=='success' \
@@ -174,5 +186,11 @@ def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYP
             )
             idx += 1
     else:
-        message += "_Your have no reservations at the moment._"
+        message += "_You have no reservations at the moment._"
     return message
+
+def update_gsheet_data_point(data: pd.DataFrame, org_data_point_id: str, org_data_col_name: str, new_value, worksheet) -> None:
+    row_idx = data.index[data['id'] == org_data_point_id].tolist()
+    sheet_row = row_idx[0] + 2 # +2 because: 1 for zero-based index, 1 for header row
+    sheet_col = data.columns.get_loc(org_data_col_name) + 1 # 1-based for pygsheets 
+    worksheet.update_value((sheet_row, sheet_col), str(new_value))

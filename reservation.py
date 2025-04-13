@@ -83,7 +83,7 @@ def confirm_reservation(booking_code: int) -> dict:
     
 def cancel_reservation(codice: str, booking_code: str) -> dict:
 
-    url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/manage/{booking_code}?chiave={codice}'
+    url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/delete/{booking_code}?chiave={codice}'
 
     try:
         response = requests.post(url)

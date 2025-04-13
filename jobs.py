@@ -12,11 +12,13 @@ from telegram.ext import Application
 
 from reservation import set_reservation, confirm_reservation
 from slot_datetime import reserve_datetime
+from utils import update_gsheet_data_point
 
 def reserve_job():
-    # gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json')) # Local - Must be commented by default.    
-    gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
-    wks = gc.open('Biblio-logs').worksheet_by_title('logs')
+    gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json')) # Local - Must be commented by default.    
+    # gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
+    # wks = gc.open('Biblio-logs').worksheet_by_title('logs')
+    wks = gc.open('Biblio-logs').worksheet_by_title('tests')
     data = wks.get_as_df()
     data['temp_duration_int'] = pd.to_numeric(data['selected_dur'])
     data['temp_date'] = pd.to_datetime(data['selected_date'])
@@ -31,7 +33,8 @@ def reserve_job():
     data['retries'] = data['retries'].astype(str)
     data: pd.DataFrame = data.sort_values(['temp_datetime','priority','temp_duration_int', 'temp_start'], ascending=[True, True, False, True])
     today = datetime.now(ZoneInfo('Europe/Rome')).today().strftime('%A, %Y-%m-%d')
-    for idx, row in data.iterrows():
+    for _, row in data.iterrows():
+        id = row['id']
         status_change = False
         old_status = row['status']
         if row['status_change']=='True':
@@ -43,8 +46,9 @@ def reserve_job():
         now = datetime.now(ZoneInfo('Europe/Rome'))
         print(f"{row['temp_datetime'] + timedelta(minutes=3)}")
         print(f'{now}')
+
         if row['temp_datetime'] + timedelta(minutes=8) < now and row['status']=='fail':
-            data.loc[idx, 'status'] = 'terminated'
+            update_gsheet_data_point(data, id, 'status', 'terminated', wks)
             continue
 
         if row['status']=='success' or row['status']=='terminated':
@@ -66,27 +70,25 @@ def reserve_job():
             logging.info(f'✅ **2** Reservation set for {user_data['cognome_nome']}')
             confirm_reservation(reservation_response['entry'])
             logging.info(f'✅ **3** Reservation confirmed for {user_data['cognome_nome']}')
-            data.loc[idx, 'status'] = 'success'
-            data.loc[idx, 'booking_code'] = reservation_response['codice_prenotazione']
-            data.loc[idx, 'updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
+            update_gsheet_data_point(data, id, 'status', 'success', wks)
+            update_gsheet_data_point(data, id, 'booking_code', reservation_response['codice_prenotazione'], wks)
+            update_gsheet_data_point(data, id, 'updated_at', datetime.now(ZoneInfo('Europe/Rome')), wks)
+
         except Exception as e:
             logging.error(f'❌ Failed reservation for {user_data['cognome_nome']} — {e}')
-            data.loc[idx, 'retries'] = str(int(row['retries'])+1)
-            data.loc[idx, 'status'] = 'terminated' if int(row['retries']) > 18 else 'fail'
-            data.loc[idx, 'updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
+            update_gsheet_data_point(data, id, 'retries', int(row['retries'])+1, wks)
+            changed_status = 'terminated' if int(row['retries']) > 18 else 'fail'
+            update_gsheet_data_point(data, id, 'status', changed_status, wks)
+            update_gsheet_data_point(data, id, 'updated_at', datetime.now(ZoneInfo('Europe/Rome')), wks)
 
-        new_status = row['status']
+        new_data = wks.get_as_df()
+        new_status = new_data.loc[new_data['id'] == id, 'status'].values[0]
         if (old_status=='fail' or old_status=='pending') and old_status!=new_status:
             status_change = True
 
-        data.loc[idx, 'status_change'] = status_change
+        update_gsheet_data_point(data, id, 'status_change', status_change, wks)
         
     del data['temp_duration_int'], data['temp_date'], data['temp_start'], data['temp_datetime']
-
-    wks.clear()
-    data['instant'] = data['instant'].astype(str).apply(lambda x: x.title())
-    data['status_change'] = data['status_change'].astype(str).apply(lambda x: x.title())
-    wks.set_dataframe(data, start='A1', copy_head=True, copy_index=False)
     logging.info(f'🔄 Data refreshed at {datetime.now(ZoneInfo('Europe/Rome'))}')
 
 def run_reserve_job():  

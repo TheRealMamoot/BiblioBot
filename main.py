@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 import utils
 from jobs import run_reserve_job, run_notify_job
-from reservation import set_reservation, confirm_reservation
+from reservation import set_reservation, confirm_reservation, cancel_reservation
 from slot_datetime import reserve_datetime
 from validation import validate_email, validate_codice_fiscale, duration_overlap, time_not_overlap
 
@@ -24,20 +24,21 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Env Vars
 
 # ~Local~
-# with open(os.path.join(os.getcwd(), 'priorities.json'), 'r') as f:
-#     PRIORITY_CODES = json.load(f)  # NOT json.loads
-# gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))
+with open(os.path.join(os.getcwd(), 'priorities.json'), 'r') as f:
+    PRIORITY_CODES = json.load(f)  # NOT json.loads
+gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))
 
 # ~Global~
-PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
-PRIORITY_CODES = json.loads(PRIORITY_CODES)
-gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
+# PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
+# PRIORITY_CODES = json.loads(PRIORITY_CODES)
+# gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
 
-wks = gc.open('Biblio-logs').worksheet_by_title('logs')
-# wks = gc.open('Biblio-logs').worksheet_by_title('tests') # Only for tests. Must be commented.
+# ~Data Location~
+# wks = gc.open('Biblio-logs').worksheet_by_title('logs')
+wks = gc.open('Biblio-logs').worksheet_by_title('tests') # Only for tests. Must be commented.
 
 load_dotenv()
-TOKEN: str = os.getenv('TELEGRAM_TOKEN')
+TOKEN: str = os.getenv('TELEGRAM_TOKEN_S')
 
 # States
 class States(IntEnum):
@@ -48,6 +49,8 @@ class States(IntEnum):
     CHOOSING_TIME = auto()
     CHOOSING_DUR = auto()
     CONFIRMING = auto()
+    CANCELATION_SLOT_CHOICE = auto()
+    CANCELATION_CONFIRMING = auto()
     RETRY = auto()
 
 # Commands
@@ -276,9 +279,61 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
         return States.RESERVE_TYPE
     
     elif user_input == '🚫 Cancel reservation':
+        reservations = utils.show_existing_reservations(update, 
+                                                        context, 
+                                                        history=wks.get_as_df(), 
+                                                        cancel_stage=True)
+        choices = {}
+        buttons = []
+        for _, row in reservations.iterrows():
+            if row['status'] == 'terminated':
+                continue
+            status = '🔄' if row['status']=='pending' else '⚠️' if row['status']=='fail' else '✅' if row['status']=='success' else ''
+            button = f"{status} {row['selected_date']}: {row['start']} - {row['end']}"
+
+            choices[f"{row['id']}"] = {
+                'selected_date':row['selected_date'],
+                'start':row['start'],
+                'end':row['end'],
+                'selected_dur':row['selected_dur'],
+                'booking_code':row['booking_code'],
+                'status':row['status'],
+                'button':button
+            }
+            buttons.append(button)
+
+        if len(buttons) == 0:
+            await update.message.reply_text(
+                '_You have no reservations at the moment._',
+                parse_mode='Markdown'
+            )
+            return States.RESERVE_TYPE
+        
+        context.user_data['cancelation_choices'] = choices
+        keyboard = utils.generate_cancelation_options_keyboard(buttons)
+
+        logging.info(f"🔄 {update.effective_user} started cancelation at {datetime.now(ZoneInfo('Europe/Rome'))}")
+        await update.message.reply_text(
+                textwrap.dedent(
+                    f"""
+                    ❗ *Please make sure your reservation time has not ended*❗
+                    🔄 *Pending*: Reservation will be processed when slots open.
+                    ⚠️ *Failed*: Reservation request will be retried at :00 and :30 again.
+                    ✅ *Success*:. Reservation was succesful.
+
+                    That being said, which one will it be?
+                    """
+                ),
+                parse_mode='Markdown',
+                reply_markup=keyboard
+            )
+        return States.CANCELATION_SLOT_CHOICE
+    
+    elif user_input == "❓ Help":
         await update.message.reply_text(
             '⚒️ In development 🛠️',
-            parse_mode='Markdown',
+            parse_mode='Markdown', 
+            reply_markup=utils.generate_reservation_type_keyboard()
         )
         return States.RESERVE_TYPE
 
@@ -552,6 +607,102 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         )
         return States.CONFIRMING 
     
+# Canelation
+async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user_input = update.message.text.strip()
+
+    if user_input == '⬅️ Back to reservation type':
+        await update.message.reply_text(
+            'You are so determined, wow!',
+            reply_markup=utils.generate_reservation_type_keyboard()
+        )
+        return States.RESERVE_TYPE
+
+    choices: dict = context.user_data['cancelation_choices']
+    cancelation_id = next((id for id, deatils in choices.items() if deatils['button'] == user_input), None)
+    
+    if not cancelation_id:
+        await update.message.reply_text(
+            "Pick from the list!",
+        )
+        return States.CANCELATION_SLOT_CHOICE 
+
+    context.user_data['cancelation_chosen_slot_id'] = cancelation_id
+    logging.info(f"🔄 {update.effective_user} selected cancelation slot at {datetime.now(ZoneInfo('Europe/Rome'))}")
+
+    await update.message.reply_text(
+        textwrap.dedent(
+            f"""
+            Are you sure you want to cancel this slot ?
+            Codice Fiscale: *{context.user_data.get('codice_fiscale')}*
+            Full Name: *{context.user_data.get('name')}*
+            Email: *{context.user_data.get('email')}*
+            On *{choices[cancelation_id]['selected_date']}*
+            From *{choices[cancelation_id]['start']}* - *{choices[cancelation_id]['end']}*)
+            Satus: *{(choices[cancelation_id]['status']).title()}*
+            """
+        ),
+        parse_mode='Markdown',
+        reply_markup=utils.generate_cancelation_confirm_keyboard()
+    )
+    return States.CANCELATION_CONFIRMING
+
+async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user_input = update.message.text.strip()
+    if user_input == '⬅️ No, take me back.':
+        choices: dict = context.user_data['cancelation_choices']
+        reservation_buttons = [choice['button'] for choice in choices.values()]
+        await update.message.reply_text(
+            'God kill me now! 😭',
+            reply_markup=utils.generate_cancelation_options_keyboard(reservation_buttons)
+        )
+        return States.CANCELATION_SLOT_CHOICE
+    
+    elif user_input == "📅❌ Yes, I'm sure.":
+        history = wks.get_as_df()
+        cancelation_chosen_slot_id: str = context.user_data['cancelation_chosen_slot_id']
+        row_idx = history.index[history['id'] == cancelation_chosen_slot_id].tolist()
+        faiulure = False
+        if row_idx:
+            booking_code = history.loc[row_idx,'booking_code'].values[0]
+            if booking_code not in ['TBD','NA']:
+                try:
+                    cancel_reservation(context.user_data['codice_fiscale'], booking_code)
+                except RuntimeError as e:
+                    logging.error(f"🔄 {update.effective_user} cancelation was not completed at {datetime.now(ZoneInfo('Europe/Rome'))} -- {e}")
+                    faiulure = True
+                    await update.message.reply_text(
+                        "⚠️ Something went wrong while canceling! The time of the slot has most likely passed or it was canceled manually by you.")
+
+            sheet_row = row_idx[0] + 2  # +2 because: 1 for zero-based index, 1 for header row
+            col_number = history.columns.get_loc('status') + 1 # 1-based for pygsheets 
+            wks.update_value((sheet_row, col_number), 'terminated')
+            col_number = history.columns.get_loc('notified') + 1 
+            wks.update_value((sheet_row, col_number), 'True')
+
+            logging.info(f"✔️ {update.effective_user} confirmed cancelation at {datetime.now(ZoneInfo('Europe/Rome'))}")
+            if not faiulure:
+                await update.message.reply_text(
+                    '✔️ Reservation canceled successfully!',
+                    reply_markup=utils.generate_reservation_type_keyboard()
+                )
+            return States.RESERVE_TYPE
+
+        else:
+            logging.info(f"⚠️ {update.effective_user} cancelation slot NOT FOUND at {datetime.now(ZoneInfo('Europe/Rome'))}")
+            await update.message.reply_text(
+                '⚠️ Reservation cancelation usuccessfull!',
+                reply_markup=utils.generate_reservation_type_keyboard()
+            )
+            return States.RESERVE_TYPE
+        
+    else:
+        await update.message.reply_text(
+            'Just click. Please! 😭',
+        )
+        return States.CANCELATION_CONFIRMING
+
+# Retry   
 async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
@@ -640,7 +791,7 @@ async def send_reservation_update(context: CallbackContext):
     id = context.bot_data['chat_id']
     history = wks.get_as_df()
     for idx, row in history.iterrows():
-        
+        transaction_id = row['id']
         if row['notified']=='True':
             continue
         now = datetime.now(ZoneInfo('Europe/Rome'))
@@ -664,11 +815,9 @@ async def send_reservation_update(context: CallbackContext):
                 {retry_message}
                 """
             )
+            utils.update_gsheet_data_point(history, transaction_id, 'notified', 'True', wks)
             await context.bot.send_message(chat_id=id, text=notification, parse_mode='Markdown')
-            history.loc[idx, 'notified'] = 'True'
-    wks.clear()
-    wks.set_dataframe(history, start='A1', copy_head=True, copy_index=False)
-
+            
 # Misc
 async def fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Hey! who or what do you think I am? 😑 use /start again if NOTHING is working.')
@@ -702,6 +851,8 @@ def main():
             States.CHOOSING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, time_selection)],
             States.CHOOSING_DUR: [MessageHandler(filters.TEXT & ~filters.COMMAND, duration_selection)],
             States.CONFIRMING: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirmation)],
+            States.CANCELATION_SLOT_CHOICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, cancelation)],
+            States.CANCELATION_CONFIRMING: [MessageHandler(filters.TEXT & ~filters.COMMAND, cancelation_confirmation)],
             States.RETRY: [MessageHandler(filters.TEXT & ~filters.COMMAND, retry)],
         },
         fallbacks=[

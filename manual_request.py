@@ -1,4 +1,4 @@
-from reservation import set_reservation, confirm_reservation
+from reservation import set_reservation, confirm_reservation, cancel_reservation
 from slot_datetime import reserve_datetime
 
 def main():
@@ -12,6 +12,7 @@ def main():
     reservation_response = set_reservation(start, end, duration, user_data)
     confirm_reservation(reservation_response['entry'])
     print(reservation_response)
+    cancel_reservation(user_data['codice_fiscale'], reservation_response['codice_prenotazione'])
 
 if __name__ == '__main__':
     main()
