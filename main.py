@@ -7,6 +7,7 @@ import threading
 import uuid
 
 from dotenv import load_dotenv
+import pandas as pd
 import pygsheets
 from telegram import Update, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, ContextTypes, CallbackContext, filters
@@ -285,11 +286,19 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
                                                         cancel_stage=True)
         choices = {}
         buttons = []
+
+        if not isinstance(reservations, pd.DataFrame):
+            await update.message.reply_text(
+                '_You have no reservations at the moment._',
+                parse_mode='Markdown'
+            )
+            return States.RESERVE_TYPE
+        
         for _, row in reservations.iterrows():
             if row['status'] == 'terminated':
                 continue
             status = '🔄' if row['status']=='pending' else '⚠️' if row['status']=='fail' else '✅' if row['status']=='success' else ''
-            button = f"{status} {row['selected_date']}: {row['start']} - {row['end']}"
+            button = f"{status} {row['selected_date']} at {row['start']} - {row['end']}"
 
             choices[f"{row['id']}"] = {
                 'selected_date':row['selected_date'],
@@ -678,6 +687,8 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
             col_number = history.columns.get_loc('status') + 1 # 1-based for pygsheets 
             wks.update_value((sheet_row, col_number), 'terminated')
             col_number = history.columns.get_loc('notified') + 1 
+            wks.update_value((sheet_row, col_number), 'True')
+            col_number = history.columns.get_loc('status_change') + 1 
             wks.update_value((sheet_row, col_number), 'True')
 
             logging.info(f"✔️ {update.effective_user} confirmed cancelation at {datetime.now(ZoneInfo('Europe/Rome'))}")
