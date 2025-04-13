@@ -15,10 +15,10 @@ from slot_datetime import reserve_datetime
 from utils import update_gsheet_data_point
 
 def reserve_job():
-    gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json')) # Local - Must be commented by default.    
-    # gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
-    # wks = gc.open('Biblio-logs').worksheet_by_title('logs')
-    wks = gc.open('Biblio-logs').worksheet_by_title('tests')
+    # gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json')) # Local - Must be commented by default.    
+    gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
+    wks = gc.open('Biblio-logs').worksheet_by_title('logs')
+    # wks = gc.open('Biblio-logs').worksheet_by_title('tests') # Commented by default - only for tests
     data = wks.get_as_df()
     data['temp_duration_int'] = pd.to_numeric(data['selected_dur'])
     data['temp_date'] = pd.to_datetime(data['selected_date'])

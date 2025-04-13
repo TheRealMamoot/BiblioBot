@@ -24,21 +24,21 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Env Vars
 
 # ~Local~
-with open(os.path.join(os.getcwd(), 'priorities.json'), 'r') as f:
-    PRIORITY_CODES = json.load(f)  # NOT json.loads
-gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))
+# with open(os.path.join(os.getcwd(), 'priorities.json'), 'r') as f:
+#     PRIORITY_CODES = json.load(f)  # NOT json.loads
+# gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))
 
 # ~Global~
-# PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
-# PRIORITY_CODES = json.loads(PRIORITY_CODES)
-# gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
+PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
+PRIORITY_CODES = json.loads(PRIORITY_CODES)
+gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
 
 # ~Data Location~
-# wks = gc.open('Biblio-logs').worksheet_by_title('logs')
-wks = gc.open('Biblio-logs').worksheet_by_title('tests') # Only for tests. Must be commented.
+wks = gc.open('Biblio-logs').worksheet_by_title('logs')
+# wks = gc.open('Biblio-logs').worksheet_by_title('tests') # Only for tests. Must be commented.
 
 load_dotenv()
-TOKEN: str = os.getenv('TELEGRAM_TOKEN_S')
+TOKEN: str = os.getenv('TELEGRAM_TOKEN')
 
 # States
 class States(IntEnum):
