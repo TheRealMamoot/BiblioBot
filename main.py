@@ -37,10 +37,11 @@ gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS'])
 
 # ~Data Location~
 wks: Worksheet = gc.open('Biblio-logs').worksheet_by_title('logs')
-# wks = gc.open('Biblio-logs').worksheet_by_title('tests') # Only for tests. Must be commented.
+# wks: Worksheet = gc.open('Biblio-logs').worksheet_by_title('tests') # Only for tests. Must be commented.
 
 load_dotenv()
-TOKEN: str = os.getenv('TELEGRAM_TOKEN')
+# TOKEN: str = os.getenv('TELEGRAM_TOKEN')
+TOKEN: str = os.getenv('TELEGRAM_TOKEN') # Staging environmet. Commented by default
 
 # States
 class States(IntEnum):
@@ -84,6 +85,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         reply_markup=utils.generate_agreement_keyboard()
     )
     return States.AGREEMENT
+
+async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        utils.show_help(),
+        parse_mode='Markdown'
+    )
+
+async def feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        utils.show_support_message(),
+        parse_mode='Markdown'
+    )
 
 # Handlers
 async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -149,7 +162,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if user_input == "🤝 Reach out!":
         await update.message.reply_text(
-            utils.support_message(name),
+            utils.show_support_message(),
             parse_mode='Markdown', 
             reply_markup=utils.generate_start_keyboard()
         )
@@ -157,7 +170,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     
     if user_input == "❓ Help":
         await update.message.reply_text(
-            '⚒️ In development 🛠️',
+            utils.show_help(),
             parse_mode='Markdown', 
             reply_markup=utils.generate_start_keyboard()
         )
@@ -342,7 +355,7 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
     
     elif user_input == "❓ Help":
         await update.message.reply_text(
-            '⚒️ In development 🛠️',
+            utils.show_help(),
             parse_mode='Markdown', 
             reply_markup=utils.generate_reservation_type_keyboard()
         )
@@ -588,7 +601,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                     Full Name: *{context.user_data.get('name')}*
                     Email: *{context.user_data.get('email')}*
                     On: *{context.user_data.get('selected_date')}*
-                    From: *{start_time}* - *{end_time}* (*{context.user_data.get('selected_dur')}* hours)
+                    From: *{start_time}* - *{end_time}* (*{context.user_data.get('selected_duration')}* hours)
                     Booking Code: *{context.user_data['booking_code'].upper()}*
                     Reservation Type: *{res_type.title()}*
                     {retry_status_message}
@@ -649,7 +662,7 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             Full Name: *{context.user_data.get('name')}*
             Email: *{context.user_data.get('email')}*
             On *{choices[cancelation_id]['selected_date']}*
-            From *{choices[cancelation_id]['start']}* - *{choices[cancelation_id]['end']}* ({choices[cancelation_id]['selected_dur']})
+            From *{choices[cancelation_id]['start']}* - *{choices[cancelation_id]['end']}* (*{choices[cancelation_id]['selected_dur']}* hours)
             Satus: *{(choices[cancelation_id]['status']).title()}*
             """
         ),
@@ -735,10 +748,8 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return result
     
     elif user_input == "💡 Feedback":
-        user = update.effective_user
-        name = user.first_name if user.first_name else user.username
         await update.message.reply_text(
-        utils.support_message(name),
+        utils.show_support_message(),
         parse_mode='Markdown',
         )
         return States.RETRY
@@ -877,12 +888,16 @@ def main():
             States.RETRY: [MessageHandler(filters.TEXT & ~filters.COMMAND, retry)],
         },
         fallbacks=[
-            CommandHandler('start', start),  # Allows /start to reset everything
-            MessageHandler(filters.ALL, fallback),
+            CommandHandler('start', start), # Allows /start to reset everything
+            CommandHandler('help', help),
+            CommandHandler('feedback', feedback),
+            MessageHandler(filters.ALL, fallback)
         ],
         allow_reentry=True
     )
     app.add_handler(conv_handler)
+    app.add_handler(CommandHandler('help', help))
+    app.add_handler(CommandHandler('feedback', feedback))
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, restart))
 

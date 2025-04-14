@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 import pygsheets
-from pygsheets import   Worksheet
+from pygsheets import Worksheet
 import schedule
 from telegram.ext import Application
 
