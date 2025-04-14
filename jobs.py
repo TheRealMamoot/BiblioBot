@@ -5,8 +5,9 @@ import time
 import os
 from zoneinfo import ZoneInfo
 
-import pygsheets
 import pandas as pd
+import pygsheets
+from pygsheets import   Worksheet
 import schedule
 from telegram.ext import Application
 
@@ -17,7 +18,7 @@ from utils import update_gsheet_data_point
 def reserve_job():
     # gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json')) # Local - Must be commented by default.    
     gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
-    wks = gc.open('Biblio-logs').worksheet_by_title('logs')
+    wks: Worksheet = gc.open('Biblio-logs').worksheet_by_title('logs')
     # wks = gc.open('Biblio-logs').worksheet_by_title('tests') # Commented by default - only for tests
     data = wks.get_as_df()
     data['temp_duration_int'] = pd.to_numeric(data['selected_dur'])

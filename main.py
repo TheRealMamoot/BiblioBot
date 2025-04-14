@@ -7,8 +7,9 @@ import threading
 import uuid
 
 from dotenv import load_dotenv
-import pandas as pd
+from pandas import DataFrame
 import pygsheets
+from pygsheets import Worksheet
 from telegram import Update, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, ContextTypes, CallbackContext, filters
 import textwrap
@@ -35,7 +36,7 @@ PRIORITY_CODES = json.loads(PRIORITY_CODES)
 gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
 
 # ~Data Location~
-wks = gc.open('Biblio-logs').worksheet_by_title('logs')
+wks: Worksheet = gc.open('Biblio-logs').worksheet_by_title('logs')
 # wks = gc.open('Biblio-logs').worksheet_by_title('tests') # Only for tests. Must be commented.
 
 load_dotenv()
@@ -54,10 +55,10 @@ class States(IntEnum):
     CANCELATION_CONFIRMING = auto()
     RETRY = auto()
 
+user_chat_ids = {}
+
 # Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    chat_id = update.effective_chat.id
-    context.bot_data['chat_id'] = chat_id 
     context.user_data.clear()
     await update.message.reply_text(
         textwrap.dedent(
@@ -191,6 +192,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     context.user_data['name'] = name
     context.user_data['email'] = email.lower()
     context.user_data['priority'] = PRIORITY_CODES.get(codice.upper(), 2)
+    user_chat_ids[context.user_data['codice_fiscale']] = update.effective_chat.id
 
     keyboard = utils.generate_reservation_type_keyboard()
     await update.message.reply_text(
@@ -287,7 +289,7 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
         choices = {}
         buttons = []
 
-        if not isinstance(reservations, pd.DataFrame):
+        if not isinstance(reservations, DataFrame):
             await update.message.reply_text(
                 '_You have no reservations at the moment._',
                 parse_mode='Markdown'
@@ -328,7 +330,7 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
                     ❗ *Please make sure your reservation time has not ended*❗
                     🔄 *Pending*: Reservation will be processed when slots open.
                     ⚠️ *Failed*: Reservation request will be retried at :00 and :30 again.
-                    ✅ *Success*:. Reservation was succesful.
+                    ✅ *Success*: Reservation was succesful.
 
                     That being said, which one will it be?
                     """
@@ -586,7 +588,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                     Full Name: *{context.user_data.get('name')}*
                     Email: *{context.user_data.get('email')}*
                     On: *{context.user_data.get('selected_date')}*
-                    From: *{start_time}* - *{end_time}* (*{context.user_data.get('selected_duration')} hours*)
+                    From: *{start_time}* - *{end_time}* (*{context.user_data.get('selected_dur')}* hours)
                     Booking Code: *{context.user_data['booking_code'].upper()}*
                     Reservation Type: *{res_type.title()}*
                     {retry_status_message}
@@ -647,7 +649,7 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             Full Name: *{context.user_data.get('name')}*
             Email: *{context.user_data.get('email')}*
             On *{choices[cancelation_id]['selected_date']}*
-            From *{choices[cancelation_id]['start']}* - *{choices[cancelation_id]['end']}*)
+            From *{choices[cancelation_id]['start']}* - *{choices[cancelation_id]['end']}* ({choices[cancelation_id]['selected_dur']})
             Satus: *{(choices[cancelation_id]['status']).title()}*
             """
         ),
@@ -762,6 +764,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     
 # Writer
 async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    unique_id = str(uuid.uuid4())
     start_time = context.user_data.get('selected_time')
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
     end_time = end_time.strftime('%H:%M')
@@ -769,10 +772,11 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     instant = str(context.user_data.get('instant'))
     status_change = 'False'
     notifed = 'False' if context.user_data.get('notified') is None else context.user_data.get('notified')
-    unique_id = str(uuid.uuid4())
+    chat_id = 'NA' if user_chat_ids.get(context.user_data['codice_fiscale']) is None else user_chat_ids.get(context.user_data['codice_fiscale'])
 
     values=[
     unique_id,
+    chat_id,
     context.user_data['username'],
     context.user_data['user_firstname'],
     context.user_data['user_lastname'],
@@ -799,12 +803,18 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Notif
 async def send_reservation_update(context: CallbackContext):
-    id = context.bot_data['chat_id']
     history = wks.get_as_df()
-    for idx, row in history.iterrows():
+    for _, row in history.iterrows():
+        codice = row['codice_fiscale']
         transaction_id = row['id']
+        id = user_chat_ids.get(codice)
+
+        if not id:
+            continue 
+        
         if row['notified']=='True':
             continue
+
         now = datetime.now(ZoneInfo('Europe/Rome'))
         today = datetime(year=now.year, month=now.month, day=now.day, tzinfo= ZoneInfo('Europe/Rome'))
         date = datetime.strptime(row['selected_date'].split(' ')[-1], '%Y-%m-%d').replace(tzinfo=ZoneInfo('Europe/Rome'))
