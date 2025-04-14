@@ -204,7 +204,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     context.user_data['codice_fiscale'] = codice.upper()
     context.user_data['name'] = name
     context.user_data['email'] = email.lower()
-    context.user_data['priority'] = PRIORITY_CODES.get(codice.upper(), 2)
+    context.user_data['priority'] = PRIORITY_CODES.get(codice.upper(), 2) # Default: 2. For everyone else
     user_chat_ids[context.user_data['codice_fiscale']] = update.effective_chat.id
 
     keyboard = utils.generate_reservation_type_keyboard()
@@ -578,7 +578,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 context.user_data['status'] = 'success'
                 context.user_data['booking_code'] = reservation_response['codice_prenotazione']
                 context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
-                context.user_data['notifed'] = 'True'
+                context.user_data['notified'] = 'True'
                 request_status_message = f"✅ Reservation *successful*!"
                 retry_status_message=''
 
@@ -782,7 +782,7 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome')) if context.user_data.get('updated_at') is None else context.user_data.get('updated_at')
     instant = str(context.user_data.get('instant'))
     status_change = 'False'
-    notifed = 'False' if context.user_data.get('notified') is None else context.user_data.get('notified')
+    notified = 'False' if context.user_data.get('notified') is None else context.user_data.get('notified')
     chat_id = 'NA' if user_chat_ids.get(context.user_data['codice_fiscale']) is None else user_chat_ids.get(context.user_data['codice_fiscale'])
 
     values=[
@@ -806,7 +806,7 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['updated_at'],
     instant,
     status_change,
-    notifed
+    notified
     ]
     values = list(map(str, values))
     wks.append_table(values=values, start='A1', overwrite=False)
