@@ -43,8 +43,6 @@ def reserve_job():
             continue
 
         now = datetime.now(ZoneInfo('Europe/Rome'))
-        print(f"{row['temp_datetime'] + timedelta(minutes=3)}")
-        print(f'{now}')
 
         if row['temp_datetime'] + timedelta(minutes=8) < now and row['status']=='fail':
             update_gsheet_data_point(data, id, 'status', 'terminated', wks)

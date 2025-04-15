@@ -568,6 +568,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         context.user_data['status'] = 'pending'
         context.user_data['booking_code'] = 'TBD'
         context.user_data['retries'] = '0'
+        context.user_data['notified'] = 'False'
 
         if context.user_data['instant']:
             try:
