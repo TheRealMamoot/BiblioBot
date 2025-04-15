@@ -104,7 +104,7 @@ gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])
 ```
 ### ✏️ Required Bot Commands
 
-After setting up your bot, be sure to register these commands in your[BotFather settings](https://core.telegram.org/bots#botfather):
+After setting up your bot, be sure to register these commands in your [BotFather settings](https://core.telegram.org/bots#botfather):
 ```txt
 /start - Start the bot
 /help - Show help and usage instructions
