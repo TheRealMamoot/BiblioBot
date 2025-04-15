@@ -360,6 +360,14 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
             reply_markup=utils.generate_reservation_type_keyboard()
         )
         return States.RESERVE_TYPE
+    
+    elif user_input == "🫶 Donate":
+        await update.message.reply_text(
+            utils.show_donate_message(),
+            parse_mode='Markdown', 
+            reply_markup=utils.generate_reservation_type_keyboard()
+        )
+        return States.RESERVE_TYPE
 
     else:
         await update.message.reply_text(
@@ -771,6 +779,13 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text(
             utils.show_existing_reservations(update, context, wks.get_as_df()),
             parse_mode='Markdown',
+        )
+        return States.RETRY
+    
+    elif user_input == "🫶 Donate":
+        await update.message.reply_text(
+            utils.show_donate_message(),
+            parse_mode='Markdown', 
         )
         return States.RETRY
 

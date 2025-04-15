@@ -18,12 +18,12 @@ def generate_start_keyboard(edit_credential_stage: bool = False):
 
 def generate_reservation_type_keyboard():
    keyboard_buttons = [
+       [KeyboardButton('🫶 Donate'), KeyboardButton('❓ Help')],
        [KeyboardButton('🗓️ Current reservations')],
        [KeyboardButton('⏳ I need a slot for later.')], 
        [KeyboardButton('⚡️ I need a slot for now.')], 
        [KeyboardButton('🚫 Cancel reservation')], 
        [KeyboardButton('⬅️ Edit credentials')],
-       [KeyboardButton('❓ Help')],
        ]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
@@ -98,7 +98,12 @@ def generate_confirmation_keyboard():
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 def generate_retry_keyboard():
-   keyboard_buttons = [[KeyboardButton("🆕 Let's go again!")], [KeyboardButton('🗓️ Current reservations')], [KeyboardButton("💡 Feedback")]]
+   keyboard_buttons = [
+       [KeyboardButton("🆕 Let's go again!")], 
+       [KeyboardButton('🗓️ Current reservations')], 
+       [KeyboardButton("💡 Feedback")],
+       [KeyboardButton('🫶 Donate')],
+       ]
    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 def generate_agreement_keyboard():
@@ -188,6 +193,19 @@ def show_support_message() -> str:
             Cool person, check him out! 😏
     """
     return textwrap.dedent(text)
+
+def show_donate_message() -> str:
+    message = textwrap.dedent(
+        f"""
+        *🤝 Thanks for Helping Out!*
+        Your support means the world! ❤️
+        If you find the bot helpful and would like to contribute to its development, your donation would be truly appreciated.
+        [Revolut](https://revolut.me/mamoot)
+        [PayPal](https://www.paypal.com/paypalme/TheRealMamoot)
+        Cheers! 🍻
+        """
+    )
+    return message
 
 def show_help() -> str:
     message = textwrap.dedent(
