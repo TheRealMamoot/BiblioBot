@@ -40,8 +40,8 @@ wks: Worksheet = gc.open('Biblio-logs').worksheet_by_title('logs')
 # wks: Worksheet = gc.open('Biblio-logs').worksheet_by_title('tests') # Only for tests. Must be commented.
 
 load_dotenv()
-# TOKEN: str = os.getenv('TELEGRAM_TOKEN')
-TOKEN: str = os.getenv('TELEGRAM_TOKEN') # Staging environmet. Commented by default
+TOKEN: str = os.getenv('TELEGRAM_TOKEN')
+# TOKEN: str = os.getenv('TELEGRAM_TOKEN_S') # Staging environmet. Commented by default
 
 # States
 class States(IntEnum):
@@ -693,10 +693,22 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
                 try:
                     cancel_reservation(context.user_data['codice_fiscale'], booking_code)
                 except RuntimeError as e:
-                    logging.error(f"🔄 {update.effective_user} cancelation was not completed at {datetime.now(ZoneInfo('Europe/Rome'))} -- {e}")
-                    faiulure = True
-                    await update.message.reply_text(
-                        "⚠️ Something went wrong while canceling! The time of the slot has most likely passed or it was canceled manually by you.")
+                    try:
+                        cancel_reservation(context.user_data['codice_fiscale'], booking_code, mode='update')
+                    except RuntimeError as e:
+                        logging.error(f"🔄 {update.effective_user} cancelation was not completed at {datetime.now(ZoneInfo('Europe/Rome'))} -- {e}")
+                        faiulure = True
+                        await update.message.reply_text(
+                            textwrap.dedent(
+                                f"""
+                                ⚠️ You don't appear to have an active reservation! 
+                                The slot has most likely *expired*, was *canceled manually* or was not *activated* by the library staff. 
+                                ❗ In any case, you can now *book a new slot*.
+                                """
+                            ),
+                            parse_mode='Markdown',
+                            reply_markup=utils.generate_reservation_type_keyboard()
+                            )
 
             sheet_row = row_idx[0] + 2  # +2 because: 1 for zero-based index, 1 for header row
             col_number = history.columns.get_loc('status') + 1 # 1-based for pygsheets 
@@ -848,6 +860,7 @@ async def send_reservation_update(context: CallbackContext):
                 """
             )
             utils.update_gsheet_data_point(history, transaction_id, 'notified', 'True', wks)
+            logging.info(f"Notified user {row['username']} for reservation {state} at {datetime.now(ZoneInfo('Europe/Italy'))}")
             await context.bot.send_message(chat_id=id, text=notification, parse_mode='Markdown')
             
 # Misc

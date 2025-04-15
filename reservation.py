@@ -81,14 +81,19 @@ def confirm_reservation(booking_code: int) -> dict:
         logging.error(f'Value error: {e}')
         raise RuntimeError(f'Value error: {e}')
     
-def cancel_reservation(codice: str, booking_code: str) -> dict:
+def cancel_reservation(codice: str, booking_code: str, mode: str = 'delete') -> dict:
 
-    url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/delete/{booking_code}?chiave={codice}'
+    url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/{mode}/{booking_code}?chiave={codice}'
 
+    payload = None
+    if mode == 'update':
+        payload = {
+            "type": "libera_posto"
+        }
     try:
-        response = requests.post(url)
+        response = requests.post(url, json=payload)
         response.raise_for_status()
-        logging.info(f'Reservation canceled.')
+        logging.info(f'Reservation canceled. mode: {mode}')
         return response.json()
     except requests.exceptions.RequestException as e:
         logging.error(f'Request failed: {e}')
