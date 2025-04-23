@@ -67,8 +67,10 @@ def reserve_job():
             logging.info(f'✅ **2** Reservation set for {user_data['cognome_nome']}')
             confirm_reservation(reservation_response['entry'])
             logging.info(f'✅ **3** Reservation confirmed for {user_data['cognome_nome']}')
+            booking_code: str = str(reservation_response['codice_prenotazione'])
+            booking_code = booking_code.replace('.','').replace('+','').replace('-','').upper()
             update_gsheet_data_point(data, id, 'status', 'success', wks)
-            update_gsheet_data_point(data, id, 'booking_code', reservation_response['codice_prenotazione'], wks)
+            update_gsheet_data_point(data, id, 'booking_code', booking_code, wks)
             update_gsheet_data_point(data, id, 'updated_at', datetime.now(ZoneInfo('Europe/Rome')), wks)
 
         except Exception as e:

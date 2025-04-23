@@ -162,7 +162,8 @@ def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYP
                 else f'⚠️ {row['status']}' if row['status']=='fail' \
                 else f'❌ {row['status']}' if row['status']=='terminated' \
                 else 'undefined'
-            booking_code: str = row['booking_code']
+            booking_code: str = str(row['booking_code'])
+            booking_code = booking_code.replace('.','').replace('+','').replace('-','')
             res_type = 'Instant' if row['instant']=='True' else 'Regular'
             retry = f" - Retry at :00 and :30 of every hour." if row['status'] =='fail' else ''
             message += textwrap.dedent(

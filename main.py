@@ -585,7 +585,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 confirm_reservation(reservation_response['entry'])
                 logging.info(f'✅ **3** {res_type} Reservation confirmed for {user_data['cognome_nome']}')
                 context.user_data['status'] = 'success'
-                context.user_data['booking_code'] = reservation_response['codice_prenotazione']
+                context.user_data['booking_code'] = f"{reservation_response['codice_prenotazione']}"
                 context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
                 context.user_data['notified'] = 'True'
                 request_status_message = f"✅ Reservation *successful*!"

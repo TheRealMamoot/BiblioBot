@@ -53,7 +53,7 @@ def set_reservation(start_time: int, end_time: int, duration: int, user_data: di
         response.raise_for_status()
         response_data = response.json()
         if 'entry' in response_data: # entry = Booking Code
-            logging.info(f'Reservation successful. Booking Code: {response_data["entry"]}')
+            logging.info(f'Reservation successful. Booking Code: {response_data["codice_prenotazione"]}')
             return response_data
         else:
             logging.error('Unexpected response format: "Booking Code" not found.')
