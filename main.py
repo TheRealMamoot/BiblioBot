@@ -754,19 +754,14 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
     if user_input == "🆕 Let's go again!":
-        keyboard = utils.generate_date_keyboard()
-        result = States.CHOOSING_DATE
-
-        if context.user_data['instant']:
-            keyboard = utils.generate_reservation_type_keyboard()
-            result = States.RESERVE_TYPE
+        keyboard = utils.generate_reservation_type_keyboard()
 
         await update.message.reply_text(
             'Ah ****, here we go again! 😪',
             reply_markup=keyboard
         )
         logging.info(f"⏳ {update.effective_user} reinitiated the process at {datetime.now(ZoneInfo('Europe/Rome'))}")
-        return result
+        return States.RESERVE_TYPE
     
     elif user_input == "💡 Feedback":
         await update.message.reply_text(
@@ -774,7 +769,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         parse_mode='Markdown',
         )
         return States.RETRY
-
+    
     elif user_input == '🗓️ Current reservations':
         await update.message.reply_text(
             utils.show_existing_reservations(update, context, wks.get_as_df()),
@@ -782,6 +777,65 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         )
         return States.RETRY
     
+    elif user_input == '🚫 Cancel reservation':
+        reservations = utils.show_existing_reservations(update, 
+                                                        context, 
+                                                        history=wks.get_as_df(), 
+                                                        cancel_stage=True)
+        choices = {}
+        buttons = []
+
+        if not isinstance(reservations, DataFrame):
+            await update.message.reply_text(
+                '_You have no reservations at the moment._',
+                parse_mode='Markdown'
+            )
+            return States.RETRY
+        
+        for _, row in reservations.iterrows():
+            if row['status'] == 'terminated':
+                continue
+            status = '🔄' if row['status']=='pending' else '⚠️' if row['status']=='fail' else '✅' if row['status']=='success' else ''
+            button = f"{status} {row['selected_date']} at {row['start']} - {row['end']}"
+
+            choices[f"{row['id']}"] = {
+                'selected_date':row['selected_date'],
+                'start':row['start'],
+                'end':row['end'],
+                'selected_dur':row['selected_dur'],
+                'booking_code':row['booking_code'],
+                'status':row['status'],
+                'button':button
+            }
+            buttons.append(button)
+
+        if len(buttons) == 0:
+            await update.message.reply_text(
+                '_You have no reservations at the moment._',
+                parse_mode='Markdown'
+            )
+            return States.RETRY
+        
+        context.user_data['cancelation_choices'] = choices
+        keyboard = utils.generate_cancelation_options_keyboard(buttons)
+        
+        logging.info(f"🔄 {update.effective_user} started cancelation at {datetime.now(ZoneInfo('Europe/Rome'))}")
+        await update.message.reply_text(
+                textwrap.dedent(
+                    f"""
+                    ❗ *Please make sure your reservation time has not ended*❗
+                    🔄 *Pending*: Reservation will be processed when slots open.
+                    ⚠️ *Failed*: Reservation request will be retried at :00 and :30 again.
+                    ✅ *Success*: Reservation was succesful.
+
+                    That being said, which one will it be?
+                    """
+                ),
+                parse_mode='Markdown',
+                reply_markup=keyboard
+            )
+        return States.CANCELATION_SLOT_CHOICE
+
     elif user_input == "🫶 Donate":
         await update.message.reply_text(
             utils.show_donate_message(),

@@ -101,6 +101,7 @@ def generate_retry_keyboard():
    keyboard_buttons = [
        [KeyboardButton("🆕 Let's go again!")], 
        [KeyboardButton('🗓️ Current reservations')], 
+       [KeyboardButton('🚫 Cancel reservation')],
        [KeyboardButton("💡 Feedback")],
        [KeyboardButton('🫶 Donate')],
        ]
