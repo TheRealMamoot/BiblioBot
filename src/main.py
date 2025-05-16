@@ -24,7 +24,7 @@ from telegram.ext import (
 import textwrap
 from zoneinfo import ZoneInfo
 
-import src.biblio.utils as utils
+from src.biblio.utils import keyboards, utils
 from src.biblio.jobs import run_notify_job, run_reserve_job 
 from src.biblio.reservation import cancel_reservation, confirm_reservation, set_reservation
 from src.biblio.slot_datetime import reserve_datetime
@@ -100,7 +100,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """
         ),
         parse_mode='Markdown', 
-        reply_markup=utils.generate_agreement_keyboard()
+        reply_markup=keyboards.generate_agreement_keyboard()
     )
     return States.AGREEMENT
 
@@ -160,7 +160,7 @@ async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 """
             ),
             parse_mode='Markdown',
-            reply_markup=utils.generate_start_keyboard()
+            reply_markup=keyboards.generate_start_keyboard()
         )
         return States.CREDENTIALS
     
@@ -182,7 +182,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text(
             utils.show_support_message(),
             parse_mode='Markdown', 
-            reply_markup=utils.generate_start_keyboard()
+            reply_markup=keyboards.generate_start_keyboard()
         )
         return States.CREDENTIALS
     
@@ -190,7 +190,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text(
             utils.show_help(),
             parse_mode='Markdown', 
-            reply_markup=utils.generate_start_keyboard()
+            reply_markup=keyboards.generate_start_keyboard()
         )
         return States.CREDENTIALS
     
@@ -198,7 +198,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text(
         'Gotta be kidding me! 😑',
             parse_mode='Markdown', 
-            reply_markup=utils.generate_reservation_type_keyboard()
+            reply_markup=keyboards.generate_reservation_type_keyboard()
         )
         return States.RESERVE_TYPE
 
@@ -225,7 +225,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     context.user_data['priority'] = PRIORITY_CODES.get(codice.upper(), 2) # Default: 2. For everyone else
     user_chat_ids[context.user_data['codice_fiscale']] = update.effective_chat.id
 
-    keyboard = utils.generate_reservation_type_keyboard()
+    keyboard = keyboards.generate_reservation_type_keyboard()
     await update.message.reply_text(
                 textwrap.dedent(
             f"""
@@ -242,7 +242,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
-    keyboard = utils.generate_reservation_type_keyboard()
+    keyboard = keyboards.generate_reservation_type_keyboard()
 
     if user_input == '⬅️ Edit credentials':
         await update.message.reply_text(
@@ -257,12 +257,12 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
             """
         ),
             parse_mode='Markdown', 
-            reply_markup=utils.generate_start_keyboard(edit_credential_stage=True)
+            reply_markup=keyboards.generate_start_keyboard(edit_credential_stage=True)
         )
         return States.CREDENTIALS
 
     elif user_input == '⏳ I need a slot for later.':
-        keyboard = utils.generate_date_keyboard()
+        keyboard = keyboards.generate_date_keyboard()
         await update.message.reply_text(
             'So, when will it be? 📅',
             reply_markup=keyboard
@@ -284,21 +284,21 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
         if now.hour < open_time or now.hour >= close_time:
             await update.message.reply_text(
                 "It's over for today! Go home. 😌", 
-                reply_markup=utils.generate_reservation_type_keyboard()
+                reply_markup=keyboards.generate_reservation_type_keyboard()
                 )
             return States.RESERVE_TYPE
 
         if week_day == 6: #Sunday
             await update.message.reply_text(
                 "It's Sunday! Come on, chill. 😌", 
-                reply_markup=utils.generate_reservation_type_keyboard()
+                reply_markup=keyboards.generate_reservation_type_keyboard()
                 )
             return States.RESERVE_TYPE
         
         date = f'{now_day}, {now_date}'
         await update.message.reply_text(
             'So, when will it be? 🕑',
-            reply_markup=utils.generate_time_keyboard(date, instant=True)
+            reply_markup=keyboards.generate_time_keyboard(date, instant=True)
         )
         context.user_data['instant'] = True
         context.user_data['selected_date'] = date
@@ -352,7 +352,7 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
             return States.RESERVE_TYPE
         
         context.user_data['cancelation_choices'] = choices
-        keyboard = utils.generate_cancelation_options_keyboard(buttons)
+        keyboard = keyboards.generate_cancelation_options_keyboard(buttons)
 
         logging.info(f"🔄 {update.effective_user} started cancelation at {datetime.now(ZoneInfo('Europe/Rome'))}")
         await update.message.reply_text(
@@ -375,7 +375,7 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(
             utils.show_help(),
             parse_mode='Markdown', 
-            reply_markup=utils.generate_reservation_type_keyboard()
+            reply_markup=keyboards.generate_reservation_type_keyboard()
         )
         return States.RESERVE_TYPE
     
@@ -383,7 +383,7 @@ async def reservation_selection(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(
             utils.show_donate_message(),
             parse_mode='Markdown', 
-            reply_markup=utils.generate_reservation_type_keyboard()
+            reply_markup=keyboards.generate_reservation_type_keyboard()
         )
         return States.RESERVE_TYPE
 
@@ -401,7 +401,7 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             'Fine, just be quick. 🙄',
             parse_mode='Markdown', 
-            reply_markup=utils.generate_reservation_type_keyboard()
+            reply_markup=keyboards.generate_reservation_type_keyboard()
         )
         return States.RESERVE_TYPE
     
@@ -429,7 +429,7 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return States.CHOOSING_DATE
     
     context.user_data['selected_date'] = user_input
-    keyboard = utils.generate_time_keyboard(user_input)
+    keyboard = keyboards.generate_time_keyboard(user_input)
     
     if len(keyboard.keyboard) <= 1:
         await update.message.reply_text(
@@ -456,11 +456,11 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 """
             ),
                 parse_mode='Markdown', 
-                reply_markup=utils.generate_reservation_type_keyboard()
+                reply_markup=keyboards.generate_reservation_type_keyboard()
             )
             return States.RESERVE_TYPE
         
-        keyboard = utils.generate_date_keyboard()
+        keyboard = keyboards.generate_date_keyboard()
         await update.message.reply_text('Choose a date, AGAIN! 😒', reply_markup=keyboard)
         return States.CHOOSING_DATE
     
@@ -500,7 +500,7 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return States.CHOOSING_TIME
 
     context.user_data['selected_time'] = user_input
-    keyboard = utils.generate_duration_keyboard(user_input, context)[0] # [0] for the reply, [1] for the values
+    keyboard = keyboards.generate_duration_keyboard(user_input, context)[0] # [0] for the reply, [1] for the values
 
     await update.message.reply_text(
         f'How long will you absolutely NOT be productive over there? 🕦 Give me hours.', reply_markup=keyboard)
@@ -520,7 +520,7 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return States.CHOOSING_TIME
 
     selected_time = context.user_data.get('selected_time')
-    duration_selection = utils.generate_duration_keyboard(selected_time, context)[1] # [0] for the reply, [1] for the values
+    duration_selection = keyboards.generate_duration_keyboard(selected_time, context)[1] # [0] for the reply, [1] for the values
     max_dur = max(duration_selection)
 
     if not user_input.isdigit():
@@ -551,7 +551,7 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
     end_time = end_time.strftime('%H:%M')
 
-    keyboard = utils.generate_confirmation_keyboard()
+    keyboard = keyboards.generate_confirmation_keyboard()
     await update.message.reply_text(
         textwrap.dedent(
             f"""
@@ -637,14 +637,14 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                     """
                 ),
             parse_mode='Markdown',
-            reply_markup=utils.generate_retry_keyboard()
+            reply_markup=keyboards.generate_retry_keyboard()
         )
 
         await writer(update, context)
         return States.RETRY 
 
     elif user_input == '⬅️ No, take me back.':
-        keyboard = utils.generate_duration_keyboard(context.user_data.get('selected_time'), context)[0]
+        keyboard = keyboards.generate_duration_keyboard(context.user_data.get('selected_time'), context)[0]
         await update.message.reply_text(
             'I overestimated you it seems. Duration please. 😬',
             reply_markup=keyboard
@@ -654,7 +654,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     else:
         await update.message.reply_text(
             "JUST.CLICK...PLEASE!",
-            reply_markup=utils.generate_confirmation_keyboard()
+            reply_markup=keyboards.generate_confirmation_keyboard()
         )
         return States.CONFIRMING 
     
@@ -665,7 +665,7 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     if user_input == '⬅️ Back to reservation type':
         await update.message.reply_text(
             'You are so determined, wow!',
-            reply_markup=utils.generate_reservation_type_keyboard()
+            reply_markup=keyboards.generate_reservation_type_keyboard()
         )
         return States.RESERVE_TYPE
 
@@ -694,7 +694,7 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             """
         ),
         parse_mode='Markdown',
-        reply_markup=utils.generate_cancelation_confirm_keyboard()
+        reply_markup=keyboards.generate_cancelation_confirm_keyboard()
     )
     return States.CANCELATION_CONFIRMING
 
@@ -705,7 +705,7 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
         reservation_buttons = [choice['button'] for choice in choices.values()]
         await update.message.reply_text(
             'God kill me now! 😭',
-            reply_markup=utils.generate_cancelation_options_keyboard(reservation_buttons)
+            reply_markup=keyboards.generate_cancelation_options_keyboard(reservation_buttons)
         )
         return States.CANCELATION_SLOT_CHOICE
     
@@ -734,7 +734,7 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
                                 """
                             ),
                             parse_mode='Markdown',
-                            reply_markup=utils.generate_reservation_type_keyboard()
+                            reply_markup=keyboards.generate_reservation_type_keyboard()
                             )
 
             sheet_row = row_idx[0] + 2  # +2 because: 1 for zero-based index, 1 for header row
@@ -749,7 +749,7 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
             if not faiulure:
                 await update.message.reply_text(
                     '✔️ Reservation canceled successfully!',
-                    reply_markup=utils.generate_reservation_type_keyboard()
+                    reply_markup=keyboards.generate_reservation_type_keyboard()
                 )
             return States.RESERVE_TYPE
 
@@ -757,7 +757,7 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
             logging.info(f"⚠️ {update.effective_user} cancelation slot NOT FOUND at {datetime.now(ZoneInfo('Europe/Rome'))}")
             await update.message.reply_text(
                 '⚠️ Reservation cancelation usuccessfull!',
-                reply_markup=utils.generate_reservation_type_keyboard()
+                reply_markup=keyboards.generate_reservation_type_keyboard()
             )
             return States.RESERVE_TYPE
         
@@ -772,7 +772,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
     if user_input == "🆕 Let's go again!":
-        keyboard = utils.generate_reservation_type_keyboard()
+        keyboard = keyboards.generate_reservation_type_keyboard()
 
         await update.message.reply_text(
             'Ah ****, here we go again! 😪',
@@ -835,7 +835,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             return States.RETRY
         
         context.user_data['cancelation_choices'] = choices
-        keyboard = utils.generate_cancelation_options_keyboard(buttons)
+        keyboard = keyboards.generate_cancelation_options_keyboard(buttons)
         
         logging.info(f"🔄 {update.effective_user} started cancelation at {datetime.now(ZoneInfo('Europe/Rome'))}")
         await update.message.reply_text(

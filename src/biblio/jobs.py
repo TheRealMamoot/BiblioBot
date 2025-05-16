@@ -17,7 +17,7 @@ from telegram.ext import Application
 
 from src.biblio.reservation import confirm_reservation, set_reservation
 from src.biblio.slot_datetime import reserve_datetime
-from src.biblio.utils import update_gsheet_data_point
+from src.biblio.utils.utils import update_gsheet_data_point
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 CREDENTIALS_PATH = BASE_DIR / 'biblio.json'
