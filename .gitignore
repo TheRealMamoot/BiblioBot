@@ -1,4 +1,5 @@
 biblio/
+!src/biblio/
 __pycache__/
 *.pyc
 *.pyo
@@ -6,3 +7,5 @@ __pycache__/
 *.log
 .DS_Store
 *.json
+.vscode
+notifs.py

@@ -1,5 +1,5 @@
-from reservation import set_reservation, confirm_reservation, cancel_reservation
-from slot_datetime import reserve_datetime
+from src.biblio.reservation import cancel_reservation, confirm_reservation, set_reservation 
+from src.biblio.slot_datetime import reserve_datetime
 
 def main():
     date = '2025-04-11'

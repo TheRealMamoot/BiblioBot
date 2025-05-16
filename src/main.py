@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
-from enum import IntEnum, auto
+from enum import auto, IntEnum
 import json
 import logging
 import os
+from pathlib import Path
 import threading
 import uuid
 
@@ -10,38 +11,55 @@ from dotenv import load_dotenv
 from pandas import DataFrame
 import pygsheets
 from pygsheets import Worksheet
-from telegram import Update, ReplyKeyboardRemove
-from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, ContextTypes, CallbackContext, filters
+from telegram import ReplyKeyboardRemove, Update
+from telegram.ext import (
+    Application, 
+    CallbackContext, 
+    CommandHandler,
+    ContextTypes, 
+    ConversationHandler,
+    filters,
+    MessageHandler
+)
 import textwrap
 from zoneinfo import ZoneInfo
 
-import utils
-from jobs import run_reserve_job, run_notify_job
-from reservation import set_reservation, confirm_reservation, cancel_reservation
-from slot_datetime import reserve_datetime
-from validation import validate_email, validate_codice_fiscale, duration_overlap, time_not_overlap
-
+import src.biblio.utils as utils
+from src.biblio.jobs import run_notify_job, run_reserve_job 
+from src.biblio.reservation import cancel_reservation, confirm_reservation, set_reservation
+from src.biblio.slot_datetime import reserve_datetime
+from src.biblio.validation import (
+    duration_overlap, 
+    time_not_overlap, 
+    validate_codice_fiscale, 
+    validate_email
+)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Env Vars
+# Paths
+BASE_DIR = Path(__file__).resolve().parents[1]
+ENV_PATH = BASE_DIR / '.env'
+PRIORITY_CODES_PATH = BASE_DIR / 'priorities.json'
+CREDENTIALS_PATH = BASE_DIR / 'biblio.json'
 
-# ~Local~
-# with open(os.path.join(os.getcwd(), 'priorities.json'), 'r') as f:
-#     PRIORITY_CODES = json.load(f)  # NOT json.loads
-# gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json'))
+# Env Vars: 
+load_dotenv(dotenv_path=ENV_PATH)
+# TOKEN: str = os.getenv('TELEGRAM_TOKEN')
+TOKEN: str = os.getenv('TELEGRAM_TOKEN_S') # Staging environment. Commented by default
+
+# ~Local~   
+with PRIORITY_CODES_PATH.open('r') as f:
+    PRIORITY_CODES = json.load(f) # NOT json.loads
+gc = pygsheets.authorize(service_file=CREDENTIALS_PATH)
 
 # ~Global~
-PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
-PRIORITY_CODES = json.loads(PRIORITY_CODES)
-gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
+# PRIORITY_CODES: dict = os.environ['PRIORITY_CODES']
+# PRIORITY_CODES = json.loads(PRIORITY_CODES)
+# gc =  pygsheets.authorize(service_account_json=os.environ['GSHEETS']) 
 
 # ~Data Location~
 wks: Worksheet = gc.open('Biblio-logs').worksheet_by_title('logs')
 # wks: Worksheet = gc.open('Biblio-logs').worksheet_by_title('tests') # Only for tests. Must be commented.
-
-load_dotenv()
-TOKEN: str = os.getenv('TELEGRAM_TOKEN')
-# TOKEN: str = os.getenv('TELEGRAM_TOKEN_S') # Staging environmet. Commented by default
 
 # States
 class States(IntEnum):

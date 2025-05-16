@@ -1,8 +1,12 @@
-from datetime import datetime, timedelta, time as dt_time
+from datetime import (
+    datetime, 
+    time as dt_time,
+    timedelta
+)
 from itertools import product
 import logging
+from pathlib import Path
 import time
-import os
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -11,13 +15,16 @@ from pygsheets import Worksheet
 import schedule
 from telegram.ext import Application
 
-from reservation import set_reservation, confirm_reservation
-from slot_datetime import reserve_datetime
-from utils import update_gsheet_data_point
+from src.biblio.reservation import confirm_reservation, set_reservation
+from src.biblio.slot_datetime import reserve_datetime
+from src.biblio.utils import update_gsheet_data_point
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+CREDENTIALS_PATH = BASE_DIR / 'biblio.json'
 
 def reserve_job():
-    # gc = pygsheets.authorize(service_file=os.path.join(os.getcwd(),'biblio.json')) # Local - Must be commented by default.    
-    gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
+    gc = pygsheets.authorize(service_file=str(CREDENTIALS_PATH)) # Local - Must be commented by default.    
+    # gc = pygsheets.authorize(service_account_json=os.environ['GSHEETS'])    
     wks: Worksheet = gc.open('Biblio-logs').worksheet_by_title('logs')
     # wks = gc.open('Biblio-logs').worksheet_by_title('tests') # Commented by default - only for tests
     data = wks.get_as_df()

@@ -1,7 +1,7 @@
 import logging
 import requests
 
-from validation import validate_user_data
+from src.biblio.validation import validate_user_data
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
