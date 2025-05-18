@@ -1,11 +1,12 @@
+import textwrap
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
-from pygsheets import Worksheet
 import pandas as pd
+from pygsheets import Worksheet
 from telegram import Update
 from telegram.ext import ContextTypes
-import textwrap
-from zoneinfo import ZoneInfo
+
 
 def generate_days() -> list:
     today = datetime.now(ZoneInfo('Europe/Rome')).today()
@@ -20,58 +21,65 @@ def generate_days() -> list:
             break
     return days
 
-def show_existing_reservations(update: Update, context: ContextTypes.DEFAULT_TYPE, history: pd.DataFrame, cancel_stage: bool=False) -> str:
 
+def show_existing_reservations(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    history: pd.DataFrame,
+    cancel_stage: bool = False,
+) -> str:
     coidce = context.user_data['codice_fiscale']
     email = context.user_data['email']
-    filtered: pd.DataFrame = history[(history['codice_fiscale'] == coidce) & 
-                                     (history['email'] == email)
-    ].copy()
-    filtered['datetime'] = pd.to_datetime(filtered['selected_date'] + ' ' +filtered['end']) # ' ' acts as space
+    filtered: pd.DataFrame = history[(history['codice_fiscale'] == coidce) & (history['email'] == email)].copy()
+    filtered['datetime'] = pd.to_datetime(filtered['selected_date'] + ' ' + filtered['end'])  # ' ' acts as space
     filtered['datetime'] = filtered['datetime'].dt.tz_localize('UTC').dt.tz_convert('Europe/Rome')
     current = filtered[filtered['datetime'] > datetime.now(ZoneInfo('Europe/Rome'))]
     current = current.sort_values('datetime', ascending=True)
     name = update.effective_user.username if update.effective_user.username else update.effective_user.first_name
     message = textwrap.dedent(
-        f"Reservations for *{name}*\n"
-        f"Coidce Fiscale: *{coidce}*\n"
-        f"Email: {email}\n"
-        f"-----------------------\n"
-        )   
+        f'Reservations for *{name}*\nCoidce Fiscale: *{coidce}*\nEmail: {email}\n-----------------------\n'
+    )
     if len(current) != 0:
         if cancel_stage:
             return current
 
         idx = 1
         for _, row in current.iterrows():
-            status = f'✅ {row['status']}' if row['status']=='success' \
-                else f'🔄 {row['status']}' if row['status']=='pending' \
-                else f'⚠️ {row['status']}' if row['status']=='fail' \
-                else f'❌ {row['status']}' if row['status']=='terminated' \
+            status = (
+                f'✅ {row["status"]}'
+                if row['status'] == 'success'
+                else f'🔄 {row["status"]}'
+                if row['status'] == 'pending'
+                else f'⚠️ {row["status"]}'
+                if row['status'] == 'fail'
+                else f'❌ {row["status"]}'
+                if row['status'] == 'terminated'
                 else 'undefined'
+            )
             booking_code: str = str(row['booking_code'])
-            booking_code = booking_code.replace('.','').replace('+','').replace('-','')
-            if len(booking_code) < 6 and booking_code not in ['TBD','NA','INF','inf']:
+            booking_code = booking_code.replace('.', '').replace('+', '').replace('-', '')
+            if len(booking_code) < 6 and booking_code not in ['TBD', 'NA', 'INF', 'inf']:
                 booking_code = booking_code.zfill(6)
-            res_type = 'Instant' if row['instant']=='True' else 'Regular'
-            retry = f" - Retry at :00 and :30 of every hour." if row['status'] =='fail' else ''
+            res_type = 'Instant' if row['instant'] == 'True' else 'Regular'
+            retry = ' - Retry at :00 and :30 of every hour.' if row['status'] == 'fail' else ''
             message += textwrap.dedent(
-                f"Reservation NO: *{idx:02d}*\n"
-                f"Date: *{row['selected_date']}*\n"
-                f"Time: *{row['start']}* - *{row['end']}*\n"
-                f"Duration: *{row['selected_dur']}* *hours*\n"
-                f"Booking Code: *{booking_code.upper()}*\n"
-                f"Reservation Type: *{res_type}*\n"
-                f"Status: *{status.title()}*_{retry}_\n"
-                f"-----------------------\n"
+                f'Reservation NO: *{idx:02d}*\n'
+                f'Date: *{row["selected_date"]}*\n'
+                f'Time: *{row["start"]}* - *{row["end"]}*\n'
+                f'Duration: *{row["selected_dur"]}* *hours*\n'
+                f'Booking Code: *{booking_code.upper()}*\n'
+                f'Reservation Type: *{res_type}*\n'
+                f'Status: *{status.title()}*_{retry}_\n'
+                f'-----------------------\n'
             )
             idx += 1
     else:
-        message += "_You have no reservations at the moment._"
+        message += '_You have no reservations at the moment._'
     return message
 
+
 def show_support_message() -> str:
-    text = f"""
+    text = """
             Thank you for using *Biblio*.
             Tell your friends, but not all of them!
             If anything was not to your liking, I don't really care. Blame this guy not me.
@@ -84,9 +92,10 @@ def show_support_message() -> str:
     """
     return textwrap.dedent(text)
 
+
 def show_donate_message() -> str:
     message = textwrap.dedent(
-        f"""
+        """
         *🤝 Thanks for Helping Out!*
         Your support means the world! ❤️
         If you find the bot helpful and would like to contribute to its development, your donation would be truly appreciated.
@@ -97,9 +106,10 @@ def show_donate_message() -> str:
     )
     return message
 
+
 def show_help() -> str:
     message = textwrap.dedent(
-        f"""
+        """
         📖 *How it works*
         --------------------------
         You can reserve your slot at *BICF* either for *later* or *instantly*:
@@ -141,11 +151,15 @@ def show_help() -> str:
     )
     return message
 
-def update_gsheet_data_point(data: pd.DataFrame, 
-                             org_data_point_id: str, 
-                             org_data_col_name: str, 
-                             new_value, worksheet: Worksheet) -> None:
+
+def update_gsheet_data_point(
+    data: pd.DataFrame,
+    org_data_point_id: str,
+    org_data_col_name: str,
+    new_value,
+    worksheet: Worksheet,
+) -> None:
     row_idx = data.index[data['id'] == org_data_point_id].tolist()
-    sheet_row = row_idx[0] + 2 # +2 because: 1 for zero-based index, 1 for header row
-    sheet_col = data.columns.get_loc(org_data_col_name) + 1 # 1-based for pygsheets 
+    sheet_row = row_idx[0] + 2  # +2 because: 1 for zero-based index, 1 for header row
+    sheet_col = data.columns.get_loc(org_data_col_name) + 1  # 1-based for pygsheets
     worksheet.update_value((sheet_row, sheet_col), str(new_value))
