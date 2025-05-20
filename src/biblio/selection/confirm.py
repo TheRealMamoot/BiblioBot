@@ -7,21 +7,21 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.biblio.config.config import States
+from src.biblio.db.write import writer
 from src.biblio.reservation.reservation import confirm_reservation, set_reservation
 from src.biblio.reservation.slot_datetime import reserve_datetime
 from src.biblio.utils import keyboards
-from src.biblio.writer import writer
 
 
 async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
-
     start_time = context.user_data.get('selected_time')
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
     end_time = end_time.strftime('%H:%M')
-    date = context.user_data['selected_date'].split(' ')[-1]
-    selected_dur = int(context.user_data['selected_duration'])
-    start, end, duration = reserve_datetime(date, start_time, selected_dur)
+    date: str = context.user_data['selected_date']
+    date = date.split(' ')[-1]
+    selected_duration = int(context.user_data['selected_duration'])
+    start, end, duration = reserve_datetime(date, start_time, selected_duration)
 
     if user_input == '✅ Yes, all looks good.':
         user_data = {
@@ -41,7 +41,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         context.user_data['status'] = 'pending'
         context.user_data['booking_code'] = 'TBD'
         context.user_data['retries'] = '0'
-        context.user_data['notified'] = 'False'
+        context.user_data['notified'] = False
 
         if context.user_data['instant']:
             try:
@@ -51,8 +51,8 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 logging.info(f'✅ **3** {res_type} Reservation confirmed for {user_data["cognome_nome"]}')
                 context.user_data['status'] = 'success'
                 context.user_data['booking_code'] = f'{reservation_response["codice_prenotazione"]}'
-                context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
-                context.user_data['notified'] = 'True'
+                context.user_data['updated_at'] = datetime.now()
+                context.user_data['notified'] = True
                 request_status_message = '✅ Reservation *successful*!'
                 retry_status_message = ''
 
@@ -61,10 +61,11 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 context.user_data['retries'] = '1'
                 context.user_data['status'] = 'fail'
                 context.user_data['booking_code'] = 'NA'
-                context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
+                context.user_data['updated_at'] = datetime.now()
                 request_status_message = '⛔ Reservation *failed*! *Slot not available*.'
                 retry_status_message = '‼️ *No need to try again!* I will automatically try to get it when slots open, unless the time for the requested slot *has passed*.'
 
+        await writer(update, context)
         await update.message.reply_text(
             textwrap.dedent(
                 f"""
@@ -87,7 +88,6 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             reply_markup=keyboards.generate_retry_keyboard(),
         )
 
-        await writer(update, context)
         return States.RETRY
 
     elif user_input == '⬅️ No, take me back.':

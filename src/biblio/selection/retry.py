@@ -7,14 +7,12 @@ from pandas import DataFrame
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.access import get_wks
+from src.biblio.bot.messages import show_donate_message, show_existing_reservations, show_support_message
 from src.biblio.config.config import States
-from src.biblio.utils import keyboards, utils
+from src.biblio.utils import keyboards
 
 
 async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    sheet_env = context.bot_data.get('sheet_env')
-    auth_mode = context.bot_data.get('auth_mode')
     user_input = update.message.text.strip()
 
     if user_input == "🆕 Let's go again!":
@@ -26,22 +24,20 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     elif user_input == '💡 Feedback':
         await update.message.reply_text(
-            utils.show_support_message(),
+            show_support_message(),
             parse_mode='Markdown',
         )
         return States.RETRY
 
     elif user_input == '🗓️ Current reservations':
         await update.message.reply_text(
-            utils.show_existing_reservations(update, context, get_wks(sheet_env, auth_mode).get_as_df()),
+            await show_existing_reservations(update, context),
             parse_mode='Markdown',
         )
         return States.RETRY
 
     elif user_input == '🚫 Cancel reservation':
-        reservations = utils.show_existing_reservations(
-            update, context, history=get_wks(sheet_env, auth_mode).get_as_df(), cancel_stage=True
-        )
+        reservations = await show_existing_reservations(update, context, cancel_stage=True)
         choices = {}
         buttons = []
 
@@ -61,13 +57,15 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                 if row['status'] == 'success'
                 else ''
             )
-            button = f'{status} {row["selected_date"]} at {row["start"]} - {row["end"]}'
-
+            start_time_str = row['start_time'].strftime('%H:%M')
+            end_time_str = row['end_time'].strftime('%H:%M')
+            selected_date = row['selected_date'].strftime('%A, %Y-%m-%d')
+            button = f'{status} {selected_date} at {start_time_str} - {end_time_str}'
             choices[f'{row["id"]}'] = {
-                'selected_date': row['selected_date'],
-                'start': row['start'],
-                'end': row['end'],
-                'selected_dur': row['selected_dur'],
+                'selected_date': selected_date,
+                'start_time': start_time_str,
+                'end_time': end_time_str,
+                'selected_duration': row['selected_duration'],
                 'booking_code': row['booking_code'],
                 'status': row['status'],
                 'button': button,
@@ -100,7 +98,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     elif user_input == '🫶 Donate':
         await update.message.reply_text(
-            utils.show_donate_message(),
+            show_donate_message(),
             parse_mode='Markdown',
         )
         return States.RETRY

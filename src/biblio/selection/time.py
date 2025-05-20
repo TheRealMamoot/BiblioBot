@@ -6,15 +6,13 @@ from zoneinfo import ZoneInfo
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.access import get_wks
+from src.biblio.bot.messages import show_existing_reservations
 from src.biblio.config.config import States
-from src.biblio.utils import keyboards, utils
+from src.biblio.utils import keyboards
 from src.biblio.utils.validation import time_not_overlap
 
 
 async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    sheet_env = context.bot_data.get('sheet_env')
-    auth_mode = context.bot_data.get('auth_mode')
     user_input = update.message.text.strip()
 
     if user_input == '⬅️':
@@ -36,7 +34,7 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     elif user_input == '🗓️ Current reservations':
         await update.message.reply_text(
-            utils.show_existing_reservations(update, context, get_wks(sheet_env, auth_mode).get_as_df()),
+            await show_existing_reservations(update, context),
             parse_mode='Markdown',
         )
         return States.CHOOSING_TIME
@@ -59,7 +57,7 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text('Not that difficult to pick an option form the list! Just saying. 🤷‍♂️')
         return States.CHOOSING_TIME
 
-    if not time_not_overlap(update, context, get_wks(sheet_env, auth_mode).get_as_df()):
+    if not await time_not_overlap(update, context):
         await update.message.reply_text(
             textwrap.dedent(
                 """
@@ -69,7 +67,6 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             )
         )
         return States.CHOOSING_TIME
-
     context.user_data['selected_time'] = user_input
     keyboard = keyboards.generate_duration_keyboard(user_input, context)[0]  # [0] for the reply, [1] for the values
 

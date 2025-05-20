@@ -5,14 +5,12 @@ from zoneinfo import ZoneInfo
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.access import get_wks
+from src.biblio.bot.messages import show_existing_reservations
 from src.biblio.config.config import States
 from src.biblio.utils import keyboards, utils
 
 
 async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    sheet_env = context.bot_data.get('sheet_env')
-    auth_mode = context.bot_data.get('auth_mode')
     user_input = update.message.text.strip()
 
     if user_input == '⬅️ Edit reservation type':
@@ -24,10 +22,10 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return States.RESERVE_TYPE
 
     elif user_input == '🗓️ Current reservations':
-        await update.message.reply_text(
-            utils.show_existing_reservations(update, context, get_wks(sheet_env, auth_mode).get_as_df()),
-            parse_mode='Markdown',
-        )
+        text = await show_existing_reservations(update, context)
+        if not text:
+            text = '_No reservations found._'
+        await update.message.reply_text(text, parse_mode='Markdown')
         return States.CHOOSING_DATE
 
     try:

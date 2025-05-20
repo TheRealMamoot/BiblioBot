@@ -6,15 +6,12 @@ from zoneinfo import ZoneInfo
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.access import get_wks
 from src.biblio.config.config import States
 from src.biblio.utils import keyboards
 from src.biblio.utils.validation import duration_overlap
 
 
 async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    sheet_env = context.bot_data.get('sheet_env')
-    auth_mode = context.bot_data.get('auth_mode')
     user_input = update.message.text.strip()
 
     if user_input == '⬅️':
@@ -38,7 +35,7 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text('Well they are not going to let you sleep there! Try again. 🤷‍♂️')
         return States.CHOOSING_DUR
 
-    if duration_overlap(update, context, get_wks(sheet_env, auth_mode).get_as_df()):
+    if await duration_overlap(update, context):
         await update.message.reply_text(
             textwrap.dedent(
                 """

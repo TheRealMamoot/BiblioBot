@@ -6,8 +6,9 @@ from zoneinfo import ZoneInfo
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.access import get_wks
 from src.biblio.config.config import States
+from src.biblio.db.fetch import fetch_reservation_by_id
+from src.biblio.db.write import update_cancel_status
 from src.biblio.reservation.reservation import cancel_reservation
 from src.biblio.utils import keyboards
 
@@ -42,7 +43,7 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             Full Name: *{context.user_data.get('name')}*
             Email: *{context.user_data.get('email')}*
             On *{choices[cancelation_id]['selected_date']}*
-            From *{choices[cancelation_id]['start']}* - *{choices[cancelation_id]['end']}* (*{choices[cancelation_id]['selected_dur']}* hours)
+            From *{choices[cancelation_id]['start_time']}* - *{choices[cancelation_id]['end_time']}* (*{choices[cancelation_id]['selected_duration']}* hours)
             Satus: *{(choices[cancelation_id]['status']).title()}*
             """
         ),
@@ -53,8 +54,6 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
 
 async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    sheet_env = context.bot_data.get('sheet_env')
-    auth_mode = context.bot_data.get('auth_mode')
     user_input = update.message.text.strip()
 
     if user_input == '⬅️ No, take me back.':
@@ -67,12 +66,11 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
         return States.CANCELATION_SLOT_CHOICE
 
     elif user_input == "📅❌ Yes, I'm sure.":
-        history = get_wks(sheet_env, auth_mode).get_as_df()
-        cancelation_chosen_slot_id: str = context.user_data['cancelation_chosen_slot_id']
-        row_idx = history.index[history['id'] == cancelation_chosen_slot_id].tolist()
-        faiulure = False
-        if row_idx:
-            booking_code = history.loc[row_idx, 'booking_code'].values[0]
+        reservation_id: str = context.user_data['cancelation_chosen_slot_id']
+        history = await fetch_reservation_by_id(reservation_id)
+        failure = False
+        if history:
+            booking_code = history['booking_code']
             if booking_code not in ['TBD', 'NA']:
                 try:
                     cancel_reservation(context.user_data['codice_fiscale'], booking_code)
@@ -87,7 +85,7 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
                         logging.error(
                             f'🔄 {update.effective_user} cancelation was not completed at {datetime.now(ZoneInfo("Europe/Rome"))} -- {e}'
                         )
-                        faiulure = True
+                        failure = True
                         await update.message.reply_text(
                             textwrap.dedent(
                                 """
@@ -100,17 +98,10 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
                             reply_markup=keyboards.generate_reservation_type_keyboard(),
                         )
 
-            sheet_row = row_idx[0] + 2  # +2 because: 1 for zero-based index, 1 for header row
-            col_number = history.columns.get_loc('status') + 1  # 1-based for pygsheets
-            wks = get_wks(sheet_env, auth_mode)
-            wks.update_value((sheet_row, col_number), 'terminated')
-            col_number = history.columns.get_loc('notified') + 1
-            wks.update_value((sheet_row, col_number), 'True')
-            col_number = history.columns.get_loc('status_change') + 1
-            wks.update_value((sheet_row, col_number), 'True')
-
+            await update_cancel_status(reservation_id)
             logging.info(f'✔️ {update.effective_user} confirmed cancelation at {datetime.now(ZoneInfo("Europe/Rome"))}')
-            if not faiulure:
+
+            if not failure:
                 await update.message.reply_text(
                     '✔️ Reservation canceled successfully!',
                     reply_markup=keyboards.generate_reservation_type_keyboard(),
