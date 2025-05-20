@@ -8,7 +8,7 @@ import pandas as pd
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.db.fetch import fetch_reservations
+from src.biblio.db.fetch import fetch_user_reservations
 
 
 async def show_existing_reservations(
@@ -19,7 +19,7 @@ async def show_existing_reservations(
     coidce = context.user_data['codice_fiscale']
     email = context.user_data['email']
     try:
-        history: pd.DataFrame = await fetch_reservations(coidce, email, include_date=False)
+        history: pd.DataFrame = await fetch_user_reservations(coidce, email, include_date=False)
         history['datetime'] = pd.to_datetime(
             history['selected_date'].astype(str) + ' ' + history['end_time'].astype(str)
         )  # ' ' acts as space
@@ -147,3 +147,28 @@ def show_help() -> str:
         """
     )
     return message
+
+
+def show_notification(status: str, record: dict, booking_code: str) -> str:
+    if status == 'success':
+        status_message = '✅ Reservation *Successful*!'
+        retry_message = 'Enjoy your stay 🤝'
+    elif status == 'fail':
+        status_message = '⚠️ Reservation *Failed*!'
+        retry_message = '*❗ Trying again ❗*'
+    elif status == 'terminated':
+        status_message = '⛔️ Reservation *Terminated*!'
+        retry_message = '*‼️ No more Retries ‼️*'
+
+    date = record['selected_date'].strftime('%A, %Y-%m-%d')
+    start_time = record['start_time'].strftime('%H:%M')
+    end_time = record['end_time'].strftime('%H:%M')
+    duration = int(record['selected_duration'])
+    text = f"""
+        {status_message}
+        {retry_message}
+        On: *{date}*
+        From: *{start_time}* - *{end_time}* (*{duration}* hours)
+        Booking Code: *{booking_code.upper()}*
+    """
+    return textwrap.dedent(text)

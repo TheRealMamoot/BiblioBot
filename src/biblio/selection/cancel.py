@@ -8,7 +8,7 @@ from telegram.ext import ContextTypes
 
 from src.biblio.config.config import States
 from src.biblio.db.fetch import fetch_reservation_by_id
-from src.biblio.db.write import update_cancel_status
+from src.biblio.db.update import update_cancel_status
 from src.biblio.reservation.reservation import cancel_reservation
 from src.biblio.utils import keyboards
 
@@ -67,16 +67,16 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
 
     elif user_input == "📅❌ Yes, I'm sure.":
         reservation_id: str = context.user_data['cancelation_chosen_slot_id']
-        history = await fetch_reservation_by_id(reservation_id)
+        history = await fetch_reservation_by_id(reservation_id, db_env=context.bot_data['db_env'])
         failure = False
         if history:
             booking_code = history['booking_code']
             if booking_code not in ['TBD', 'NA']:
                 try:
-                    cancel_reservation(context.user_data['codice_fiscale'], booking_code)
+                    await cancel_reservation(context.user_data['codice_fiscale'], booking_code)
                 except RuntimeError:
                     try:
-                        cancel_reservation(
+                        await cancel_reservation(
                             context.user_data['codice_fiscale'],
                             booking_code,
                             mode='update',
@@ -98,7 +98,7 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
                             reply_markup=keyboards.generate_reservation_type_keyboard(),
                         )
 
-            await update_cancel_status(reservation_id)
+            await update_cancel_status(reservation_id, db_env=context.bot_data['db_env'])
             logging.info(f'✔️ {update.effective_user} confirmed cancelation at {datetime.now(ZoneInfo("Europe/Rome"))}')
 
             if not failure:

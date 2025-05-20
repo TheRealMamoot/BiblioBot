@@ -7,7 +7,7 @@ from pandas import DataFrame
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.db.fetch import fetch_reservations
+from src.biblio.db.fetch import fetch_user_reservations
 
 
 def validate_email(email: str) -> bool:
@@ -41,7 +41,7 @@ async def duration_overlap(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     codice = context.user_data['codice_fiscale']
     email = context.user_data['email']
     selected_date = context.user_data['selected_date']
-    history: DataFrame = await fetch_reservations(codice, email, selected_date, include_date=True)
+    history: DataFrame = await fetch_user_reservations(codice, email, selected_date, include_date=True)
     if len(history) == 0:
         return False
 
@@ -61,7 +61,7 @@ async def time_not_overlap(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     codice = context.user_data['codice_fiscale']
     email = context.user_data['email']
     selected_date = context.user_data['selected_date']
-    history: DataFrame = await fetch_reservations(codice, email, selected_date, include_date=True)
+    history: DataFrame = await fetch_user_reservations(codice, email, selected_date, include_date=True)
     input = update.message.text.strip()
     reserving_start = datetime.strptime(input, '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
     for _, row in history.iterrows():

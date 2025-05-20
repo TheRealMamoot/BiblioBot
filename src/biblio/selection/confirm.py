@@ -7,7 +7,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.biblio.config.config import States
-from src.biblio.db.write import writer
+from src.biblio.db.insert import writer
 from src.biblio.reservation.reservation import confirm_reservation, set_reservation
 from src.biblio.reservation.slot_datetime import reserve_datetime
 from src.biblio.utils import keyboards
@@ -29,7 +29,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             'cognome_nome': context.user_data['name'],
             'email': context.user_data['email'],
         }
-        request_status_message = '📌 Registration for slot *successful*!'
+        request_status_message = '⏳ Slot *Scheduled*. Status *Pending*.'
         retry_status_message = (
             '‼️ Reservation request will be processed when slots *reset*. *Be patient!* you will be notified.'
         )
@@ -45,13 +45,13 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
         if context.user_data['instant']:
             try:
-                reservation_response = set_reservation(start, end, duration, user_data)
+                reservation_response = await set_reservation(start, end, duration, user_data)
                 logging.info(f'✅ **2** {res_type} Reservation set for {user_data["cognome_nome"]}')
-                confirm_reservation(reservation_response['entry'])
+                await confirm_reservation(reservation_response['entry'])
                 logging.info(f'✅ **3** {res_type} Reservation confirmed for {user_data["cognome_nome"]}')
                 context.user_data['status'] = 'success'
                 context.user_data['booking_code'] = f'{reservation_response["codice_prenotazione"]}'
-                context.user_data['updated_at'] = datetime.now()
+                context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
                 context.user_data['notified'] = True
                 request_status_message = '✅ Reservation *successful*!'
                 retry_status_message = ''
@@ -61,7 +61,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 context.user_data['retries'] = '1'
                 context.user_data['status'] = 'fail'
                 context.user_data['booking_code'] = 'NA'
-                context.user_data['updated_at'] = datetime.now()
+                context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
                 request_status_message = '⛔ Reservation *failed*! *Slot not available*.'
                 retry_status_message = '‼️ *No need to try again!* I will automatically try to get it when slots open, unless the time for the requested slot *has passed*.'
 

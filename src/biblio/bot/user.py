@@ -152,7 +152,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         'email': context.user_data['email'],
     }
 
-    user_id = await insert_user(user_record)
+    user_id = await insert_user(user_record, db_env=context.bot_data['db_env'])
     context.user_data['user_id'] = user_id
 
     logging.info(f'🔄 {update.effective_user} info validated at {datetime.now(ZoneInfo("Europe/Rome"))}')
