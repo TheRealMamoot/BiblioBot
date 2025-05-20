@@ -9,9 +9,10 @@ from telegram.ext import (
 )
 
 from src.biblio.access import get_token
-from src.biblio.commands import feedback, help, start
+from src.biblio.bot.commands import feedback, help, start
+from src.biblio.bot.fallbacks import error, fallback, restart
+from src.biblio.bot.user import user_agreement, user_validation
 from src.biblio.config.config import States
-from src.biblio.fallbacks import error, fallback, restart
 from src.biblio.jobs import run_reserve_job
 from src.biblio.selection.cancel import cancelation, cancelation_confirmation
 from src.biblio.selection.confirm import confirmation
@@ -20,7 +21,6 @@ from src.biblio.selection.duration import duration_selection
 from src.biblio.selection.retry import retry
 from src.biblio.selection.time import time_selection
 from src.biblio.selection.type import type_selection
-from src.biblio.user import user_agreement, user_validation
 
 
 def build_app(token_env='prod', sheet_env='prod', auth_mode='prod', priorities_env='prod'):
