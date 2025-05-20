@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     priority INTEGER DEFAULT 2,
     name TEXT,
     email TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     UNIQUE (codice_fiscale, username, first_name, last_name, email)
 );
@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS reservations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    inserted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     selected_date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,     
@@ -26,8 +27,8 @@ CREATE TABLE IF NOT EXISTS reservations (
     booking_code VARCHAR,
     retries INTEGER DEFAULT 0,
     status VARCHAR(20) DEFAULT 'pending',
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     instant BOOLEAN DEFAULT FALSE,
     status_change BOOLEAN DEFAULT FALSE,
     notified BOOLEAN DEFAULT FALSE
