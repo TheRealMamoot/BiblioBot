@@ -1,5 +1,3 @@
-import threading
-
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -8,12 +6,12 @@ from telegram.ext import (
     filters,
 )
 
-from src.biblio.access import get_token
+from src.biblio.access import get_database_url, get_token
 from src.biblio.bot.commands import feedback, help, start
 from src.biblio.bot.fallbacks import error, fallback, restart
 from src.biblio.bot.user import user_agreement, user_validation
 from src.biblio.config.config import States
-from src.biblio.jobs import run_reserve_job
+from src.biblio.jobs import schedule_jobs
 from src.biblio.selection.cancel import cancelation, cancelation_confirmation
 from src.biblio.selection.confirm import confirmation
 from src.biblio.selection.date import date_selection
@@ -23,12 +21,10 @@ from src.biblio.selection.time import time_selection
 from src.biblio.selection.type import type_selection
 
 
-def build_app(token_env='prod', sheet_env='prod', auth_mode='prod', priorities_env='prod'):
+def build_app(token_env='prod', db_env='prod', priorities_env='prod'):
     app = Application.builder().token(get_token(token_env)).build()
-    app.bot_data['sheet_env'] = sheet_env
-    app.bot_data['auth_mode'] = auth_mode
+    app.bot_data['db_env'] = get_database_url(db_env)
     app.bot_data['priorities_env'] = priorities_env
-
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
@@ -54,10 +50,9 @@ def build_app(token_env='prod', sheet_env='prod', auth_mode='prod', priorities_e
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler('help', help))
     app.add_handler(CommandHandler('feedback', feedback))
-
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, restart))
-
     app.add_error_handler(error)
-    threading.Thread(target=run_reserve_job, args=(sheet_env, auth_mode), daemon=True).start()
 
-    app.run_polling()
+    schedule_jobs(app.bot, db_env)
+
+    return app

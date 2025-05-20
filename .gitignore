@@ -1,5 +1,3 @@
-biblio/
-!src/biblio/
 __pycache__/
 *.pyc
 *.pyo
@@ -8,4 +6,5 @@ __pycache__/
 .DS_Store
 *.json
 .vscode
+.venv
 notifs.py

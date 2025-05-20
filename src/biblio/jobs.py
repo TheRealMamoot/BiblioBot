@@ -1,109 +1,118 @@
+import asyncio
 import logging
-import time
 from datetime import datetime, timedelta
-from itertools import product
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import pandas as pd
-import schedule
-from pygsheets import Worksheet
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from telegram import Bot
 
-from src.biblio.access import get_wks
+from src.biblio.bot.messages import show_notification
+from src.biblio.db.fetch import fetch_pending_reservations
+from src.biblio.db.update import update_record
 from src.biblio.reservation.reservation import confirm_reservation, set_reservation
 from src.biblio.reservation.slot_datetime import reserve_datetime
-from src.biblio.utils.utils import update_gsheet_data_point
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-CREDENTIALS_PATH = BASE_DIR / 'biblio.json'
+ALLOWED_MINUTES = {0, 1, 30, 31, 32}
+ALLOWED_WEEKDAYS = set(range(0, 5))  # Monday to Friday
+SATURDAY = 5
 
 
-def reserve_job(sheet_env: str, auth_mode: str):
-    wks: Worksheet = get_wks(sheet_env, auth_mode)
-    data = wks.get_as_df()
-    data['temp_duration_int'] = pd.to_numeric(data['selected_dur'])
-    data['temp_date'] = pd.to_datetime(data['selected_date'])
-    data['temp_date'] = data['temp_date'].dt.tz_localize('UTC').dt.tz_convert('Europe/Rome')
-    data['temp_start'] = pd.to_datetime(data['start'], format='%H:%M').dt.time
-    data['temp_datetime'] = data.apply(
-        lambda row: datetime.combine(row['temp_date'].date(), row['temp_start']).replace(
-            tzinfo=ZoneInfo('Europe/Rome')
-        ),
-        axis=1,
+async def process_reservation(record: dict, bot: Bot) -> dict:
+    chat_id = record.get('chat_id')
+    date = record['selected_date'].strftime('%Y-%m-%d')
+    start_time = record['start_time'].strftime('%H:%M')
+    selected_duration = int(record['selected_duration'])
+    user_data = {
+        'codice_fiscale': record['codice_fiscale'],
+        'cognome_nome': record['name'],
+        'email': record['email'],
+    }
+
+    now = datetime.now(ZoneInfo('Europe/Rome'))
+    scheduled_dt = datetime.combine(record['selected_date'], record['start_time']).replace(
+        tzinfo=ZoneInfo('Europe/Rome')
     )
-    data['retries'] = data['retries'].astype(str)
-    data: pd.DataFrame = data.sort_values(
-        ['priority', 'temp_datetime', 'temp_duration_int', 'temp_start'],
-        ascending=[True, True, False, True],
-    )
-    today = datetime.now(ZoneInfo('Europe/Rome')).today().strftime('%A, %Y-%m-%d')
-    for _, row in data.iterrows():
-        id = row['id']
-        status_change = False
-        old_status = row['status']
 
-        if row['selected_date'] != today:
-            continue
-
-        now = datetime.now(ZoneInfo('Europe/Rome'))
-
-        if row['temp_datetime'] + timedelta(minutes=8) < now and row['status'] == 'fail':
-            update_gsheet_data_point(data, id, 'status', 'terminated', wks)
-            continue
-
-        if row['status'] == 'success' or row['status'] == 'terminated':
-            continue
-
-        logging.info(f'⏳ Job started at {datetime.now(ZoneInfo("Europe/Rome"))}')
-        user_data = {
-            'codice_fiscale': row['codice_fiscale'],
-            'cognome_nome': row['name'],
-            'email': row['email'],
+    if record['status'] == 'fail' and scheduled_dt + timedelta(minutes=8) < now:
+        logging.info(f'[JOB] ⏰ Reservation too old for ID {record["id"]} — marked as terminated')
+        if chat_id:
+            notif = show_notification(status='terminated', record=record, booking_code=record['booking_code'])
+            await bot.send_message(chat_id=chat_id, text=notif, parse_mode='Markdown')
+        result = {
+            'id': record['id'],
+            'status': 'terminated',
+            'booking_code': 'CLOSED',
+            'retries': int(record['retries']),
+            'status_change': True,
+            'notified': True,
+            'updated_at': datetime.now(ZoneInfo('Europe/Rome')),
         }
-        date = row['selected_date'].split(' ')[-1]
-        start_time = row['start']
-        selected_dur = row['selected_dur']
-        try:
-            start, end, duration = reserve_datetime(date, start_time, selected_dur)
-            logging.info(f'✅ **1** Slot identified for {user_data["cognome_nome"]}')
-            reservation_response = set_reservation(start, end, duration, user_data)
-            logging.info(f'✅ **2** Reservation set for {user_data["cognome_nome"]}')
-            confirm_reservation(reservation_response['entry'])
-            logging.info(f'✅ **3** Reservation confirmed for {user_data["cognome_nome"]}')
-            booking_code: str = str(reservation_response['codice_prenotazione'])
-            booking_code = booking_code.replace('.', '').replace('+', '').replace('-', '').upper()
-            update_gsheet_data_point(data, id, 'status', 'success', wks)
-            update_gsheet_data_point(data, id, 'booking_code', booking_code, wks)
-            update_gsheet_data_point(data, id, 'updated_at', datetime.now(ZoneInfo('Europe/Rome')), wks)
+        return result
 
-        except Exception as e:
-            logging.error(f'❌ Failed reservation for {user_data["cognome_nome"]} — {e}')
-            update_gsheet_data_point(data, id, 'retries', int(row['retries']) + 1, wks)
-            changed_status = 'terminated' if int(row['retries']) > 18 else 'fail'
-            update_gsheet_data_point(data, id, 'status', changed_status, wks)
-            update_gsheet_data_point(data, id, 'updated_at', datetime.now(ZoneInfo('Europe/Rome')), wks)
+    try:
+        start, end, duration = reserve_datetime(date, start_time, selected_duration)
+        logging.info(f'[JOB] ✅ **1** Slot identified for {user_data["cognome_nome"]} - ID {record["id"]}')
+        response = await set_reservation(start, end, duration, user_data)
+        logging.info(f'[JOB] ✅ **2** Reservation set for {user_data["cognome_nome"]} - ID {record["id"]}')
+        await confirm_reservation(response['entry'])
+        logging.info(f'[JOB] ✅ **3** Reservation confirmed for {user_data["cognome_nome"]} - ID {record["id"]}')
 
-        new_data = wks.get_as_df()
-        new_status = new_data.loc[new_data['id'] == id, 'status'].values[0]
-        if (old_status == 'fail' or old_status == 'pending') and new_status in [
-            'success',
-            'terminated',
-        ]:
-            status_change = True
+        if chat_id:
+            notif = show_notification(status='success', record=record, booking_code=response['codice_prenotazione'])
+            await bot.send_message(chat_id=chat_id, text=notif, parse_mode='Markdown')
 
-        update_gsheet_data_point(data, id, 'status_change', status_change, wks)
+        result = {
+            'id': record['id'],
+            'status': 'success',
+            'booking_code': response['codice_prenotazione'],
+            'retries': int(record['retries']),
+            'status_change': record['status'] in ['fail', 'pending'],
+            'notified': True,
+            'updated_at': datetime.now(ZoneInfo('Europe/Rome')),
+        }
 
-    del data['temp_duration_int'], data['temp_date'], data['temp_start'], data['temp_datetime']
-    logging.info(f'🔄 Data refreshed at {datetime.now(ZoneInfo("Europe/Rome"))}')
+    except Exception as e:
+        logging.warning(f'[JOB] ❌ Reservation failed for {user_data["cognome_nome"]} - ID {record["id"]}: {e}')
+        retries = int(record['retries']) + 1
+        status = 'terminated' if retries > 18 else 'fail'
+        booking_code = record['booking_code'] if status == 'fail' else 'CLOSED'
+        chat_id = record.get('chat_id')
+        if chat_id and (retries % 6 == 0 or status == 'terminated'):
+            notif = show_notification(status, record, booking_code)
+            await bot.send_message(chat_id=chat_id, text=notif, parse_mode='Markdown')
+
+        result = {
+            'id': record['id'],
+            'status': status,
+            'booking_code': booking_code,
+            'retries': retries,
+            'status_change': record['status'] in ['pending', 'fail'],
+            'notified': True,
+            'updated_at': datetime.now(ZoneInfo('Europe/Rome')),
+        }
+
+    return result
 
 
-def run_reserve_job(sheet_env, auth_mode):
-    hours = range(7, 23)  # 7 to 18 inclusive
-    minutes = [0, 1, 30, 31, 32]
-    seconds = range(2, 30, 6)
-    for hour, minute, second in product(hours, minutes, seconds):
-        time_str = f'{hour:02d}:{minute:02d}:{second:02d}'
-        schedule.every().day.at(time_str, 'Europe/Rome').do(reserve_job, sheet_env, auth_mode)
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+async def excecute_reservations(bot: Bot, db_env: str = 'staging'):
+    records: list[dict] = await fetch_pending_reservations(db_env)
+    if not records:
+        logging.info('[DB-JOB] No pending reservations to process.')
+        return
+    tasks = [process_reservation(record, bot) for record in records]
+    updates = await asyncio.gather(*tasks)
+    await asyncio.gather(
+        *(update_record('reservations', r['id'], {k: v for k, v in r.items() if k != 'id'}) for r in updates)
+    )  # Skip the first value since it is an ID
+    logging.info(f'[DB-JOB] Reservation job completed: {len(updates)} updated')
+
+
+def schedule_jobs(bot: Bot, db_env='staging'):
+    scheduler = AsyncIOScheduler(timezone='Europe/Rome')
+    trigger = CronTrigger(second='*/10', minute='0,1,30,31,32', hour='7-22', day_of_week='mon-fri')
+    scheduler.add_job(excecute_reservations, trigger, args=[bot, db_env])
+
+    trigger_sat = CronTrigger(second='*/10', minute='0,1,30,31,32', hour='7-13', day_of_week='sat')
+    scheduler.add_job(excecute_reservations, trigger_sat, args=[bot, db_env])
+    scheduler.start()

@@ -1,8 +1,11 @@
 anyio==4.9.0
 APScheduler==3.11.0
+asyncio==3.4.3
+asyncpg==0.30.0
 cachetools==5.5.2
 certifi==2025.1.31
 charset-normalizer==3.4.1
+cronsim==2.6
 dotenv==0.9.9
 google-api-core==2.24.2
 google-api-python-client==2.166.0
