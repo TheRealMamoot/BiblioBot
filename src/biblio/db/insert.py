@@ -1,18 +1,45 @@
 import logging
-import os
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import asyncpg
+from telegram import Update
+from telegram.ext import ContextTypes
 
+from src.biblio.access import get_database_url
 from src.biblio.db.fetch import fetch_existing_user_id
-from src.biblio.utils.utils import load_env
-
-load_env()
-DATABASE_URL = os.getenv('DATABASE_URL_S')
 
 
-async def insert_reservation(data: dict):
+async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE, db_env='staging') -> None:
+    start_time = datetime.strptime(context.user_data['selected_time'], '%H:%M').time()
+    start_dt = datetime.combine(date.today(), start_time).replace(tzinfo=ZoneInfo('Europe/Rome'))
+    end_dt = start_dt + timedelta(hours=int(context.user_data['selected_duration']))
+
+    data = {
+        'user_id': context.user_data['user_id'],
+        'selected_date': datetime.strptime(context.user_data['selected_date'], '%A, %Y-%m-%d').date(),
+        'display_date': context.user_data['selected_date'],
+        'start_time': start_dt.time(),
+        'end_time': end_dt.time(),
+        'selected_duration': int(context.user_data['selected_duration']),
+        'booking_code': context.user_data['booking_code'],
+        'retries': int(context.user_data['retries']),
+        'status': context.user_data['status'],
+        'updated_at': context.user_data.get('updated_at', datetime.now(ZoneInfo('Europe/Rome'))),
+        'created_at': context.user_data.get('created_at', datetime.now(ZoneInfo('Europe/Rome'))),
+        'instant': bool(context.user_data.get('instant', False)),
+        'status_change': bool(context.user_data.get('status_change', False)),
+        'notified': bool(context.user_data.get('notified', False)),
+        'inserted_at': datetime.now(ZoneInfo('Europe/Rome')),
+    }
+
+    await insert_reservation(data, db_env)
+    logging.info(f'[DB] Reservation inserted for {update.effective_user}')
+
+
+async def insert_reservation(data: dict, db_env='staging'):
     columns, placeholders, values = _prepare_insert_parts(data)
-
+    DATABASE_URL = get_database_url(db_env)
     conn = await asyncpg.connect(DATABASE_URL)
     query = f"""
     INSERT INTO reservations ({columns})
@@ -23,7 +50,7 @@ async def insert_reservation(data: dict):
     logging.info('[DB] Reservation added')
 
 
-async def insert_user(data: dict) -> str:
+async def insert_user(data: dict, db_env='staging') -> str:
     columns, placeholders, values = _prepare_insert_parts(data)
 
     query = f"""
@@ -32,6 +59,7 @@ async def insert_user(data: dict) -> str:
     ON CONFLICT DO NOTHING
     RETURNING id
     """
+    DATABASE_URL = get_database_url(db_env)
     conn = await asyncpg.connect(DATABASE_URL)
     row = await conn.fetchrow(query, *values)
 

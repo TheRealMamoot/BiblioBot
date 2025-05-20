@@ -1,38 +1,19 @@
 import json
 import os
-from functools import cache
 from pathlib import Path
 
-import pygsheets
-from dotenv import load_dotenv
+from src.biblio.utils.utils import load_env
 
 CREDENTIALS_PATH = Path(__file__).resolve().parents[1] / 'biblio' / 'config' / 'biblio.json'
 PRIORITY_CODES_PATH = Path(__file__).resolve().parents[1] / 'biblio' / 'config' / 'priorities.json'
-ENV_PATH = Path(__file__).resolve().parent
 
 
-@cache
-def get_gsheet_client(auth_mode: str):
-    if auth_mode == 'prod':
-        return pygsheets.authorize(service_account_json=os.environ['GSHEETS'])
-    elif auth_mode == 'local':
-        return pygsheets.authorize(service_file=CREDENTIALS_PATH)
+def get_database_url(env: str) -> str:
+    load_env()
+    if env == 'prod':
+        return os.getenv('DATABASE_URL')
     else:
-        raise ValueError('Wrong mode')
-
-
-def get_wks(sheet_env: str = 'prod', auth_mode: str = 'prod'):
-    gc = get_gsheet_client(auth_mode)
-    sheet_name = 'Biblio-logs'
-    if sheet_env == 'prod':
-        tab_name = 'logs'
-    elif sheet_env == 'test':
-        tab_name = 'tests'
-    elif sheet_env == 'staging':
-        tab_name = 'staging'
-    else:
-        raise ValueError('Wrong mode')
-    return gc.open(sheet_name).worksheet_by_title(tab_name)
+        return os.getenv('DATABASE_URL_S')
 
 
 def get_priorities(priorities_env: str = 'prod'):
@@ -48,7 +29,7 @@ def get_priorities(priorities_env: str = 'prod'):
 
 
 def get_token(token_env: str = 'prod'):
-    load_dotenv(dotenv_path=ENV_PATH)
+    load_env()
     if token_env == 'prod':
         token: str = os.getenv('TELEGRAM_TOKEN')
     elif token_env == 'staging':

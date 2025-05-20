@@ -16,15 +16,9 @@ def get_parser():
         choices=['prod', 'local'],
     )
     parser.add_argument(
-        '--sheet-env',
+        '--db-env',
         type=str,
         default='prod',
-        choices=['prod', 'test', 'staging'],
-    )
-    parser.add_argument(
-        '--auth-mode',
-        type=str,
-        default='prod',
-        choices=['prod', 'local'],
+        choices=['prod', 'staging'],
     )
     return parser
