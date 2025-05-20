@@ -3,9 +3,11 @@ import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-import pandas as pd
+from pandas import DataFrame
 from telegram import Update
 from telegram.ext import ContextTypes
+
+from src.biblio.db.fetch import fetch_reservations
 
 
 def validate_email(email: str) -> bool:
@@ -35,20 +37,19 @@ def validate_user_data(user_data: dict):
     logging.info('User data validated successfully.')
 
 
-def duration_overlap(update: Update, context: ContextTypes.DEFAULT_TYPE, history: pd.DataFrame) -> bool:
-    filtered = history[
-        (history['codice_fiscale'] == context.user_data['codice_fiscale'])
-        & (history['email'] == context.user_data['email'])
-        & (history['selected_date'] == context.user_data['selected_date'])
-    ]
-    if len(filtered) == 0:
+async def duration_overlap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    codice = context.user_data['codice_fiscale']
+    email = context.user_data['email']
+    selected_date = context.user_data['selected_date']
+    history: DataFrame = await fetch_reservations(codice, email, selected_date, include_date=True)
+    if len(history) == 0:
         return False
 
     reserving_start = datetime.strptime(context.user_data['selected_time'], '%H:%M')
     reserving_end = reserving_start + timedelta(hours=int(update.message.text.strip()))
-    for _, row in filtered.iterrows():
-        existing_start = datetime.strptime(row['start'], '%H:%M')
-        existing_end = datetime.strptime(row['end'], '%H:%M')
+    for _, row in history.iterrows():
+        existing_start = datetime.strptime(row['start_time'].strftime('%H:%M'), '%H:%M')
+        existing_end = datetime.strptime(row['end_time'].strftime('%H:%M'), '%H:%M')
         if row['status'] == 'terminated':
             continue
         if reserving_start < existing_end and reserving_end > existing_start:
@@ -56,16 +57,20 @@ def duration_overlap(update: Update, context: ContextTypes.DEFAULT_TYPE, history
     return False
 
 
-def time_not_overlap(update: Update, context: ContextTypes.DEFAULT_TYPE, history: pd.DataFrame) -> bool:
-    filtered = history[
-        (history['codice_fiscale'] == context.user_data['codice_fiscale'])
-        & (history['email'] == context.user_data['email'])
-        & (history['selected_date'] == context.user_data['selected_date'])
-    ]
-    reserving_start = datetime.strptime(update.message.text.strip(), '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
-    for _, row in filtered.iterrows():
-        existing_start = datetime.strptime(row['start'], '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
-        existing_end = datetime.strptime(row['end'], '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
+async def time_not_overlap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    codice = context.user_data['codice_fiscale']
+    email = context.user_data['email']
+    selected_date = context.user_data['selected_date']
+    history: DataFrame = await fetch_reservations(codice, email, selected_date, include_date=True)
+    input = update.message.text.strip()
+    reserving_start = datetime.strptime(input, '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
+    for _, row in history.iterrows():
+        existing_start = datetime.strptime(row['start_time'].strftime('%H:%M'), '%H:%M').replace(
+            tzinfo=ZoneInfo('Europe/Rome')
+        )
+        existing_end = datetime.strptime(row['end_time'].strftime('%H:%M'), '%H:%M').replace(
+            tzinfo=ZoneInfo('Europe/Rome')
+        )
         if row['status'] == 'terminated':
             continue
         if reserving_start >= existing_start - timedelta(minutes=30) and reserving_start < existing_end:
