@@ -25,8 +25,8 @@ def get_gsheet_client(auth_mode: str = 'prod'):
         raise ValueError('Wrong mode')
 
 
-def get_wks():
-    gc = get_gsheet_client()
+def get_wks(auth_mode: str = 'prod'):
+    gc = get_gsheet_client(auth_mode)
     return gc.open('Biblio-logs').worksheet_by_title('backup')
 
 
