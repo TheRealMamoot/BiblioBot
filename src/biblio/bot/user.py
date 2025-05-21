@@ -7,11 +7,11 @@ from zoneinfo import ZoneInfo
 from telegram import ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
-from src.biblio.access import get_priorities
 from src.biblio.bot.messages import show_help, show_support_message
 from src.biblio.config.config import States
 from src.biblio.db.insert import insert_user
 from src.biblio.utils import keyboards
+from src.biblio.utils.utils import get_priorities
 from src.biblio.utils.validation import validate_codice_fiscale, validate_email
 
 
@@ -70,8 +70,6 @@ async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    priorities_env = context.bot_data.get('priorities_env')
-
     if not update.message or not update.message.text:
         await update.message.reply_text('Sure, waste your time why not? I can do this all day. 🥱')
         return States.CREDENTIALS
@@ -120,12 +118,12 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text('🚫 Nice try with a fake email. Try again!')
         return States.CREDENTIALS
 
-    priorities = get_priorities(priorities_env)
+    priorities = get_priorities()
     context.user_data['user_id'] = str(uuid.uuid4())
     context.user_data['codice_fiscale'] = codice.upper()
     context.user_data['name'] = name
     context.user_data['email'] = email.lower()
-    context.user_data['priority'] = priorities.get(codice.upper(), 2)  # Default: 2. For everyone else
+    context.user_data['priority'] = int(priorities.get(codice.upper(), 2))  # Default: 2. For everyone else
     context.bot_data['user_chat_ids'][context.user_data['codice_fiscale']] = update.effective_chat.id
 
     keyboard = keyboards.generate_reservation_type_keyboard()

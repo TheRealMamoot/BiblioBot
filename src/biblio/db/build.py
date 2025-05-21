@@ -3,7 +3,7 @@ from pathlib import Path
 
 import asyncpg
 
-from src.biblio.access import get_database_url
+from src.biblio.utils.utils import get_database_url
 
 SCHEMA_PATH = Path(__file__).parent / 'schema.sql'
 DATABASE_URL = get_database_url()

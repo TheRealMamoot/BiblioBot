@@ -3,7 +3,7 @@ from typing import Any
 
 import asyncpg
 
-from src.biblio.access import get_database_url
+from src.biblio.utils.utils import get_database_url
 
 DATABASE_URL = get_database_url()
 

@@ -3,7 +3,7 @@ import logging
 import asyncpg
 import pandas as pd
 
-from src.biblio.access import get_database_url
+from src.biblio.utils.utils import get_database_url
 
 DATABASE_URL = get_database_url()
 

@@ -6,7 +6,6 @@ from telegram.ext import (
     filters,
 )
 
-from src.biblio.access import get_token
 from src.biblio.bot.commands import feedback, help, start
 from src.biblio.bot.fallbacks import error, fallback, restart
 from src.biblio.bot.user import user_agreement, user_validation
@@ -19,11 +18,11 @@ from src.biblio.selection.duration import duration_selection
 from src.biblio.selection.retry import retry
 from src.biblio.selection.time import time_selection
 from src.biblio.selection.type import type_selection
+from src.biblio.utils.utils import get_token
 
 
-def build_app(token_env='prod', priorities_env='prod'):
+def build_app(token_env='prod'):
     app = Application.builder().token(get_token(token_env)).build()
-    app.bot_data['priorities_env'] = priorities_env
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={

@@ -6,8 +6,8 @@ import asyncpg
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.access import get_database_url
 from src.biblio.db.fetch import fetch_existing_user_id
+from src.biblio.utils.utils import get_database_url
 
 DATABASE_URL = get_database_url()
 

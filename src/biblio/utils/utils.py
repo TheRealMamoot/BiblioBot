@@ -1,10 +1,27 @@
+import argparse
+import json
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import pandas as pd
 from dotenv import load_dotenv
-from pygsheets import Worksheet
+
+
+def get_token(token_env: str = 'prod'):
+    load_env()
+    if token_env == 'prod':
+        token: str = os.getenv('TELEGRAM_TOKEN')
+    elif token_env == 'staging':
+        token: str = os.getenv('TELEGRAM_TOKEN_S')
+    else:
+        raise ValueError('Wrong mode')
+    return token
+
+
+def get_database_url() -> str:
+    load_env()
+    return os.getenv('DATABASE_URL')
 
 
 def load_env():
@@ -13,7 +30,7 @@ def load_env():
 
 
 def generate_days() -> list:
-    today = datetime.now(ZoneInfo('Europe/Rome')).today()
+    today = datetime.now(ZoneInfo('Europe/Rome')).date()
     days = []
     for i in range(7):
         next_day = today + timedelta(days=i)
@@ -26,14 +43,19 @@ def generate_days() -> list:
     return days
 
 
-def update_gsheet_data_point(
-    data: pd.DataFrame,
-    org_data_point_id: str,
-    org_data_col_name: str,
-    new_value,
-    worksheet: Worksheet,
-) -> None:
-    row_idx = data.index[data['id'] == org_data_point_id].tolist()
-    sheet_row = row_idx[0] + 2  # +2 because: 1 for zero-based index, 1 for header row
-    sheet_col = data.columns.get_loc(org_data_col_name) + 1  # 1-based for pygsheets
-    worksheet.update_value((sheet_row, sheet_col), str(new_value))
+def get_parser():
+    parser = argparse.ArgumentParser(description='Telegram Bot')
+    parser.add_argument(
+        '--token-env',
+        type=str,
+        default='prod',
+        choices=['prod', 'staging'],
+        help='Which .env key to use for Telegram bot token',
+    )
+    return parser
+
+
+def get_priorities():
+    priority_codes: dict = os.environ['PRIORITY_CODES']
+    priority_codes = json.loads(priority_codes)
+    return priority_codes
