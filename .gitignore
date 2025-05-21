@@ -8,4 +8,3 @@ __pycache__/
 .vscode
 .venv
 notifs.py
-gsheets.py

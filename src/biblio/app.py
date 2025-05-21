@@ -10,6 +10,7 @@ from src.biblio.bot.commands import feedback, help, start
 from src.biblio.bot.fallbacks import error, fallback, restart
 from src.biblio.bot.user import user_agreement, user_validation
 from src.biblio.config.config import States
+from src.biblio.gsheets import schedule_backup_job
 from src.biblio.jobs import schedule_jobs
 from src.biblio.selection.cancel import cancelation, cancelation_confirmation
 from src.biblio.selection.confirm import confirmation
@@ -52,5 +53,6 @@ def build_app(token_env='prod'):
     app.add_error_handler(error)
 
     schedule_jobs(app.bot)
+    schedule_backup_job()
 
     return app
