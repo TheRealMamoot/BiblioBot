@@ -83,7 +83,7 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
                         )
                     except RuntimeError as e:
                         logging.error(
-                            f'🔄 {update.effective_user} cancelation was not completed at {datetime.now(ZoneInfo("Europe/Rome"))} -- {e}'
+                            f'[CANCEL] {update.effective_user} cancelation was not completed at {datetime.now(ZoneInfo("Europe/Rome"))} -- {e}'
                         )
                         failure = True
                         await update.message.reply_text(
