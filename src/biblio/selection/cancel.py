@@ -67,7 +67,7 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
 
     elif user_input == "📅❌ Yes, I'm sure.":
         reservation_id: str = context.user_data['cancelation_chosen_slot_id']
-        history = await fetch_reservation_by_id(reservation_id, db_env=context.bot_data['db_env'])
+        history = await fetch_reservation_by_id(reservation_id)
         failure = False
         if history:
             booking_code = history['booking_code']
@@ -98,7 +98,7 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
                             reply_markup=keyboards.generate_reservation_type_keyboard(),
                         )
 
-            await update_cancel_status(reservation_id, db_env=context.bot_data['db_env'])
+            await update_cancel_status(reservation_id)
             logging.info(f'✔️ {update.effective_user} confirmed cancelation at {datetime.now(ZoneInfo("Europe/Rome"))}')
 
             if not failure:
