@@ -6,10 +6,10 @@ import asyncpg
 from src.biblio.access import get_database_url
 
 SCHEMA_PATH = Path(__file__).parent / 'schema.sql'
+DATABASE_URL = get_database_url()
 
 
-async def build_db(db_env='staging'):
-    DATABASE_URL = get_database_url(db_env)
+async def build_db():
     conn = await asyncpg.connect(DATABASE_URL)
     sql = SCHEMA_PATH.read_text()
     await conn.execute(sql)

@@ -21,9 +21,9 @@ from src.biblio.selection.time import time_selection
 from src.biblio.selection.type import type_selection
 
 
-def build_app(token_env='prod', db_env='prod', priorities_env='prod'):
+def build_app(token_env='prod', priorities_env='prod'):
     app = Application.builder().token(get_token(token_env)).build()
-    app.bot_data['db_env'] = get_database_url(db_env)
+    app.bot_data['db_env'] = get_database_url()
     app.bot_data['priorities_env'] = priorities_env
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
@@ -53,6 +53,6 @@ def build_app(token_env='prod', db_env='prod', priorities_env='prod'):
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, restart))
     app.add_error_handler(error)
 
-    schedule_jobs(app.bot, db_env)
+    schedule_jobs(app.bot)
 
     return app

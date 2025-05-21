@@ -8,12 +8,9 @@ CREDENTIALS_PATH = Path(__file__).resolve().parents[1] / 'biblio' / 'config' / '
 PRIORITY_CODES_PATH = Path(__file__).resolve().parents[1] / 'biblio' / 'config' / 'priorities.json'
 
 
-def get_database_url(env: str) -> str:
+def get_database_url() -> str:
     load_env()
-    if env == 'prod':
-        return os.getenv('DATABASE_URL')
-    else:
-        return os.getenv('DATABASE_URL_S')
+    return os.getenv('DATABASE_URL')
 
 
 def get_priorities(priorities_env: str = 'prod'):

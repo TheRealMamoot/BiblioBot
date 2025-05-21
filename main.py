@@ -11,7 +11,7 @@ async def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     parser = get_parser()
     args = parser.parse_args()
-    app: Application = build_app(token_env=args.token_env, priorities_env=args.priorities_env, db_env=args.db_env)
+    app: Application = build_app(token_env=args.token_env, priorities_env=args.priorities_env)
     await app.initialize()
     await app.start()
     await app.updater.start_polling()

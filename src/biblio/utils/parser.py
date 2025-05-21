@@ -15,10 +15,4 @@ def get_parser():
         default='prod',
         choices=['prod', 'local'],
     )
-    parser.add_argument(
-        '--db-env',
-        type=str,
-        default='prod',
-        choices=['prod', 'staging'],
-    )
     return parser

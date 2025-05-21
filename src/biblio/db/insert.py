@@ -9,8 +9,10 @@ from telegram.ext import ContextTypes
 from src.biblio.access import get_database_url
 from src.biblio.db.fetch import fetch_existing_user_id
 
+DATABASE_URL = get_database_url()
 
-async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE, db_env='staging') -> None:
+
+async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.strptime(context.user_data['selected_time'], '%H:%M').time()
     start_dt = datetime.combine(date.today(), start_time).replace(tzinfo=ZoneInfo('Europe/Rome'))
     end_dt = start_dt + timedelta(hours=int(context.user_data['selected_duration']))
@@ -33,13 +35,12 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE, db_env='sta
         'inserted_at': datetime.now(ZoneInfo('Europe/Rome')),
     }
 
-    await insert_reservation(data, db_env)
+    await insert_reservation(data)
     logging.info(f'[DB] Reservation inserted for {update.effective_user}')
 
 
-async def insert_reservation(data: dict, db_env='staging'):
+async def insert_reservation(data: dict):
     columns, placeholders, values = _prepare_insert_parts(data)
-    DATABASE_URL = get_database_url(db_env)
     conn = await asyncpg.connect(DATABASE_URL)
     query = f"""
     INSERT INTO reservations ({columns})
@@ -50,7 +51,7 @@ async def insert_reservation(data: dict, db_env='staging'):
     logging.info('[DB] Reservation added')
 
 
-async def insert_user(data: dict, db_env='staging') -> str:
+async def insert_user(data: dict) -> str:
     columns, placeholders, values = _prepare_insert_parts(data)
 
     query = f"""
@@ -59,7 +60,6 @@ async def insert_user(data: dict, db_env='staging') -> str:
     ON CONFLICT DO NOTHING
     RETURNING id
     """
-    DATABASE_URL = get_database_url(db_env)
     conn = await asyncpg.connect(DATABASE_URL)
     row = await conn.fetchrow(query, *values)
 

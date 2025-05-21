@@ -95,8 +95,8 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
     return result
 
 
-async def excecute_reservations(bot: Bot, db_env: str = 'staging'):
-    records: list[dict] = await fetch_pending_reservations(db_env)
+async def excecute_reservations(bot: Bot):
+    records: list[dict] = await fetch_pending_reservations()
     if not records:
         logging.info('[DB-JOB] No pending reservations to process.')
         return
@@ -108,11 +108,11 @@ async def excecute_reservations(bot: Bot, db_env: str = 'staging'):
     logging.info(f'[DB-JOB] Reservation job completed: {len(updates)} updated')
 
 
-def schedule_jobs(bot: Bot, db_env='staging'):
+def schedule_jobs(bot: Bot):
     scheduler = AsyncIOScheduler(timezone='Europe/Rome')
     trigger = CronTrigger(second='*/10', minute='0,1,30,31,32', hour='7-22', day_of_week='mon-fri')
-    scheduler.add_job(excecute_reservations, trigger, args=[bot, db_env])
+    scheduler.add_job(excecute_reservations, trigger, args=[bot])
 
     trigger_sat = CronTrigger(second='*/10', minute='0,1,30,31,32', hour='7-13', day_of_week='sat')
-    scheduler.add_job(excecute_reservations, trigger_sat, args=[bot, db_env])
+    scheduler.add_job(excecute_reservations, trigger_sat, args=[bot])
     scheduler.start()

@@ -5,9 +5,10 @@ import pandas as pd
 
 from src.biblio.access import get_database_url
 
+DATABASE_URL = get_database_url()
 
-async def fetch_user_reservations(*user_details, include_date: bool = True, db_env='staging') -> pd.DataFrame:
-    DATABASE_URL = get_database_url(db_env)
+
+async def fetch_user_reservations(*user_details, include_date: bool = True) -> pd.DataFrame:
     conn = await asyncpg.connect(DATABASE_URL)
     query = """
     SELECT
@@ -43,8 +44,7 @@ async def fetch_user_reservations(*user_details, include_date: bool = True, db_e
     return pd.DataFrame(data)
 
 
-async def fetch_pending_reservations(db_env='staging') -> list[dict]:
-    DATABASE_URL = get_database_url(db_env)
+async def fetch_pending_reservations() -> list[dict]:
     conn = await asyncpg.connect(DATABASE_URL)
     query = """
     SELECT r.*,
@@ -65,8 +65,7 @@ async def fetch_pending_reservations(db_env='staging') -> list[dict]:
     return [dict(row) for row in rows] if rows else []
 
 
-async def fetch_reservation_by_id(reservation_id: str, db_env='staging') -> dict | None:
-    DATABASE_URL = get_database_url(db_env)
+async def fetch_reservation_by_id(reservation_id: str) -> dict | None:
     conn = await asyncpg.connect(DATABASE_URL)
     query = """
     SELECT r.booking_code
@@ -78,8 +77,7 @@ async def fetch_reservation_by_id(reservation_id: str, db_env='staging') -> dict
     return dict(row) if row else None
 
 
-async def fetch_existing_user_id(codice: str, email: str, db_env='staging') -> str:
-    DATABASE_URL = get_database_url(db_env)
+async def fetch_existing_user_id(codice: str, email: str) -> str:
     conn = await asyncpg.connect(DATABASE_URL)
     query = 'SELECT id FROM users WHERE codice_fiscale = $1 AND email = $2'
     row = await conn.fetchrow(query, codice, email)
