@@ -6,7 +6,7 @@ from telegram.ext import (
     filters,
 )
 
-from src.biblio.access import get_database_url, get_token
+from src.biblio.access import get_token
 from src.biblio.bot.commands import feedback, help, start
 from src.biblio.bot.fallbacks import error, fallback, restart
 from src.biblio.bot.user import user_agreement, user_validation
