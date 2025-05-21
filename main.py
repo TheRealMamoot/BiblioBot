@@ -4,6 +4,7 @@ import logging
 from telegram.ext import Application
 
 from src.biblio.app import build_app
+from src.biblio.db.build import build_db
 from src.biblio.utils.utils import get_parser
 
 
@@ -12,6 +13,7 @@ async def main():
     parser = get_parser()
     args = parser.parse_args()
     app: Application = build_app(token_env=args.token_env)
+    await build_db()
     await app.initialize()
     await app.start()
     await app.updater.start_polling()
