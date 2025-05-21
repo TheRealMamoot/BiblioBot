@@ -13,7 +13,7 @@ DATABASE_URL = get_database_url()
 
 
 async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    start_time = datetime.strptime(context.user_data['selected_time'], '%H:%M').time()
+    start_time = datetime.strptime(context.user_data['selected_time'], '%H:%M:%S').time()
     start_dt = datetime.combine(date.today(), start_time).replace(tzinfo=ZoneInfo('Europe/Rome'))
     end_dt = start_dt + timedelta(hours=int(context.user_data['selected_duration']))
 
