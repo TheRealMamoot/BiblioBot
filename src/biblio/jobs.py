@@ -110,9 +110,9 @@ async def excecute_reservations(bot: Bot):
 
 def schedule_jobs(bot: Bot):
     scheduler = AsyncIOScheduler(timezone='Europe/Rome')
-    trigger = CronTrigger(second='*/10', minute='0,1,30,31,32', hour='7-22', day_of_week='mon-fri')
+    trigger = CronTrigger(second='*/10', minute='0,1,30,31,32', hour='5-20', day_of_week='mon-fri')  # UTC
     scheduler.add_job(excecute_reservations, trigger, args=[bot])
 
-    trigger_sat = CronTrigger(second='*/10', minute='0,1,30,31,32', hour='7-13', day_of_week='sat')
+    trigger_sat = CronTrigger(second='*/10', minute='0,1,30,31,32', hour='5-11', day_of_week='sat')  # UTC
     scheduler.add_job(excecute_reservations, trigger_sat, args=[bot])
     scheduler.start()

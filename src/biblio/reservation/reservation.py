@@ -46,7 +46,7 @@ async def set_reservation(start_time: int, end_time: int, duration: int, user_da
                 raise ValueError('[SET] Unexpected response format: "Booking Code" not found.')
         except httpx.RequestError as e:
             logging.error(f'[SET] Request failed: {e}')
-            raise RuntimeError(f'[SET] Value error: {e}')
+            raise RuntimeError(f'[SET] Request error: {e}')
         except ValueError as e:
             logging.error(f'[SET] Value error: {e}')
             raise RuntimeError(f'[SET] Value error: {e}')
@@ -61,12 +61,23 @@ async def confirm_reservation(booking_code: int) -> dict:
             response.raise_for_status()
             logging.info('[CONFIRM] Reservation confirmed.')
             return response.json()
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 400:
+                logging.error('[CONFIRM] 400 Bad Request – Check booking_code or payload format.')
+                raise RuntimeError('Reservation confirmation failed: Invalid request. Please try again.')
+
+            elif e.response.status_code == 401:
+                logging.error('[CONFIRM] 401 Unauthorized – Authentication failed.')
+                raise RuntimeError('Reservation confirmation failed: Unauthorized. Please check your credentials.')
+
+            else:
+                logging.error(f'[CONFIRM] HTTP error: {e}')
+                raise RuntimeError(f'Unexpected HTTP error: {e}')
+
         except httpx.RequestError as e:
             logging.error(f'[CONFIRM] Request failed: {e}')
-            raise RuntimeError(f'Value error: {e}')
-        except ValueError as e:
-            logging.error(f'[CONFIRM] Value error: {e}')
-            raise RuntimeError(f'Value error: {e}')
+            raise RuntimeError(f'Connection error: {e}')
 
 
 async def cancel_reservation(codice: str, booking_code: str, mode: str = 'delete') -> dict:
