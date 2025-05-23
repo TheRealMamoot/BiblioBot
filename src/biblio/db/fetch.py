@@ -65,6 +65,47 @@ async def fetch_pending_reservations() -> list[dict]:
     return [dict(row) for row in rows] if rows else []
 
 
+async def fetch_all_reservations():
+    conn = await asyncpg.connect(DATABASE_URL)
+    query = """
+    SELECT 
+    r.id as id,
+    user_id,
+    chat_id,
+    username,
+    first_name,
+    last_name,
+    codice_fiscale as codice,
+    email,
+    name,
+    priority,
+    selected_date,
+    display_date,
+    start_time,
+    end_time,
+    selected_duration as dur,
+    booking_code as code,
+    retries,
+    status,
+    instant,
+    status_change as change,
+    notified,
+    inserted_at AT TIME ZONE 'Europe/Rome' as inserted_at,
+    updated_at AT TIME ZONE 'Europe/Rome' as updated_at,
+    r.created_at AT TIME ZONE 'Europe/Rome' as created_at
+    FROM reservations r
+    JOIN users u ON r.user_id = u.id
+    ORDER BY selected_date ASC, priority ASC, status ASC, selected_duration DESC, start_time ASC
+    """
+    rows = await conn.fetch(query)
+    await conn.close()
+    if not rows:
+        return pd.DataFrame()
+
+    data = [dict(row) for row in rows]
+    return pd.DataFrame(data)
+
+
 async def fetch_reservation_by_id(reservation_id: str) -> dict | None:
     conn = await asyncpg.connect(DATABASE_URL)
     query = """

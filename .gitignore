@@ -7,5 +7,5 @@ __pycache__/
 *.json
 .vscode
 .venv
-notifs.py
 *.zip
+manual/

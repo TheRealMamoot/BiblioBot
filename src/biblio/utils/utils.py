@@ -2,26 +2,14 @@ import argparse
 import json
 import os
 from datetime import datetime, timedelta
+from functools import cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pygsheets
 from dotenv import load_dotenv
 
-
-def get_token(token_env: str = 'prod'):
-    load_env()
-    if token_env == 'prod':
-        token: str = os.getenv('TELEGRAM_TOKEN')
-    elif token_env == 'staging':
-        token: str = os.getenv('TELEGRAM_TOKEN_S')
-    else:
-        raise ValueError('Wrong mode')
-    return token
-
-
-def get_database_url() -> str:
-    load_env()
-    return os.getenv('DATABASE_URL')
+CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / 'biblio' / 'config' / 'biblio.json'
 
 
 def load_env():
@@ -43,6 +31,22 @@ def generate_days() -> list:
     return days
 
 
+def get_token(token_env: str = 'prod'):
+    load_env()
+    if token_env == 'prod':
+        token: str = os.getenv('TELEGRAM_TOKEN')
+    elif token_env == 'staging':
+        token: str = os.getenv('TELEGRAM_TOKEN_S')
+    else:
+        raise ValueError('Wrong mode')
+    return token
+
+
+def get_database_url() -> str:
+    load_env()
+    return os.getenv('DATABASE_URL')
+
+
 def get_parser():
     parser = argparse.ArgumentParser(description='Telegram Bot')
     parser.add_argument(
@@ -59,3 +63,18 @@ def get_priorities():
     priority_codes: dict = os.environ['PRIORITY_CODES']
     priority_codes = json.loads(priority_codes)
     return priority_codes
+
+
+@cache
+def get_gsheet_client(auth_mode: str = 'prod'):
+    if auth_mode == 'prod':
+        return pygsheets.authorize(service_account_json=os.environ['GSHEETS'])
+    elif auth_mode == 'local':
+        return pygsheets.authorize(service_file=CREDENTIALS_PATH)
+    else:
+        raise ValueError('Wrong mode')
+
+
+def get_wks(auth_mode: str = 'prod'):
+    gc = get_gsheet_client(auth_mode)
+    return gc.open('Biblio-logs').worksheet_by_title('backup')
