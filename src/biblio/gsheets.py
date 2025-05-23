@@ -69,13 +69,13 @@ async def fetch_all_reservations():
 async def backup_reservations(auth_mode: str = 'prod'):
     df = await fetch_all_reservations()
     if df.empty:
-        print('[GSHEET] No data to write to the sheet.')
+        logging.info('[GSHEET] No data to write to the sheet.')
         return
 
     wks = get_wks(auth_mode)
     wks.clear(start='A1')  # Optional: clear previous backup
     wks.set_dataframe(df, (1, 1))
-    print('[GSHEET] Data written to Google Sheet successfully.')
+    logging.info('[GSHEET] Data written to Google Sheet successfully.')
 
 
 def schedule_backup_job():
@@ -83,7 +83,6 @@ def schedule_backup_job():
     async def _backup_job():
         logging.info('[GSHEET] Starting Google Sheets backup')
         await backup_reservations()
-        logging.info('[GSHEET] Backup complete.')
 
 
 if __name__ == '__main__':
