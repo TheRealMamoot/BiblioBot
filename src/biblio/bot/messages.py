@@ -75,6 +75,54 @@ async def show_existing_reservations(
         traceback.print_exc()
 
 
+def show_notification(status: str, record: dict, booking_code: str) -> str:
+    if status == 'success':
+        status_message = '✅ Reservation *Successful*!'
+        retry_message = 'Enjoy your stay 🤝'
+    elif status == 'fail':
+        status_message = '⚠️ Reservation *Failed*!'
+        retry_message = '*❗ Trying again ❗*'
+    elif status == 'terminated':
+        status_message = '⛔️ Reservation *Terminated*!'
+        retry_message = '*‼️ No more Retries ‼️*'
+
+    date = record['selected_date'].strftime('%A, %Y-%m-%d')
+    start_time = record['start_time'].strftime('%H:%M')
+    end_time = record['end_time'].strftime('%H:%M')
+    duration = int(record['selected_duration'])
+    text = f"""
+        {status_message}
+        {retry_message}
+        On: *{date}*
+        From: *{start_time}* - *{end_time}* (*{duration}* hours)
+        Booking Code: *{booking_code.upper()}*
+    """
+    return textwrap.dedent(text)
+
+
+def show_user_agreement() -> str:
+    text = textwrap.dedent(
+        """
+        *📄 User Agreement*
+        *📣 Data Usage Notice*
+
+        ❗ By using this bot, you agree to the collection and storage of the following *data*:
+
+        📌 Your *Telegram username*, *first name*, and *last name* (if available)
+        📌 Your provided *Codice Fiscale*, *full name*, and *email address*
+        📌 Your selected *reservation date*, *time*, and *duration* at Università degli Studi di Milano's Library of Biology, Computer Science, Chemistry and Physics (*BICF*)
+        📌 The *status* of your reservation (*active* or *cancelled*) 
+        📌 *General activity data*, including your *interactions* with the bot during the reservation process
+
+        ❕ This data is used *exclusively* for making and managing *BICF reservations* more easily on your behalf.
+        ❕ Your data is *never shared* with third parties and is used solely to assist with *reservation automation* and *troubleshooting*.
+
+        🤝🏻 By continuing to use this bot, you *agree to these terms*.
+        """
+    )
+    return text
+
+
 def show_support_message() -> str:
     text = """
             Thank you for using *Biblio*.
@@ -147,28 +195,3 @@ def show_help() -> str:
         """
     )
     return message
-
-
-def show_notification(status: str, record: dict, booking_code: str) -> str:
-    if status == 'success':
-        status_message = '✅ Reservation *Successful*!'
-        retry_message = 'Enjoy your stay 🤝'
-    elif status == 'fail':
-        status_message = '⚠️ Reservation *Failed*!'
-        retry_message = '*❗ Trying again ❗*'
-    elif status == 'terminated':
-        status_message = '⛔️ Reservation *Terminated*!'
-        retry_message = '*‼️ No more Retries ‼️*'
-
-    date = record['selected_date'].strftime('%A, %Y-%m-%d')
-    start_time = record['start_time'].strftime('%H:%M')
-    end_time = record['end_time'].strftime('%H:%M')
-    duration = int(record['selected_duration'])
-    text = f"""
-        {status_message}
-        {retry_message}
-        On: *{date}*
-        From: *{start_time}* - *{end_time}* (*{duration}* hours)
-        Booking Code: *{booking_code.upper()}*
-    """
-    return textwrap.dedent(text)

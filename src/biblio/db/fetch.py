@@ -118,6 +118,15 @@ async def fetch_reservation_by_id(reservation_id: str) -> dict | None:
     return dict(row) if row else None
 
 
+async def fetch_all_user_chat_ids():
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        rows = await conn.fetch('SELECT DISTINCT chat_id FROM users')
+        return [row['chat_id'] for row in rows]
+    finally:
+        await conn.close()
+
+
 async def fetch_existing_user_id(codice: str, email: str) -> str:
     conn = await asyncpg.connect(DATABASE_URL)
     query = 'SELECT id FROM users WHERE codice_fiscale = $1 AND email = $2'
