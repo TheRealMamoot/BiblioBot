@@ -13,10 +13,6 @@ from src.biblio.db.update import update_record
 from src.biblio.reservation.reservation import confirm_reservation, set_reservation
 from src.biblio.reservation.slot_datetime import reserve_datetime
 
-ALLOWED_MINUTES = {0, 1, 30, 31, 32}
-ALLOWED_WEEKDAYS = set(range(0, 5))  # Monday to Friday
-SATURDAY = 5
-
 
 async def process_reservation(record: dict, bot: Bot) -> dict:
     chat_id = record.get('chat_id')
@@ -75,7 +71,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
     except Exception as e:
         logging.warning(f'[JOB] ❌ Reservation failed for {user_data["cognome_nome"]} - ID {record["id"]}: {e}')
         retries = int(record['retries']) + 1
-        status = 'terminated' if retries > 18 else 'fail'
+        status = 'terminated' if retries > 20 else 'fail'
         booking_code = record['booking_code'] if status == 'fail' else 'CLOSED'
         chat_id = record.get('chat_id')
         if chat_id and (retries % 6 == 0 or status == 'terminated'):

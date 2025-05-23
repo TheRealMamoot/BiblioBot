@@ -28,7 +28,7 @@ async def show_existing_reservations(
         current = current.sort_values('datetime', ascending=True)
         name = update.effective_user.username if update.effective_user.username else update.effective_user.first_name
         message = textwrap.dedent(
-            f'Reservations for *{name}*\nCoidce Fiscale: *{coidce}*\nEmail: {email}\n-----------------------\n'
+            f'Reservations for *{name}*\nCodice Fiscale: *{coidce}*\nEmail: {email}\n-----------------------\n'
         )
         if len(current) != 0:
             if cancel_stage:
@@ -152,10 +152,10 @@ def show_help() -> str:
 def show_notification(status: str, record: dict, booking_code: str) -> str:
     if status == 'success':
         status_message = '✅ Reservation *Successful*!'
-        retry_message = 'Enjoy your stay 🤝'
+        retry_message = '*🤝 Enjoy your stay 🤝*'
     elif status == 'fail':
         status_message = '⚠️ Reservation *Failed*!'
-        retry_message = '*❗ Trying again ❗*'
+        retry_message = '*❗ Retrying. Be patient... ❗*'
     elif status == 'terminated':
         status_message = '⛔️ Reservation *Terminated*!'
         retry_message = '*‼️ No more Retries ‼️*'

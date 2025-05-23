@@ -93,8 +93,6 @@ def schedule_backup_job():
 
 
 if __name__ == '__main__':
-    # parser = get_parser()
-    # args = parser.parse_args()
     import asyncio
 
     asyncio.run(backup_reservations(auth_mode='local'))
