@@ -47,7 +47,7 @@ TELEGRAM_TOKEN_S=your_staging_bot_token_here (optional)
 DATABASE_URL=your_postgres_url_here
 PRIORITIES_CODES=priorities.json
 ```
-Your priorities shoudl look like this:
+Your priorities should look like this:
 ```json
 {
   "ABCDEF12G34H567I": 0,
