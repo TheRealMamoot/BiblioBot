@@ -4,13 +4,13 @@ import sys
 
 def setup_logger():
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
-    # stdout handler: DEBUG and INFO only
+    # stdout handler: INFO only
     stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setLevel(logging.DEBUG)
+    stdout_handler.setLevel(logging.INFO)
     stdout_handler.addFilter(lambda record: record.levelno < logging.WARNING)
     stdout_handler.setFormatter(formatter)
 
