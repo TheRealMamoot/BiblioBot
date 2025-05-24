@@ -4,6 +4,7 @@ from enum import IntEnum, auto
 class States(IntEnum):
     AGREEMENT = auto()
     CREDENTIALS = auto()
+    WELCOME_BACK = auto()
     RESERVE_TYPE = auto()
     CHOOSING_DATE = auto()
     CHOOSING_TIME = auto()

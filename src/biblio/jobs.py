@@ -3,15 +3,18 @@ import logging
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import aiocron
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from pygsheets import Worksheet
 from telegram import Bot
 
 from src.biblio.bot.messages import show_notification
-from src.biblio.db.fetch import fetch_pending_reservations
+from src.biblio.db.fetch import fetch_all_reservations, fetch_pending_reservations
 from src.biblio.db.update import update_record
 from src.biblio.reservation.reservation import confirm_reservation, set_reservation
 from src.biblio.reservation.slot_datetime import reserve_datetime
+from src.biblio.utils.utils import get_wks
 
 
 async def process_reservation(record: dict, bot: Bot) -> dict:
@@ -104,6 +107,18 @@ async def excecute_reservations(bot: Bot):
     logging.info(f'[DB-JOB] Reservation job completed: {len(updates)} updated')
 
 
+async def backup_reservations(auth_mode: str = 'prod'):
+    df = await fetch_all_reservations()
+    if df.empty:
+        logging.info('[GSHEET] No data to write to the sheet.')
+        return
+
+    wks: Worksheet = get_wks(auth_mode)
+    wks.clear(start='A1')
+    wks.set_dataframe(df, (1, 1))
+    logging.info('[GSHEET] Data written to Google Sheet successfully.')
+
+
 def schedule_jobs(bot: Bot):
     scheduler = AsyncIOScheduler(timezone='Europe/Rome')
     trigger = CronTrigger(second='*/10', minute='0,1,30,31,32', hour='5-20', day_of_week='mon-fri')  # UTC
@@ -112,3 +127,10 @@ def schedule_jobs(bot: Bot):
     trigger_sat = CronTrigger(second='*/10', minute='0,1,30,31,32', hour='5-11', day_of_week='sat')  # UTC
     scheduler.add_job(excecute_reservations, trigger_sat, args=[bot])
     scheduler.start()
+
+
+def schedule_backup_job():
+    @aiocron.crontab('*/5 * * * *', tz=ZoneInfo('Europe/Rome'))
+    async def _backup_job():
+        logging.info('[GSHEET] Starting Google Sheets backup')
+        await backup_reservations()

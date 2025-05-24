@@ -3,34 +3,57 @@ import textwrap
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.bot.messages import show_help, show_support_message
+from src.biblio.bot.messages import show_help, show_support_message, show_user_agreement
 from src.biblio.config.config import States
-from src.biblio.utils.keyboards import generate_agreement_keyboard
+from src.biblio.db.fetch import fetch_existing_user
+from src.biblio.utils.keyboards import generate_agreement_keyboard, generate_welcome_back_keyboard
+from src.biblio.utils.utils import get_priorities
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    context.user_data.clear()
-    context.bot_data.setdefault('user_chat_ids', {})
-    await update.message.reply_text(
-        textwrap.dedent(
+    user = update.effective_user
+    username = user.username
+    if not username:
+        return States.AGREEMENT
+
+    existing_user = await fetch_existing_user(username)
+
+    if existing_user:
+        user_id = existing_user['id']
+        codice: str = existing_user['codice_fiscale']
+        name = existing_user['name']
+        email = existing_user['email']
+        name = user.first_name if user.first_name else username
+        message = textwrap.dedent(
+            f"""
+            Welcome back *{name}*!
+
+            Proceed with current credentials?
+            Codice Fiscale: *{codice}*
+            Name: *{name}*
+            Email: *{email}*
             """
-        *📄 User Agreement*
-        *📣 Data Usage Notice*
+        )
+        priorities = get_priorities()
+        context.user_data['user_firstname'] = user.first_name
+        context.user_data['user_lastname'] = user.last_name
+        context.user_data['user_id'] = user_id
+        context.user_data['username'] = username
+        context.user_data['codice_fiscale'] = codice.upper()
+        context.user_data['name'] = name.lower()
+        context.user_data['email'] = email
+        context.user_data['priority'] = int(priorities.get(codice.upper(), 2))
 
-        ❗ By using this bot, you agree to the collection and temporary storage of the following *data*:
+        await update.message.reply_text(
+            message,
+            parse_mode='Markdown',
+            reply_markup=generate_welcome_back_keyboard(),
+        )
+        return States.WELCOME_BACK
 
-        📌 Your *Telegram username*, *first name*, and *last name* (if available)
-        📌 Your provided *Codice Fiscale*, *full name*, and *email address*
-        📌 Your selected *reservation date*, *time*, and *duration* at Università degli Studi di Milano's Library of Biology, Computer Science, Chemistry and Physics (*BICF*)
-        📌 The *status* of your reservation (*active* or *cancelled*) 
-        📌 *General activity data*, including your *interactions* with the bot during the reservation process
-
-        ❕ This data is used *exclusively* for making and managing *BICF reservations* more easily on your behalf.
-        ❕ Your data is *never shared* with third parties and is used solely to assist with *reservation automation* and *troubleshooting*.
-
-        🤝🏻 By continuing to use this bot, you *agree to these terms*.
-        """
-        ),
+    context.user_data.clear()
+    await update.message.reply_text(
+        show_user_agreement(),
         parse_mode='Markdown',
         reply_markup=generate_agreement_keyboard(),
     )
@@ -43,3 +66,7 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(show_support_message(), parse_mode='Markdown')
+
+
+async def agreement(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(show_user_agreement(), parse_mode='Markdown')

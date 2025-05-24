@@ -30,9 +30,6 @@ async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     elif user_input == '👍 Yes, I agree.':
         user = update.effective_user
         name = user.first_name if user.first_name else user.username
-        context.user_data['username'] = user.username
-        context.user_data['user_firstname'] = user.first_name
-        context.user_data['user_lastname'] = user.last_name
         logging.info(f'{user} started chat at {datetime.now(ZoneInfo("Europe/Rome"))}')
 
         user_input = update.message.text.strip()
@@ -75,7 +72,8 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return States.CREDENTIALS
 
     user_input = update.message.text.strip()
-    name = update.effective_user.first_name if update.effective_user.first_name else update.effective_user.username
+    user = update.effective_user
+    name = user.first_name if user.first_name else user.username
 
     if user_input == '🤝 Reach out!':
         await update.message.reply_text(
@@ -119,18 +117,19 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return States.CREDENTIALS
 
     priorities = get_priorities()
-    context.user_data['user_id'] = str(uuid.uuid4())
+    context.user_data['username'] = user.username
+    context.user_data['user_firstname'] = user.first_name
+    context.user_data['user_lastname'] = user.last_name
     context.user_data['codice_fiscale'] = codice.upper()
     context.user_data['name'] = name
     context.user_data['email'] = email.lower()
     context.user_data['priority'] = int(priorities.get(codice.upper(), 2))  # Default: 2. For everyone else
-    context.bot_data['user_chat_ids'][context.user_data['codice_fiscale']] = update.effective_chat.id
 
     keyboard = keyboards.generate_reservation_type_keyboard()
     await update.message.reply_text(
         textwrap.dedent(
             """
-            There we go! Your data is saved. FOREVER! 😈 (JUST KIDDING!)
+            There we go! Your data is saved. FOREVER! 😈 (JUST KIDDING...?)
             Now, you can plan ahead for later or,
             If you're so desperate and need a slot now, try to book instantly. No promises!
             """
@@ -140,6 +139,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     )
 
     user_record = {
+        'id': str(uuid.uuid4()),
         'chat_id': update.effective_chat.id,
         'username': context.user_data['username'],
         'first_name': context.user_data['user_firstname'],
@@ -150,8 +150,44 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         'email': context.user_data['email'],
     }
 
-    user_id = await insert_user(user_record)
-    context.user_data['user_id'] = user_id
+    await insert_user(user_record)
+    context.user_data['user_id'] = user_record['id']
 
     logging.info(f'🔄 {update.effective_user} info validated at {datetime.now(ZoneInfo("Europe/Rome"))}')
     return States.RESERVE_TYPE
+
+
+async def user_returning(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_input = update.message.text.strip()
+
+    if user_input == '👍 Yes, go right on.':
+        await update.message.reply_text(
+            'Glad to have you back!',
+            parse_mode='Markdown',
+            reply_markup=keyboards.generate_reservation_type_keyboard(),
+        )
+        return States.RESERVE_TYPE
+
+    if user_input == '🆕 No, I want to change.':
+        context.user_data['modifed'] = True
+        await update.message.reply_text(
+            textwrap.dedent(
+                """
+            your _Codice Fiscale_, _Full Name_, and _Email_.
+            Example: 
+            *ABCDEF12G34H567I*, 
+            *Mamoot Real*, 
+            *brain@rot.com*
+
+            📌_Comma placement matters. Spacing does not._
+            """
+            ),
+            parse_mode='Markdown',
+            reply_markup=keyboards.generate_start_keyboard(edit_credential_stage=True),
+        )
+        return States.CREDENTIALS
+    else:
+        await update.message.reply_text(
+            textwrap.dedent('Come on now! Just choose.'),
+        )
+        return States.WELCOME_BACK

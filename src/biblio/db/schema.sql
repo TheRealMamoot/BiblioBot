@@ -6,13 +6,13 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT,
     first_name TEXT,
     last_name TEXT,
-    codice_fiscale VARCHAR(16) UNIQUE NOT NULL,
+    codice_fiscale VARCHAR(16) NOT NULL,
     priority INTEGER DEFAULT 2,
     name TEXT,
     email TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
-    UNIQUE (codice_fiscale, username, first_name, last_name, email)
+    UNIQUE (codice_fiscale, email, name) 
 );
 
 CREATE TABLE IF NOT EXISTS reservations (
