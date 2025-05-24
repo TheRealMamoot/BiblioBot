@@ -22,11 +22,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         user_id = existing_user['id']
         codice: str = existing_user['codice_fiscale']
         name = existing_user['name']
-        email = existing_user['email']
-        name = user.first_name if user.first_name else username
+        first_name = user.first_name if user.first_name else username
+        email: str = existing_user['email']
         message = textwrap.dedent(
             f"""
-            Welcome back *{name}*!
+            Welcome back *{first_name}*!
 
             Proceed with current credentials?
             Codice Fiscale: *{codice}*
@@ -40,8 +40,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         context.user_data['user_id'] = user_id
         context.user_data['username'] = username
         context.user_data['codice_fiscale'] = codice.upper()
-        context.user_data['name'] = name.lower()
-        context.user_data['email'] = email
+        context.user_data['name'] = name
+        context.user_data['email'] = email.lower()
         context.user_data['priority'] = int(priorities.get(codice.upper(), 2))
 
         await update.message.reply_text(
