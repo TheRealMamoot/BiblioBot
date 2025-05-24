@@ -8,14 +8,14 @@ from telegram.ext import ContextTypes
 
 from src.biblio.bot.messages import show_existing_reservations
 from src.biblio.config.config import States
-from src.biblio.utils import keyboards
+from src.biblio.utils.keyboards import Keyboards, Labels
 from src.biblio.utils.validation import time_not_overlap
 
 
 async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
-    if user_input == '⬅️':
+    if user_input == Labels.BACK:
         if context.user_data['instant']:
             await update.message.reply_text(
                 textwrap.dedent(
@@ -24,15 +24,15 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 """
                 ),
                 parse_mode='Markdown',
-                reply_markup=keyboards.generate_reservation_type_keyboard(),
+                reply_markup=Keyboards.reservation_type(),
             )
             return States.RESERVE_TYPE
 
-        keyboard = keyboards.generate_date_keyboard()
+        keyboard = Keyboards.date()
         await update.message.reply_text('Choose a date, AGAIN! 😒', reply_markup=keyboard)
         return States.CHOOSING_DATE
 
-    elif user_input == '🗓️ Current reservations':
+    elif user_input == Labels.CURRENT_RESERVATIONS:
         await update.message.reply_text(
             await show_existing_reservations(update, context),
             parse_mode='Markdown',
@@ -68,7 +68,7 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return States.CHOOSING_TIME
     context.user_data['selected_time'] = user_input
-    keyboard = keyboards.generate_duration_keyboard(user_input, context)[0]  # [0] for the reply, [1] for the values
+    keyboard = Keyboards.duration(user_input, context)[0]  # [0] for the reply, [1] for the values
 
     await update.message.reply_text(
         'How long will you absolutely NOT be productive over there? 🕦 Give me hours.',

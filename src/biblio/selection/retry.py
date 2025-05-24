@@ -9,34 +9,34 @@ from telegram.ext import ContextTypes
 
 from src.biblio.bot.messages import show_donate_message, show_existing_reservations, show_support_message
 from src.biblio.config.config import States
-from src.biblio.utils import keyboards
+from src.biblio.utils.keyboards import Keyboards, Labels
 
 
 async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
-    if user_input == "🆕 Let's go again!":
-        keyboard = keyboards.generate_reservation_type_keyboard()
+    if user_input == Labels.RETRY:
+        keyboard = Keyboards.reservation_type()
 
         await update.message.reply_text('Ah ****, here we go again! 😪', reply_markup=keyboard)
         logging.info(f'⏳ {update.effective_user} reinitiated the process at {datetime.now(ZoneInfo("Europe/Rome"))}')
         return States.RESERVE_TYPE
 
-    elif user_input == '💡 Feedback':
+    elif user_input == Labels.FEEDBACK:
         await update.message.reply_text(
             show_support_message(),
             parse_mode='Markdown',
         )
         return States.RETRY
 
-    elif user_input == '🗓️ Current reservations':
+    elif user_input == Labels.CURRENT_RESERVATIONS:
         await update.message.reply_text(
             await show_existing_reservations(update, context),
             parse_mode='Markdown',
         )
         return States.RETRY
 
-    elif user_input == '🚫 Cancel reservation':
+    elif user_input == Labels.CANCEL_RESERVATION:
         reservations = await show_existing_reservations(update, context, cancel_stage=True)
         choices = {}
         buttons = []
@@ -77,7 +77,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             return States.RETRY
 
         context.user_data['cancelation_choices'] = choices
-        keyboard = keyboards.generate_cancelation_options_keyboard(buttons)
+        keyboard = Keyboards.cancelation_options(buttons)
 
         logging.info(f'🔄 {update.effective_user} started cancelation at {datetime.now(ZoneInfo("Europe/Rome"))}')
         await update.message.reply_text(
@@ -96,7 +96,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         )
         return States.CANCELATION_SLOT_CHOICE
 
-    elif user_input == '🫶 Donate':
+    elif user_input == Labels.DONATE:
         await update.message.reply_text(
             show_donate_message(),
             parse_mode='Markdown',

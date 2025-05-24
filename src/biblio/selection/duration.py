@@ -7,24 +7,20 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.biblio.config.config import States
-from src.biblio.utils import keyboards
+from src.biblio.utils.keyboards import Keyboards, Labels
 from src.biblio.utils.validation import duration_overlap
 
 
 async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
-    if user_input == '⬅️':
-        keyboard = keyboards.generate_time_keyboard(
-            context.user_data.get('selected_date'), instant=context.user_data['instant']
-        )
+    if user_input == Labels.BACK:
+        keyboard = Keyboards.time(context.user_data.get('selected_date'), instant=context.user_data['instant'])
         await update.message.reply_text('Make up your mind! choose a time ALREADY 🙄', reply_markup=keyboard)
         return States.CHOOSING_TIME
 
     selected_time = context.user_data.get('selected_time')
-    duration_selection = keyboards.generate_duration_keyboard(selected_time, context)[
-        1
-    ]  # [0] for the reply, [1] for the values
+    duration_selection = Keyboards.duration(selected_time, context)[1]  # [0] for the reply, [1] for the values
     max_dur = max(duration_selection)
 
     if not user_input.isdigit():
@@ -54,7 +50,7 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
     end_time = datetime.strptime(start_time, '%H:%M') + timedelta(hours=int(context.user_data.get('selected_duration')))
     end_time = end_time.strftime('%H:%M')
 
-    keyboard = keyboards.generate_confirmation_keyboard()
+    keyboard = Keyboards.confirmation()
     await update.message.reply_text(
         textwrap.dedent(
             f"""
