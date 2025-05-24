@@ -127,7 +127,7 @@ async def fetch_all_user_chat_ids():
         await conn.close()
 
 
-async def fetch_existing_user(username: str):
+async def fetch_existing_user(chat_id: str):
     conn = await asyncpg.connect(DATABASE_URL)
     query = """
     SELECT 
@@ -137,8 +137,8 @@ async def fetch_existing_user(username: str):
     email,
     priority
     FROM users
-    WHERE username = $1
+    WHERE chat_id = $1
     """
-    row = await conn.fetchrow(query, username)
+    row = await conn.fetchrow(query, chat_id)
     await conn.close()
     return row

@@ -48,8 +48,6 @@ def build_app(token_env='prod'):
         allow_reentry=True,
     )
     app.add_handler(conv_handler)
-    app.add_handler(CommandHandler('help', help))
-    app.add_handler(CommandHandler('feedback', feedback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, restart))
     app.add_error_handler(error)
 

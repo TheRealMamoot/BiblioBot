@@ -1,6 +1,5 @@
 import logging
 import textwrap
-import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -10,7 +9,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from src.biblio.bot.messages import show_help, show_support_message
 from src.biblio.config.config import States
 from src.biblio.db.insert import insert_user
-from src.biblio.utils import keyboards
+from src.biblio.utils.keyboards import Keyboards, Labels
 from src.biblio.utils.utils import get_priorities
 from src.biblio.utils.validation import validate_codice_fiscale, validate_email
 
@@ -18,7 +17,7 @@ from src.biblio.utils.validation import validate_codice_fiscale, validate_email
 async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
-    if user_input == "👎 No, I don't agree.":
+    if user_input == Labels.AGREEMENT_DISAGREE:
         (
             await update.message.reply_text(
                 'Sorry to see you go! Hope you change your mind. Use /start again in case you do.',
@@ -27,7 +26,7 @@ async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return ConversationHandler.END
 
-    elif user_input == '👍 Yes, I agree.':
+    elif user_input == Labels.AGREEMENT_AGREE:
         user = update.effective_user
         name = user.first_name if user.first_name else user.username
         logging.info(f'{user} started chat at {datetime.now(ZoneInfo("Europe/Rome"))}')
@@ -57,7 +56,7 @@ async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 """
             ),
             parse_mode='Markdown',
-            reply_markup=keyboards.generate_start_keyboard(),
+            reply_markup=Keyboards.start(),
         )
         return States.CREDENTIALS
 
@@ -75,27 +74,27 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     user = update.effective_user
     name = user.first_name if user.first_name else user.username
 
-    if user_input == '🤝 Reach out!':
+    if user_input == Labels.SUPPORT:
         await update.message.reply_text(
             show_support_message(),
             parse_mode='Markdown',
-            reply_markup=keyboards.generate_start_keyboard(),
+            reply_markup=Keyboards.start(),
         )
         return States.CREDENTIALS
 
-    if user_input == '❓ Help':
+    if user_input == Labels.HELP:
         await update.message.reply_text(
             show_help(),
             parse_mode='Markdown',
-            reply_markup=keyboards.generate_start_keyboard(),
+            reply_markup=Keyboards.start(),
         )
         return States.CREDENTIALS
 
-    if user_input == '➡️ Changed my mind.':
+    if user_input == Labels.CREDENTIALS_RETURN:
         await update.message.reply_text(
             'Gotta be kidding me! 😑',
             parse_mode='Markdown',
-            reply_markup=keyboards.generate_reservation_type_keyboard(),
+            reply_markup=Keyboards.reservation_type(),
         )
         return States.RESERVE_TYPE
 
@@ -125,7 +124,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     context.user_data['email'] = email.lower()
     context.user_data['priority'] = int(priorities.get(codice.upper(), 2))  # Default: 2. For everyone else
 
-    keyboard = keyboards.generate_reservation_type_keyboard()
+    keyboard = Keyboards.reservation_type()
     await update.message.reply_text(
         textwrap.dedent(
             """
@@ -139,7 +138,6 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     )
 
     user_record = {
-        'id': str(uuid.uuid4()),
         'chat_id': update.effective_chat.id,
         'username': context.user_data['username'],
         'first_name': context.user_data['user_firstname'],
@@ -150,8 +148,8 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         'email': context.user_data['email'],
     }
 
-    await insert_user(user_record)
-    context.user_data['user_id'] = user_record['id']
+    id = await insert_user(user_record)
+    context.user_data['user_id'] = id
 
     logging.info(f'🔄 {update.effective_user} info validated at {datetime.now(ZoneInfo("Europe/Rome"))}')
     return States.RESERVE_TYPE
@@ -160,16 +158,15 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def user_returning(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text.strip()
 
-    if user_input == '👍 Yes, go right on.':
+    if user_input == Labels.CONTINUE:
         await update.message.reply_text(
             'Glad to have you back!',
             parse_mode='Markdown',
-            reply_markup=keyboards.generate_reservation_type_keyboard(),
+            reply_markup=Keyboards.reservation_type(),
         )
         return States.RESERVE_TYPE
 
-    if user_input == '🆕 No, I want to change.':
-        context.user_data['modifed'] = True
+    if user_input == Labels.CREDENTIALS_NEW:
         await update.message.reply_text(
             textwrap.dedent(
                 """
@@ -183,7 +180,7 @@ async def user_returning(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """
             ),
             parse_mode='Markdown',
-            reply_markup=keyboards.generate_start_keyboard(edit_credential_stage=True),
+            reply_markup=Keyboards.start(edit_credential_stage=True),
         )
         return States.CREDENTIALS
     else:
