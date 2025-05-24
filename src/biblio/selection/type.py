@@ -7,7 +7,7 @@ from pandas import DataFrame
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.bot.messages import show_donate_message, show_existing_reservations, show_help
+from src.biblio.bot.messages import show_donate_message, show_existing_reservations, show_help, show_user_agreement
 from src.biblio.config.config import States
 from src.biblio.utils import keyboards
 
@@ -26,6 +26,8 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             *ABCDEF12G34H567I*, 
             *Mamoot Real*, 
             *brain@rot.com*
+
+            📌_Comma placement matters. Spacing does not._
             """
             ),
             parse_mode='Markdown',
@@ -157,6 +159,14 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     elif user_input == '🫶 Donate':
         await update.message.reply_text(
             show_donate_message(),
+            parse_mode='Markdown',
+            reply_markup=keyboards.generate_reservation_type_keyboard(),
+        )
+        return States.RESERVE_TYPE
+
+    elif user_input == '📝 Agreement':
+        await update.message.reply_text(
+            show_user_agreement(),
             parse_mode='Markdown',
             reply_markup=keyboards.generate_reservation_type_keyboard(),
         )

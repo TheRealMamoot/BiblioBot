@@ -20,6 +20,8 @@ async def show_existing_reservations(
     email = context.user_data['email']
     try:
         history: pd.DataFrame = await fetch_user_reservations(coidce, email, include_date=False)
+        if history.empty:
+            return '_You have no reservations at the moment._'
         history['datetime'] = pd.to_datetime(
             history['selected_date'].astype(str) + ' ' + history['end_time'].astype(str)
         )  # ' ' acts as space

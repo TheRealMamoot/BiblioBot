@@ -8,6 +8,11 @@ from telegram.ext import ContextTypes
 from src.biblio.utils.utils import generate_days
 
 
+def generate_agreement_keyboard():
+    keyboard_buttons = [[KeyboardButton('👍 Yes, I agree.')], [KeyboardButton("👎 No, I don't agree.")]]
+    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+
 def generate_start_keyboard(edit_credential_stage: bool = False):
     keyboard_buttons = [[KeyboardButton('🤝 Reach out!')], [KeyboardButton('❓ Help')]]
     if edit_credential_stage:
@@ -16,14 +21,23 @@ def generate_start_keyboard(edit_credential_stage: bool = False):
     return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 
+def generate_welcome_back_keyboard():
+    keyboard_buttons = [
+        [KeyboardButton('👍 Yes, go right on.')],
+        [KeyboardButton('🆕 No, I want to change.')],
+    ]
+    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+
 def generate_reservation_type_keyboard():
     keyboard_buttons = [
-        [KeyboardButton('🫶 Donate'), KeyboardButton('❓ Help')],
+        [KeyboardButton('🫶 Donate')],
         [KeyboardButton('🗓️ Current reservations')],
         [KeyboardButton('⏳ I need a slot for later.')],
         [KeyboardButton('⚡️ I need a slot for now.')],
         [KeyboardButton('🚫 Cancel reservation')],
         [KeyboardButton('⬅️ Edit credentials')],
+        [KeyboardButton('📝 Agreement'), KeyboardButton('❓ Help')],
     ]
     return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
@@ -106,11 +120,6 @@ def generate_retry_keyboard():
         [KeyboardButton('💡 Feedback')],
         [KeyboardButton('🫶 Donate')],
     ]
-    return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
-
-
-def generate_agreement_keyboard():
-    keyboard_buttons = [[KeyboardButton('👍 Yes, I agree.')], [KeyboardButton("👎 No, I don't agree.")]]
     return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
 

@@ -6,9 +6,9 @@ from telegram.ext import (
     filters,
 )
 
-from src.biblio.bot.commands import feedback, help, start
+from src.biblio.bot.commands import agreement, feedback, help, start
 from src.biblio.bot.fallbacks import error, fallback, restart
-from src.biblio.bot.user import user_agreement, user_validation
+from src.biblio.bot.user import user_agreement, user_returning, user_validation
 from src.biblio.config.config import States
 from src.biblio.jobs import schedule_backup_job, schedule_jobs
 from src.biblio.selection.cancel import cancelation, cancelation_confirmation
@@ -28,6 +28,7 @@ def build_app(token_env='prod'):
         states={
             States.AGREEMENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, user_agreement)],
             States.CREDENTIALS: [MessageHandler(filters.TEXT & ~filters.COMMAND, user_validation)],
+            States.WELCOME_BACK: [MessageHandler(filters.TEXT & ~filters.COMMAND, user_returning)],
             States.RESERVE_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, type_selection)],
             States.CHOOSING_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, date_selection)],
             States.CHOOSING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, time_selection)],
@@ -41,6 +42,7 @@ def build_app(token_env='prod'):
             CommandHandler('start', start),  # Allows /start to reset everything
             CommandHandler('help', help),
             CommandHandler('feedback', feedback),
+            CommandHandler('agreement', agreement),
             MessageHandler(filters.ALL, fallback),
         ],
         allow_reentry=True,

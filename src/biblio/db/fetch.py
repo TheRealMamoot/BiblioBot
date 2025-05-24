@@ -127,9 +127,18 @@ async def fetch_all_user_chat_ids():
         await conn.close()
 
 
-async def fetch_existing_user_id(codice: str, email: str) -> str:
+async def fetch_existing_user(username: str):
     conn = await asyncpg.connect(DATABASE_URL)
-    query = 'SELECT id FROM users WHERE codice_fiscale = $1 AND email = $2'
-    row = await conn.fetchrow(query, codice, email)
+    query = """
+    SELECT 
+    id,
+    codice_fiscale,
+    name,
+    email,
+    priority
+    FROM users
+    WHERE username = $1
+    """
+    row = await conn.fetchrow(query, username)
     await conn.close()
-    return row['id'] if row else None
+    return row

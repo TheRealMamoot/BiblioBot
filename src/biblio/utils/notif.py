@@ -10,10 +10,22 @@ from src.biblio.db.fetch import fetch_all_user_chat_ids
 
 NOTIF = textwrap.dedent(
     """
-    📦🛠️ *Bot updated*
-    - User agreement updated.
-    - Performance enhanced.
-    Please use /start again!
+    📦🛠️ *Bot updated! v2.0.1*
+
+    *- 🔁 Returning users can now skip credential re-entry.*
+    *- 🚨 Automatic notifications sent on every bot deployment.*
+    *- 📜 User agreement revised. Please read.*
+
+    Please use /start again to continue.
+
+
+    📦🛠️ *ربات به‌روزرسانی شد! نسخه 2.0.1*
+
+    *- 🔁 کاربرای قبلی دیگه نیازی به وارد کردن دوبارهٔ اطلاعات ندارن.*
+    *- 🚨 اعلان خودکار هنگام هر بار به‌روزرسانی.*
+    *- 📜 توافق‌نامهٔ کاربری به‌روزرسانی شد.*
+
+    لطفاً دوباره از /start استفاده کنید.
     """
 )
 
