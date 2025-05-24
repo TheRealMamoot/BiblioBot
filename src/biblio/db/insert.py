@@ -50,7 +50,7 @@ async def insert_reservation(data: dict):
     logging.info('[DB] Reservation added')
 
 
-async def insert_user(data: dict) -> None:
+async def insert_user(data: dict) -> str:
     columns, placeholders, values = _prepare_insert_parts(data)
 
     query = f"""
@@ -59,13 +59,24 @@ async def insert_user(data: dict) -> None:
     ON CONFLICT (codice_fiscale, email, name) DO NOTHING
     RETURNING id
     """
+
     conn = await asyncpg.connect(DATABASE_URL)
     try:
         row = await conn.fetchrow(query, *values)
         if row:
             logging.info('[DB] new user inserted.')
-        else:
+            return row['id']
+        # insert didn't happen, so fetch the correct user_id
+        fallback_query = """
+        SELECT id FROM users
+        WHERE codice_fiscale = $1 AND email = $2 AND name = $3
+        """
+        fallback_row = await conn.fetchrow(fallback_query, data['codice_fiscale'], data['email'], data['name'])
+        if fallback_row:
             logging.info('[DB] Insert skipped due to conflict (user already exists).')
+            return fallback_row['id']
+        else:
+            raise ValueError('[DB] Failed to insert or retrieve existing user.')
     finally:
         await conn.close()
 

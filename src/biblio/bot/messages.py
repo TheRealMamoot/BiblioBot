@@ -191,7 +191,7 @@ def show_help() -> str:
 
         ❕ Please avoid sharing the bot with a wide audience. Too many users may cause the system to slow down or fail, and it could reduce everyone's chances of getting a reservation.
 
-        ❕ In case of any unforseen behaviour, please use /start to reset the bot. You can also use /help and /feedback at any time.
+        ❕ In case of any unforseen behaviour, please use /start to reset the bot. You can also use /help, /feedback and /agreemnt at any time.
 
         🏹 Happy hunting...for slots!!!
         """

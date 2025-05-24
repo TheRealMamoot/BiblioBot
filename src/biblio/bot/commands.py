@@ -6,17 +6,16 @@ from telegram.ext import ContextTypes
 from src.biblio.bot.messages import show_help, show_support_message, show_user_agreement
 from src.biblio.config.config import States
 from src.biblio.db.fetch import fetch_existing_user
-from src.biblio.utils.keyboards import generate_agreement_keyboard, generate_welcome_back_keyboard
+from src.biblio.utils.keyboards import Keyboards
 from src.biblio.utils.utils import get_priorities
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
+    chat_id = update.effective_chat.id
     username = user.username
-    if not username:
-        return States.AGREEMENT
 
-    existing_user = await fetch_existing_user(username)
+    existing_user = await fetch_existing_user(chat_id)
 
     if existing_user:
         user_id = existing_user['id']
@@ -47,7 +46,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text(
             message,
             parse_mode='Markdown',
-            reply_markup=generate_welcome_back_keyboard(),
+            reply_markup=Keyboards.welcome_back(),
         )
         return States.WELCOME_BACK
 
@@ -55,7 +54,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         show_user_agreement(),
         parse_mode='Markdown',
-        reply_markup=generate_agreement_keyboard(),
+        reply_markup=Keyboards.agreement(),
     )
     return States.AGREEMENT
 
