@@ -130,7 +130,7 @@ def schedule_jobs(bot: Bot):
 
 
 def schedule_backup_job():
-    @aiocron.crontab('*/5 * * * *', tz=ZoneInfo('Europe/Rome'))
+    @aiocron.crontab('*/1 * * * *', tz=ZoneInfo('Europe/Rome'))
     async def _backup_job():
         logging.info('[GSHEET] Starting Google Sheets backup')
         await backup_reservations()
