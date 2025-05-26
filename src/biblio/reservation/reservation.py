@@ -4,15 +4,15 @@ import httpx
 
 from src.biblio.utils.validation import validate_user_data
 
-timeout = httpx.Timeout(
-    connect=10.0,  # max time to establish TCP connection
-    read=45.0,  # max time to read response
-    write=10.0,
-    pool=10.0,
-)
+
+def calculate_timeout(retries: int, base: int = 10, step: int = 15, max_read: int = 150) -> httpx.Timeout:
+    read = base + retries * step
+    return httpx.Timeout(connect=10.0, read=min(read, max_read), write=10.0, pool=10.0)
 
 
-async def set_reservation(start_time: int, end_time: int, duration: int, user_data: dict) -> dict:
+async def set_reservation(
+    start_time: int, end_time: int, duration: int, user_data: dict, timeout: httpx.Timeout
+) -> dict:
     url = 'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/store'
 
     try:
@@ -71,7 +71,7 @@ async def set_reservation(start_time: int, end_time: int, duration: int, user_da
 async def confirm_reservation(booking_code: int) -> dict:
     url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/confirm/{booking_code}'
 
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with httpx.AsyncClient() as client:
         try:
             response = await client.post(url)
             response.raise_for_status()
@@ -110,7 +110,7 @@ async def cancel_reservation(codice: str, booking_code: str, mode: str = 'delete
     url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/{mode}/{booking_code}?chiave={codice}'
 
     payload = {'type': 'libera_posto'} if mode == 'update' else None
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with httpx.AsyncClient() as client:
         try:
             response = await client.post(url, json=payload)
             response.raise_for_status()
@@ -122,11 +122,11 @@ async def cancel_reservation(codice: str, booking_code: str, mode: str = 'delete
             if status == 400:
                 logging.error('[CANCEL] 400 Bad Request: Possibly invalid booking code or reservation expired')
                 raise
-            elif status == 409:
-                logging.error('[CANCEL] 409 Conflict: Another process may be modifying the reservation.')
-                raise
             elif status == 404:
                 logging.error('[CANCEL] 404 Not found: Cancel slot not found (?).')
+                raise
+            elif status == 409:
+                logging.error('[CANCEL] 409 Conflict: Another process may be modifying the reservation.')
                 raise
             else:
                 logging.error(f'[CANCEL] HTTP error: {status} — {e.response.text}')

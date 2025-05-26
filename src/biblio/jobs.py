@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -12,7 +13,7 @@ from telegram import Bot
 from src.biblio.bot.messages import show_notification
 from src.biblio.db.fetch import fetch_all_reservations, fetch_pending_reservations
 from src.biblio.db.update import update_record
-from src.biblio.reservation.reservation import confirm_reservation, set_reservation
+from src.biblio.reservation.reservation import calculate_timeout, confirm_reservation, set_reservation
 from src.biblio.reservation.slot_datetime import reserve_datetime
 from src.biblio.utils.utils import get_wks
 
@@ -49,10 +50,12 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
         }
         return result
 
+    process_start = time.perf_counter()
+    timeout = calculate_timeout(record['retries'])
     try:
         start, end, duration = reserve_datetime(date, start_time, selected_duration)
         logging.info(f'[JOB] ✅ **1** Slot IDENTIFIED for {user_data["cognome_nome"]} - ID {record["id"]}')
-        response = await set_reservation(start, end, duration, user_data)
+        response = await set_reservation(start, end, duration, user_data, timeout)
         logging.info(f'[JOB] ✅ **2** Reservation SET for {user_data["cognome_nome"]} - ID {record["id"]}')
         await confirm_reservation(response['entry'])
         logging.info(f'[JOB] ✅ **3** Reservation CONFIRMED for {user_data["cognome_nome"]} - ID {record["id"]}')
@@ -70,6 +73,8 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
             'notified': True,
             'updated_at': datetime.now(ZoneInfo('Europe/Rome')),
         }
+
+        retries = result['retries']
 
     except Exception as e:
         logging.error(f'[JOB] ❌ Reservation FAILED for {user_data["cognome_nome"]} - ID {record["id"]}: {e}')
@@ -91,10 +96,15 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
             'updated_at': datetime.now(ZoneInfo('Europe/Rome')),
         }
 
+    process_end = time.perf_counter()
+    elapsed = process_end - process_start
+    logging.debug(f'[JOB] 🕒 Process for {user_data["cognome_nome"]} - ID {result["id"]} took {elapsed:.2f}s')
+    logging.debug(f'[JOB] Retry {retries} → Timeout {timeout.read:.1f}s for ID {record["id"]}')
+
     return result
 
 
-async def excecute_reservations(bot: Bot):
+async def execute_reservations(bot: Bot):
     records: list[dict] = await fetch_pending_reservations()
     if not records:
         logging.info('[DB-JOB] No pending reservations to process.')
@@ -122,10 +132,10 @@ async def backup_reservations(auth_mode: str = 'prod'):
 def schedule_jobs(bot: Bot):
     scheduler = AsyncIOScheduler(timezone='Europe/Rome')
     trigger = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-20', day_of_week='mon-fri')  # UTC
-    scheduler.add_job(excecute_reservations, trigger, args=[bot])
+    scheduler.add_job(execute_reservations, trigger, args=[bot])
 
     trigger_sat = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-11', day_of_week='sat')  # UTC
-    scheduler.add_job(excecute_reservations, trigger_sat, args=[bot])
+    scheduler.add_job(execute_reservations, trigger_sat, args=[bot])
     scheduler.start()
 
 
