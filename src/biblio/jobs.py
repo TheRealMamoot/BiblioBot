@@ -117,7 +117,7 @@ async def execute_reservations(bot: Bot):
     logging.info(f'[DB-JOB] Reservation job completed: {len(updates)} updated')
 
 
-async def backup_reservations(auth_mode: str = 'prod'):
+async def backup_reservations(auth_mode: str = 'cloud'):
     df = await fetch_all_reservations()
     if df.empty:
         logging.info('[GSHEET] No data to write to the sheet.')
@@ -139,8 +139,8 @@ def schedule_jobs(bot: Bot):
     scheduler.start()
 
 
-def schedule_backup_job():
+def schedule_backup_job(auth_mode: str = 'cloud'):
     @aiocron.crontab('*/1 * * * *', tz=ZoneInfo('Europe/Rome'))
     async def _backup_job():
         logging.info('[GSHEET] Starting Google Sheets backup')
-        await backup_reservations()
+        await backup_reservations(auth_mode)

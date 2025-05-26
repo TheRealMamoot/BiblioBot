@@ -56,6 +56,13 @@ def get_parser():
         choices=['prod', 'staging'],
         help='Which .env key to use for Telegram bot token',
     )
+    parser.add_argument(
+        '--gsheet-auth',
+        type=str,
+        default='cloud',
+        choices=['cloud', 'local'],
+        help='Which .env key to use for Telegram bot token',
+    )
     return parser
 
 
@@ -66,8 +73,8 @@ def get_priorities():
 
 
 @cache
-def get_gsheet_client(auth_mode: str = 'prod'):
-    if auth_mode == 'prod':
+def get_gsheet_client(auth_mode: str = 'cloud'):
+    if auth_mode == 'cloud':
         return pygsheets.authorize(service_account_json=os.environ['GSHEETS'])
     elif auth_mode == 'local':
         return pygsheets.authorize(service_file=CREDENTIALS_PATH)
@@ -75,6 +82,6 @@ def get_gsheet_client(auth_mode: str = 'prod'):
         raise ValueError('Wrong mode')
 
 
-def get_wks(auth_mode: str = 'prod'):
+def get_wks(auth_mode: str = 'cloud'):
     gc = get_gsheet_client(auth_mode)
     return gc.open('Biblio-logs').worksheet_by_title('backup')

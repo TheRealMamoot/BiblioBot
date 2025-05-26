@@ -21,7 +21,7 @@ from src.biblio.selection.type import type_selection
 from src.biblio.utils.utils import get_token
 
 
-def build_app(token_env='prod'):
+def build_app(token_env='prod', gsheet_auth_mode='cloud'):
     app = Application.builder().token(get_token(token_env)).build()
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
@@ -52,6 +52,6 @@ def build_app(token_env='prod'):
     app.add_error_handler(error)
 
     schedule_jobs(app.bot)
-    schedule_backup_job()
+    schedule_backup_job(gsheet_auth_mode)
 
     return app

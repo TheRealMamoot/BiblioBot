@@ -13,7 +13,7 @@ async def main():
     setup_logger()
     parser = get_parser()
     args = parser.parse_args()
-    app: Application = build_app(token_env=args.token_env)
+    app: Application = build_app(token_env=args.token_env, gsheet_auth_mode=args.gsheet_auth)
     await build_db()
     await app.initialize()
     await notify_on_deploy(app.bot)

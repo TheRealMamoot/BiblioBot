@@ -54,7 +54,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         close_time = 22
         if week_day == 5:
             close_time = 13
-        if now.hour < open_time or now.hour >= close_time:
+        if now.hour < (open_time - 2) or now.hour >= close_time:
             await update.message.reply_text(
                 "It's over for today! Go home. 😌",
                 reply_markup=Keyboards.reservation_type(),
