@@ -59,7 +59,7 @@ class Keyboards:
     @staticmethod
     def reservation_type():
         keyboard_buttons = [
-            [KeyboardButton(Labels.DONATE)],
+            [KeyboardButton(Labels.DONATE), KeyboardButton(Labels.FEEDBACK)],
             [KeyboardButton(Labels.CURRENT_RESERVATIONS)],
             [KeyboardButton(Labels.SLOT_LATER)],
             [KeyboardButton(Labels.SLOT_INSTANT)],

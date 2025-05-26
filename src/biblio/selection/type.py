@@ -7,7 +7,13 @@ from pandas import DataFrame
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.bot.messages import show_donate_message, show_existing_reservations, show_help, show_user_agreement
+from src.biblio.bot.messages import (
+    show_donate_message,
+    show_existing_reservations,
+    show_help,
+    show_support_message,
+    show_user_agreement,
+)
 from src.biblio.config.config import States
 from src.biblio.utils.keyboards import Keyboards, Labels
 
@@ -167,6 +173,14 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     elif user_input == Labels.AGREEMENT:
         await update.message.reply_text(
             show_user_agreement(),
+            parse_mode='Markdown',
+            reply_markup=Keyboards.reservation_type(),
+        )
+        return States.RESERVE_TYPE
+
+    elif user_input == Labels.FEEDBACK:
+        await update.message.reply_text(
+            show_support_message(),
             parse_mode='Markdown',
             reply_markup=Keyboards.reservation_type(),
         )
