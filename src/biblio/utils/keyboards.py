@@ -90,10 +90,7 @@ class Keyboards:
         year = now.year if now.month <= date_obj.month else now.year + 1
         full_date = datetime(year, date_obj.month, date_obj.day, tzinfo=ZoneInfo('Europe/Rome'))
         end_hour = 13 if full_date.weekday() == 5 else 22
-        print(f'full: {full_date}')
         current = datetime(year, date_obj.month, date_obj.day, 9, 0, tzinfo=ZoneInfo('Europe/Rome'))
-        print(f'curent: {current}')
-        print(f'now: {now}')
         if full_date.date() == now.date() and now.hour >= 9:
             hour = now.hour
             minute = 0 if now.minute < 30 else 30

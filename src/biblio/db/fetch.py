@@ -80,6 +80,14 @@ async def fetch_all_reservations():
     name,
     priority,
     selected_date,
+
+    CASE 
+    WHEN selected_date = CURRENT_DATE THEN '2030-01-03'
+    WHEN selected_date = CURRENT_DATE + 1 THEN '2030-01-02'
+    WHEN selected_date = CURRENT_DATE + 2 THEN '2030-01-01'
+    ELSE selected_date
+    END AS custom_date_sort,
+
     display_date,
     start_time,
     end_time,
@@ -87,6 +95,14 @@ async def fetch_all_reservations():
     booking_code as code,
     retries,
     status,
+
+    CASE 
+    WHEN status = 'pending' THEN 1  
+    WHEN status = 'success' THEN 2
+    WHEN status = 'terminated' THEN 3
+    ELSE 4
+    END AS status_label,
+
     instant,
     status_change as change,
     notified,
@@ -95,7 +111,7 @@ async def fetch_all_reservations():
     r.created_at AT TIME ZONE 'Europe/Rome' as created_at
     FROM reservations r
     JOIN users u ON r.user_id = u.id
-    ORDER BY selected_date ASC, priority ASC, status ASC, selected_duration DESC, start_time ASC
+    ORDER BY custom_date_sort DESC, status_label ASC, priority ASC, selected_duration DESC, start_time ASC
     """
     rows = await conn.fetch(query)
     await conn.close()

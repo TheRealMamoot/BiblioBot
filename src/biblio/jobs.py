@@ -51,11 +51,11 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
 
     try:
         start, end, duration = reserve_datetime(date, start_time, selected_duration)
-        logging.info(f'[JOB] ✅ **1** Slot identified for {user_data["cognome_nome"]} - ID {record["id"]}')
+        logging.info(f'[JOB] ✅ **1** Slot IDENTIFIED for {user_data["cognome_nome"]} - ID {record["id"]}')
         response = await set_reservation(start, end, duration, user_data)
-        logging.info(f'[JOB] ✅ **2** Reservation set for {user_data["cognome_nome"]} - ID {record["id"]}')
+        logging.info(f'[JOB] ✅ **2** Reservation SET for {user_data["cognome_nome"]} - ID {record["id"]}')
         await confirm_reservation(response['entry'])
-        logging.info(f'[JOB] ✅ **3** Reservation confirmed for {user_data["cognome_nome"]} - ID {record["id"]}')
+        logging.info(f'[JOB] ✅ **3** Reservation CONFIRMED for {user_data["cognome_nome"]} - ID {record["id"]}')
 
         if chat_id:
             notif = show_notification(status='success', record=record, booking_code=response['codice_prenotazione'])
@@ -72,7 +72,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
         }
 
     except Exception as e:
-        logging.warning(f'[JOB] ❌ Reservation failed for {user_data["cognome_nome"]} - ID {record["id"]}: {e}')
+        logging.error(f'[JOB] ❌ Reservation FAILED for {user_data["cognome_nome"]} - ID {record["id"]}: {e}')
         retries = int(record['retries']) + 1
         status = 'terminated' if retries > 20 else 'fail'
         booking_code = record['booking_code'] if status == 'fail' else 'CLOSED'
@@ -121,10 +121,10 @@ async def backup_reservations(auth_mode: str = 'prod'):
 
 def schedule_jobs(bot: Bot):
     scheduler = AsyncIOScheduler(timezone='Europe/Rome')
-    trigger = CronTrigger(second='*/10', minute='0,1,30,31,32', hour='5-20', day_of_week='mon-fri')  # UTC
+    trigger = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-20', day_of_week='mon-fri')  # UTC
     scheduler.add_job(excecute_reservations, trigger, args=[bot])
 
-    trigger_sat = CronTrigger(second='*/10', minute='0,1,30,31,32', hour='5-11', day_of_week='sat')  # UTC
+    trigger_sat = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-11', day_of_week='sat')  # UTC
     scheduler.add_job(excecute_reservations, trigger_sat, args=[bot])
     scheduler.start()
 

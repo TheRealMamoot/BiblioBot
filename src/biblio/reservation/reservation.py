@@ -4,6 +4,13 @@ import httpx
 
 from src.biblio.utils.validation import validate_user_data
 
+timeout = httpx.Timeout(
+    connect=10.0,  # max time to establish TCP connection
+    read=45.0,  # max time to read response
+    write=10.0,
+    pool=10.0,
+)
+
 
 async def set_reservation(start_time: int, end_time: int, duration: int, user_data: dict) -> dict:
     url = 'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/store'
@@ -33,7 +40,7 @@ async def set_reservation(start_time: int, end_time: int, duration: int, user_da
         'timezone': 'Europe/Rome',
     }
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             response = await client.post(url, json=payload)
             response.raise_for_status()
@@ -44,18 +51,27 @@ async def set_reservation(start_time: int, end_time: int, duration: int, user_da
             else:
                 logging.error('[SET] Unexpected response format: "Booking Code" not found.')
                 raise ValueError('[SET] Unexpected response format: "Booking Code" not found.')
+
+        except httpx.ReadTimeout as e:
+            logging.error(f'[SET] Timeout: Server took too long to respond – {repr(e)}')
+            raise
+
         except httpx.RequestError as e:
-            logging.error(f'[SET] Request failed: {e}')
-            raise RuntimeError(f'[SET] Request error: {e}')
+            logging.error(f'[SET] Request failed: {type(e).__name__} - {repr(e)}')
+            raise
         except ValueError as e:
-            logging.error(f'[SET] Value error: {e}')
-            raise RuntimeError(f'[SET] Value error: {e}')
+            logging.error(f'[SET] Value error: {type(e).__name__} - {e}')
+            raise
+
+        except Exception as e:
+            logging.exception(f'[SET] Unexpected error: {type(e).__name__} - {repr(e)}')
+            raise
 
 
 async def confirm_reservation(booking_code: int) -> dict:
     url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/confirm/{booking_code}'
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             response = await client.post(url)
             response.raise_for_status()
@@ -63,28 +79,38 @@ async def confirm_reservation(booking_code: int) -> dict:
             return response.json()
 
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 400:
+            status = e.response.status_code
+            if status == 400:
                 logging.error('[CONFIRM] 400 Bad Request – Check booking_code or payload format.')
-                raise RuntimeError('Reservation confirmation failed: Invalid request. Please try again.')
-
-            elif e.response.status_code == 401:
+                raise
+            elif status == 401:
                 logging.error('[CONFIRM] 401 Unauthorized – Authentication failed.')
-                raise RuntimeError('Reservation confirmation failed: Unauthorized. Please check your credentials.')
-
+                raise
+            elif status == 404:
+                logging.error('[CONFIRM] 404 Not found – Slot unavailable.')
+                raise
             else:
-                logging.error(f'[CONFIRM] HTTP error: {e}')
-                raise RuntimeError(f'Unexpected HTTP error: {e}')
+                logging.error(f'[CONFIRM] HTTP error: {status} - {repr(e)}')
+                raise
+
+        except httpx.ReadTimeout as e:
+            logging.error(f'[CONFIRM] Timeout: Server took too long to respond – {repr(e)}')
+            raise
 
         except httpx.RequestError as e:
-            logging.error(f'[CONFIRM] Request failed: {e}')
-            raise RuntimeError(f'Connection error: {e}')
+            logging.error(f'[CONFIRM] Request error: {type(e).__name__} - {repr(e)}')
+            raise
+
+        except Exception as e:
+            logging.exception(f'[CONFIRM] Unexpected error: {type(e).__name__} - {repr(e)}')
+            raise
 
 
 async def cancel_reservation(codice: str, booking_code: str, mode: str = 'delete') -> dict:
     url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/{mode}/{booking_code}?chiave={codice}'
 
     payload = {'type': 'libera_posto'} if mode == 'update' else None
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             response = await client.post(url, json=payload)
             response.raise_for_status()
@@ -92,20 +118,28 @@ async def cancel_reservation(codice: str, booking_code: str, mode: str = 'delete
             return response.json()
 
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 400:
-                logging.warning('[CANCEL] 400 Bad Request: Possibly invalid booking code or reservation expired')
-                raise RuntimeError('Reservation not found or already canceled.')
-            elif e.response.status_code == 409:
-                logging.warning('[CANCEL] 409 Conflict: Another process may be modifying the reservation.')
-                raise RuntimeError('Reservation conflict detected.')
+            status = e.response.status_code
+            if status == 400:
+                logging.error('[CANCEL] 400 Bad Request: Possibly invalid booking code or reservation expired')
+                raise
+            elif status == 409:
+                logging.error('[CANCEL] 409 Conflict: Another process may be modifying the reservation.')
+                raise
+            elif status == 404:
+                logging.error('[CANCEL] 404 Not found: Cancel slot not found (?).')
+                raise
             else:
-                logging.error(f'[CANCEL] HTTP error: {e.response.status_code} — {e.response.text}')
-                raise RuntimeError(f'Unexpected HTTP error: {e.response.status_code}')
+                logging.error(f'[CANCEL] HTTP error: {status} — {e.response.text}')
+                raise
+
+        except httpx.ReadTimeout as e:
+            logging.error(f'[CANCEL] Timeout: Server took too long to respond – {repr(e)}')
+            raise
 
         except httpx.RequestError as e:
-            logging.error(f'[CANCEL] Network error: {e}')
-            raise RuntimeError('Network error while canceling reservation.')
+            logging.error(f'[CANCEL] Network error: {type(e).__name__} - {repr(e)}')
+            raise
 
         except Exception as e:
-            logging.exception('[CANCEL] Unexpected error')
-            raise RuntimeError(f'Unexpected cancel error: {e}')
+            logging.exception(f'[CANCEL] Unexpected error: {type(e).__name__} - {repr(e)}')
+            raise
