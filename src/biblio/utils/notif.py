@@ -11,8 +11,6 @@ from src.biblio.db.fetch import fetch_all_user_chat_ids
 NOTIF = textwrap.dedent(
     """
     📦🛠️ *Bot updated*
-    The changes seem to be effective. 
-    Please wait until 7:30 for the bot to get your slot.
     Please press /start 
     """
 )

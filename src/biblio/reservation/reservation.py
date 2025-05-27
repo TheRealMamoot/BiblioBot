@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import httpx
@@ -68,42 +69,44 @@ async def set_reservation(
             raise
 
 
-async def confirm_reservation(booking_code: int) -> dict:
+async def confirm_reservation(booking_code: int, max_retries: int = 3) -> dict:
     url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/confirm/{booking_code}'
 
     async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(url)
-            response.raise_for_status()
-            logging.info('[CONFIRM] Reservation confirmed.')
-            return response.json()
+        for attempt in range(max_retries):
+            try:
+                response = await client.post(url)
+                response.raise_for_status()
+                logging.info('[CONFIRM] Reservation confirmed.')
+                return response.json()
 
-        except httpx.HTTPStatusError as e:
-            status = e.response.status_code
-            if status == 400:
-                logging.error('[CONFIRM] 400 Bad Request – Check booking_code or payload format.')
+            except httpx.HTTPStatusError as e:
+                status = e.response.status_code
+                if status == 404:
+                    logging.warning(f'[CONFIRM] 404 Not Found — Attempt {attempt + 1}/{max_retries}')
+                    await asyncio.sleep(1.5 + attempt * 0.5)  # backoff
+                    continue
+                elif status == 400:
+                    logging.error('[CONFIRM] 400 Bad Request — Invalid booking_code or payload.')
+                    raise
+                elif status == 401:
+                    logging.error('[CONFIRM] 401 Unauthorized — Authentication failed.')
+                    raise
+                else:
+                    logging.error(f'[CONFIRM] HTTP error: {status} - {repr(e)}')
+                    raise
+
+            except httpx.ReadTimeout as e:
+                logging.error(f'[CONFIRM] Timeout: Server took too long to respond – {repr(e)}')
                 raise
-            elif status == 401:
-                logging.error('[CONFIRM] 401 Unauthorized – Authentication failed.')
+            except httpx.RequestError as e:
+                logging.error(f'[CONFIRM] Request error: {type(e).__name__} - {repr(e)}')
                 raise
-            elif status == 404:
-                logging.error('[CONFIRM] 404 Not found – Slot unavailable.')
-                raise
-            else:
-                logging.error(f'[CONFIRM] HTTP error: {status} - {repr(e)}')
+            except Exception as e:
+                logging.exception(f'[CONFIRM] Unexpected error: {type(e).__name__} - {repr(e)}')
                 raise
 
-        except httpx.ReadTimeout as e:
-            logging.error(f'[CONFIRM] Timeout: Server took too long to respond – {repr(e)}')
-            raise
-
-        except httpx.RequestError as e:
-            logging.error(f'[CONFIRM] Request error: {type(e).__name__} - {repr(e)}')
-            raise
-
-        except Exception as e:
-            logging.exception(f'[CONFIRM] Unexpected error: {type(e).__name__} - {repr(e)}')
-            raise
+        raise RuntimeError('[CONFIRM] Gave up after max retries — booking code not found.')
 
 
 async def cancel_reservation(codice: str, booking_code: str, mode: str = 'delete') -> dict:

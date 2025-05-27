@@ -98,8 +98,8 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
 
     process_end = time.perf_counter()
     elapsed = process_end - process_start
-    logging.debug(f'[JOB] 🕒 Process for {user_data["cognome_nome"]} - ID {result["id"]} took {elapsed:.2f}s')
-    logging.debug(f'[JOB] Retry {retries} → Timeout {timeout.read:.1f}s for ID {record["id"]}')
+    logging.info(f'[JOB] 🕒 Process for {user_data["cognome_nome"]} - ID {result["id"]} took {elapsed:.2f}s')
+    logging.info(f'[JOB] Retry {retries} → Delay {timeout.read:.1f}s for ID {record["id"]} in case of timeout')
 
     return result
 
@@ -134,7 +134,7 @@ def schedule_jobs(bot: Bot):
     trigger = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-20', day_of_week='mon-fri')  # UTC
     scheduler.add_job(execute_reservations, trigger, args=[bot])
 
-    trigger = CronTrigger(second='*/10', minute='15,16,17,18', hour='5', day_of_week='mon-fri')  # UTC
+    trigger = CronTrigger(second='*/20', minute='15,17,20', hour='5', day_of_week='mon-fri')  # UTC
     scheduler.add_job(execute_reservations, trigger, args=[bot])
 
     trigger_sat = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-11', day_of_week='sat')  # UTC
