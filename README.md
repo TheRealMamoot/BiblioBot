@@ -73,6 +73,7 @@ After setting up your bot, be sure to register these commands in your [BotFather
 /help - Show help and usage instructions
 /feedback - Send feedback to the developer
 /agreement - Show user agreement
+/donate - Show donation links
 ```
 
 ## 🚀 Run the Bot

@@ -1,0 +1,6 @@
+***** Bot Commands *****
+donate - Shows donation links ❤️
+start - Restarts the Bot
+help - Shows user guide
+feedback - Shows author's contacts
+agreement - Shows user agreement

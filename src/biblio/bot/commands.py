@@ -3,7 +3,7 @@ import textwrap
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.bot.messages import show_help, show_support_message, show_user_agreement
+from src.biblio.bot.messages import show_donate_message, show_help, show_support_message, show_user_agreement
 from src.biblio.config.config import States
 from src.biblio.db.fetch import fetch_existing_user
 from src.biblio.utils.keyboards import Keyboards
@@ -69,3 +69,7 @@ async def feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def agreement(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(show_user_agreement(), parse_mode='Markdown')
+
+
+async def donate(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(show_donate_message(), parse_mode='Markdown')
