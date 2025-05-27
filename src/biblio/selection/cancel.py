@@ -74,14 +74,14 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
             if booking_code not in ['TBD', 'NA']:
                 try:
                     await cancel_reservation(context.user_data['codice_fiscale'], booking_code)
-                except RuntimeError:
+                except Exception:
                     try:
                         await cancel_reservation(
                             context.user_data['codice_fiscale'],
                             booking_code,
                             mode='update',
                         )
-                    except RuntimeError as e:
+                    except Exception as e:
                         logging.error(
                             f'[CANCEL] {update.effective_user} cancelation was not completed at {datetime.now(ZoneInfo("Europe/Rome"))} -- {e}'
                         )

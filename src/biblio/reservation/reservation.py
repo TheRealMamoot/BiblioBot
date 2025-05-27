@@ -55,11 +55,11 @@ async def set_reservation(
 
         except httpx.ReadTimeout as e:
             logging.error(f'[SET] Timeout: Server took too long to respond – {repr(e)}')
-            raise
+            raise TimeoutError('Reservation request timed out') from e
 
         except httpx.RequestError as e:
             logging.error(f'[SET] Request failed: {type(e).__name__} - {repr(e)}')
-            raise
+            raise ConnectionError('Network error during reservation') from e
         except ValueError as e:
             logging.error(f'[SET] Value error: {type(e).__name__} - {e}')
             raise
@@ -123,26 +123,26 @@ async def cancel_reservation(codice: str, booking_code: str, mode: str = 'delete
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
             if status == 400:
-                logging.error('[CANCEL] 400 Bad Request: Possibly invalid booking code or reservation expired')
-                raise
+                logging.error('[CANCEL] 400 Bad Request: Possibly invalid booking code or expired reservation')
+                raise RuntimeError('Possibly invalid booking code or expired reservation') from e
             elif status == 404:
                 logging.error('[CANCEL] 404 Not found: Cancel slot not found (?).')
-                raise
+                raise FileNotFoundError('Cancel slot not found (?).') from e
             elif status == 409:
                 logging.error('[CANCEL] 409 Conflict: Another process may be modifying the reservation.')
-                raise
+                raise RuntimeError('Conflict during cancellation') from e
             else:
                 logging.error(f'[CANCEL] HTTP error: {status} — {e.response.text}')
-                raise
+                raise RuntimeError(f'HTTP error during cancellation: {status}') from e
 
         except httpx.ReadTimeout as e:
             logging.error(f'[CANCEL] Timeout: Server took too long to respond – {repr(e)}')
-            raise
+            raise TimeoutError('Cancellation request timed out') from e
 
         except httpx.RequestError as e:
             logging.error(f'[CANCEL] Network error: {type(e).__name__} - {repr(e)}')
-            raise
+            raise ConnectionError('Network error during cancellation') from e
 
         except Exception as e:
             logging.exception(f'[CANCEL] Unexpected error: {type(e).__name__} - {repr(e)}')
-            raise
+            raise RuntimeError('Unexpected cancellation error') from e
