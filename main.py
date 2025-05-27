@@ -5,7 +5,7 @@ from telegram.ext import Application
 from src.biblio.app import build_app
 from src.biblio.config.logger import setup_logger
 from src.biblio.db.build import build_db
-from src.biblio.utils.notif import notify_on_deploy
+from src.biblio.utils.notif import notify_deployment
 from src.biblio.utils.utils import get_parser
 
 
@@ -16,7 +16,7 @@ async def main():
     app: Application = build_app(token_env=args.token_env, gsheet_auth_mode=args.gsheet_auth)
     await build_db()
     await app.initialize()
-    await notify_on_deploy(app.bot)
+    await notify_deployment(app.bot)
     await app.start()
     await app.updater.start_polling()
     try:

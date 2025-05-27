@@ -89,6 +89,7 @@ async def fetch_all_reservations():
     status,
 
     CASE 
+    WHEN status = 'fail' THEN 0  
     WHEN status = 'pending' THEN 1  
     WHEN status = 'success' THEN 2
     WHEN status = 'terminated' THEN 3

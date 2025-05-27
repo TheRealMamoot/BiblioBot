@@ -8,15 +8,24 @@ from telegram import Bot
 
 from src.biblio.db.fetch import fetch_all_user_chat_ids
 
-NOTIF = textwrap.dedent(
+DEPLOY_NOTIF = textwrap.dedent(
     """
     📦🛠️ *Bot updated*
     Please press /start 
     """
 )
 
+REMINDER = textwrap.dedent(
+    """
+    *⏱️ Don't forget to book! ⏱️*
+    You will have a much better chance if you schedule in advance.
+    Don't leave it for tommorow. 
+    Do it...*NOW*! 🥸
+    """
+)
 
-async def notify_on_deploy(bot: Bot) -> None:
+
+async def notify_deployment(bot: Bot) -> None:
     current_id = os.environ.get('RAILWAY_DEPLOYMENT_ID')
     cache_file = '.last_deploy_id'
 
@@ -39,5 +48,11 @@ async def notify_on_deploy(bot: Bot) -> None:
     logging.info('[DEPLY] New Railway deployment detected — notifying users.')
 
     chat_ids = await fetch_all_user_chat_ids()
-    tasks = [bot.send_message(chat_id=chat_id, text=NOTIF, parse_mode='Markdown') for chat_id in chat_ids]
+    tasks = [bot.send_message(chat_id=chat_id, text=DEPLOY_NOTIF, parse_mode='Markdown') for chat_id in chat_ids]
+    await asyncio.gather(*tasks)
+
+
+async def notify_reminder(bot: Bot) -> None:
+    chat_ids = await fetch_all_user_chat_ids()
+    tasks = [bot.send_message(chat_id=chat_id, text=REMINDER, parse_mode='Markdown') for chat_id in chat_ids]
     await asyncio.gather(*tasks)

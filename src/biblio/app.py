@@ -10,7 +10,7 @@ from src.biblio.bot.commands import agreement, donate, feedback, help, start
 from src.biblio.bot.fallbacks import error, fallback, restart
 from src.biblio.bot.user import user_agreement, user_returning, user_validation
 from src.biblio.config.config import States
-from src.biblio.jobs import schedule_backup_job, schedule_reserve_job  # , schedule_reminder_job
+from src.biblio.jobs import schedule_backup_job, schedule_reminder_job, schedule_reserve_job
 from src.biblio.selection.cancel import cancelation, cancelation_confirmation
 from src.biblio.selection.confirm import confirmation
 from src.biblio.selection.date import date_selection
@@ -54,6 +54,6 @@ def build_app(token_env='prod', gsheet_auth_mode='cloud'):
 
     schedule_reserve_job(app.bot)
     schedule_backup_job(gsheet_auth_mode)
-    # schedule_reminder_job(app.bot)
+    schedule_reminder_job(app.bot)
 
     return app

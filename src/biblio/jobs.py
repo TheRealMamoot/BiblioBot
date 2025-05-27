@@ -15,6 +15,7 @@ from src.biblio.db.fetch import fetch_all_reservations, fetch_pending_reservatio
 from src.biblio.db.update import update_record
 from src.biblio.reservation.reservation import calculate_timeout, confirm_reservation, set_reservation
 from src.biblio.reservation.slot_datetime import reserve_datetime
+from src.biblio.utils.notif import notify_reminder
 from src.biblio.utils.utils import get_wks
 
 
@@ -104,7 +105,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
     return result
 
 
-async def execute_reservations(bot: Bot):
+async def execute_reservations(bot: Bot) -> None:
     records: list[dict] = await fetch_pending_reservations()
     if not records:
         logging.info('[DB-JOB] No pending reservations to process.')
@@ -129,7 +130,7 @@ async def backup_reservations(auth_mode: str = 'cloud'):
     logging.info('[GSHEET] Data written to Google Sheet successfully.')
 
 
-def schedule_jobs(bot: Bot):
+def schedule_reserve_job(bot: Bot) -> None:
     scheduler = AsyncIOScheduler(timezone='Europe/Rome')
     trigger = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-20', day_of_week='mon-fri')  # UTC
     scheduler.add_job(execute_reservations, trigger, args=[bot])
@@ -143,8 +144,15 @@ def schedule_jobs(bot: Bot):
     scheduler.start()
 
 
-def schedule_backup_job(auth_mode: str = 'cloud'):
+def schedule_backup_job(auth_mode: str = 'cloud') -> None:
     @aiocron.crontab('*/1 * * * *', tz=ZoneInfo('Europe/Rome'))
     async def _backup_job():
         logging.info('[GSHEET] Starting Google Sheets backup')
         await backup_reservations(auth_mode)
+
+
+def schedule_reminder_job(bot: Bot) -> None:
+    @aiocron.crontab('30 23 * * 0-4', tz=ZoneInfo('Europe/Rome'))
+    async def _reminder_job():
+        logging.info('[NOTIF] Sending reminder notification')
+        await notify_reminder(bot)
