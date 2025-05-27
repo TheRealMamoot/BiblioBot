@@ -11,23 +11,9 @@ from src.biblio.db.fetch import fetch_all_user_chat_ids
 NOTIF = textwrap.dedent(
     """
     📦🛠️ *Bot updated*
-
-    *Hello everyone*
-
-    Today we experienced very poor and slow service from the library. This also affected the bot, and many people couldn’t book a slot.  
-    I’ve made some changes and I hope we won’t face issues this severe again — though at some point, it’s out of my hands.  
-    Anyway, the bot is working now, and you can use it *(cautiously!)* 😁
-
-    *Bot Lord*
-    ---------
-    *سلام به همگی*
-
-    امروز شاهد سرویس بسیار بد و کند کتابخونه بودیم.
-    این مورد روی بات هم تاثیر خودشو گذاشت و خیلیا نتوسنتن وقت بگیرن.  
-    مواردیو تغییر دادم و امیدوارم دیگه به این شدت با مشکل مواجه نشیم، هرچند از یه جایی به بعد دیگه دست من نیست.  
-    به هر حال بات کار میکنه و میتونید با *احتیاط*! ازش استفاده کنید 😁
-
-    *صاب بات*
+    The changes seem to be effective. 
+    Please wait until 7:30 for the bot to get your slot.
+    Please press /start 
     """
 )
 

@@ -134,8 +134,12 @@ def schedule_jobs(bot: Bot):
     trigger = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-20', day_of_week='mon-fri')  # UTC
     scheduler.add_job(execute_reservations, trigger, args=[bot])
 
+    trigger = CronTrigger(second='*/10', minute='15,16,17', hour='7', day_of_week='mon-fri')  # UTC
+    scheduler.add_job(execute_reservations, trigger, args=[bot])
+
     trigger_sat = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-11', day_of_week='sat')  # UTC
     scheduler.add_job(execute_reservations, trigger_sat, args=[bot])
+
     scheduler.start()
 
 
