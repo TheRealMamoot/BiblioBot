@@ -8,7 +8,7 @@ from telegram.ext import ContextTypes
 
 from src.biblio.config.config import States
 from src.biblio.db.insert import writer
-from src.biblio.reservation.reservation import confirm_reservation, set_reservation
+from src.biblio.reservation.reservation import calculate_timeout, confirm_reservation, set_reservation
 from src.biblio.reservation.slot_datetime import reserve_datetime
 from src.biblio.utils.keyboards import Keyboards, Labels
 
@@ -45,7 +45,8 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
         if context.user_data['instant']:
             try:
-                reservation_response = await set_reservation(start, end, duration, user_data)
+                timeout = calculate_timeout(retries=0, base=120)  # todo: change to dynamic based on retries
+                reservation_response = await set_reservation(start, end, duration, user_data, timeout)
                 logging.info(f'✅ **2** {res_type} Reservation set for {user_data["cognome_nome"]}')
                 await confirm_reservation(reservation_response['entry'])
                 logging.info(f'✅ **3** {res_type} Reservation confirmed for {user_data["cognome_nome"]}')

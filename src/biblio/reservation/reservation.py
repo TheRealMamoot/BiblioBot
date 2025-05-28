@@ -12,7 +12,7 @@ def calculate_timeout(retries: int, base: int = 10, step: int = 15, max_read: in
 
 
 async def set_reservation(
-    start_time: int, end_time: int, duration: int, user_data: dict, timeout: httpx.Timeout
+    start_time: int, end_time: int, duration: int, user_data: dict, timeout: httpx.Timeout = None
 ) -> dict:
     url = 'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/store'
 
