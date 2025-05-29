@@ -44,7 +44,7 @@ async def fetch_user_reservations(*user_details, include_date: bool = True) -> p
     return pd.DataFrame(data)
 
 
-async def fetch_pending_reservations() -> list[dict]:
+async def fetch_reservations(statuses: list[str]) -> list[dict]:
     conn = await asyncpg.connect(DATABASE_URL)
     query = """
     SELECT r.*,
@@ -56,10 +56,10 @@ async def fetch_pending_reservations() -> list[dict]:
     FROM reservations r
     JOIN users u ON r.user_id = u.id
     WHERE r.selected_date = CURRENT_DATE
-    AND r.status IN ('pending', 'fail')
+    AND r.status = ANY($1)
     ORDER BY u.priority, r.selected_date, r.selected_duration DESC, r.start_time;
     """
-    rows = await conn.fetch(query)
+    rows = await conn.fetch(query, statuses)
     await conn.close()
     logging.info(f'[DB] *pending* reservations fetched - {len(rows)} results')
     return [dict(row) for row in rows] if rows else []

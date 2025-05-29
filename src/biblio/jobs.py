@@ -11,7 +11,7 @@ from pygsheets import Worksheet
 from telegram import Bot
 
 from src.biblio.bot.messages import show_notification
-from src.biblio.db.fetch import fetch_all_reservations, fetch_pending_reservations
+from src.biblio.db.fetch import fetch_all_reservations, fetch_reservations
 from src.biblio.db.update import update_record
 from src.biblio.reservation.reservation import calculate_timeout, confirm_reservation, set_reservation
 from src.biblio.reservation.slot_datetime import reserve_datetime
@@ -106,7 +106,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
 
 
 async def execute_reservations(bot: Bot) -> None:
-    records: list[dict] = await fetch_pending_reservations()
+    records: list[dict] = await fetch_reservations(statuses=['pending', 'fail'])
     if not records:
         logging.info('[DB-JOB] No pending reservations to process.')
         return
