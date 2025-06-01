@@ -46,7 +46,6 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
             'booking_code': 'CLOSED',
             'retries': int(record['retries']),
             'status_change': True,
-            'notified': True,
             'updated_at': datetime.now(ZoneInfo('Europe/Rome')),
         }
         return result
@@ -71,7 +70,6 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
             'booking_code': response['codice_prenotazione'],
             'retries': int(record['retries']),
             'status_change': record['status'] in ['fail', 'pending'],
-            'notified': True,
             'updated_at': datetime.now(ZoneInfo('Europe/Rome')),
         }
 
@@ -93,7 +91,6 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
             'booking_code': booking_code,
             'retries': retries,
             'status_change': record['status'] in ['pending', 'fail'],
-            'notified': True,
             'updated_at': datetime.now(ZoneInfo('Europe/Rome')),
         }
 
@@ -108,7 +105,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
 async def execute_reservations(bot: Bot) -> None:
     records: list[dict] = await fetch_reservations(statuses=['pending', 'fail'])
     if not records:
-        logging.info('[DB-JOB] No pending reservations to process.')
+        logging.info('[DB-JOB] No pending reservations to process')
         return
     tasks = [process_reservation(record, bot) for record in records]
     updates = await asyncio.gather(*tasks)
@@ -118,16 +115,65 @@ async def execute_reservations(bot: Bot) -> None:
     logging.info(f'[DB-JOB] Reservation job completed: {len(updates)} updated')
 
 
+# async def remind_reservation_activation(bot: Bot) -> None:
+#     records: list[dict] = await fetch_reservations(statuses=['success'])
+#     if not records:
+#         logging.info('[DB-JOB] No successful reservations to remind')
+#         return
+#     imminent = []
+#     for record in records:
+#         minutes = 15
+#         expire_lower_bound = record['start'] - timedelta(minutes=minutes)
+#         expire_upper_bound = record['start'] + timedelta(minutes=minutes)
+
+
+# async def remind_reservation_activation(bot: Bot) -> None:
+#     now = datetime.now(ZoneInfo('Europe/Rome'))
+#     reservations = await fetch_reservations(statuses=['success'])
+
+#     # Determine time targets for before and after the upcoming reservation
+#     if now.minute == 15:
+#         after_time = now.replace(minute=0, second=0, microsecond=0).strftime('%H:%M:%S')
+#         before_time = now.replace(minute=30, second=0, microsecond=0).strftime('%H:%M:%S')
+#     elif now.minute == 45:
+#         after_time = now.replace(minute=30, second=0, microsecond=0).strftime('%H:%M:%S')
+#         next_hour = now + timedelta(hours=1)
+#         before_time = next_hour.replace(minute=0, second=0, microsecond=0).strftime('%H:%M:%S')
+#     else:
+#         return
+
+#     reminders = []
+
+#     for r in reservations:
+#         if r['start_time'] == after_time:
+#             reminders.append((r['chat_id'], after_time, 'after'))
+#         elif r['start_time'] == before_time:
+#             reminders.append((r['chat_id'], before_time, 'before'))
+
+#     if not reminders:
+#         logging.info('[NOTIF] No matching reservations for reminder times.')
+#         return
+
+#     for chat_id, time_str, kind in reminders:
+#         if kind == 'before':
+#             text = f'🕒 Reminder: your reservation starts at *{time_str}*. Don’t forget to activate!'
+#         else:
+#             text = f'✅ You should have activated your reservation at *{time_str}*. If not, do it now!'
+#         await bot.send_message(chat_id=chat_id, text=text, parse_mode='Markdown')
+
+#     logging.info(f'[NOTIF] Sent {len(reminders)} reminders.')
+
+
 async def backup_reservations(auth_mode: str = 'cloud'):
     df = await fetch_all_reservations()
     if df.empty:
-        logging.info('[GSHEET] No data to write to the sheet.')
+        logging.info('[GSHEET] No data to write to the sheet')
         return
 
     wks: Worksheet = get_wks(auth_mode)
     wks.clear(start='A1')
     wks.set_dataframe(df, (1, 1))
-    logging.info('[GSHEET] Data written to Google Sheet successfully.')
+    logging.info('[GSHEET] Data written to Google Sheet successfully')
 
 
 def schedule_reserve_job(bot: Bot) -> None:

@@ -41,7 +41,6 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         context.user_data['status'] = 'pending'
         context.user_data['booking_code'] = 'TBD'
         context.user_data['retries'] = '0'
-        context.user_data['notified'] = False
 
         if context.user_data['instant']:
             try:
@@ -53,7 +52,6 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 context.user_data['status'] = 'success'
                 context.user_data['booking_code'] = f'{reservation_response["codice_prenotazione"]}'
                 context.user_data['updated_at'] = datetime.now(ZoneInfo('Europe/Rome'))
-                context.user_data['notified'] = True
                 request_status_message = '✅ Reservation *successful*!'
                 retry_status_message = ''
 

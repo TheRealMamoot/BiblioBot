@@ -127,15 +127,17 @@ def show_user_agreement() -> str:
 
 def show_support_message() -> str:
     text = """
-            Thank you for using *Biblio*.
-            Tell your friends, but not all of them!
-            If anything was not to your liking, I don't really care. Blame this guy not me.
+        Thank you for using *Biblio*.
+        Tell your friends, but not all of them!
 
-            [Linkedin](https://www.linkedin.com/in/alireza-mahmoudian-5b0276246/)
-            [GitHub](https://github.com/TheRealMamoot)
-            alireza.mahmoudian.am@gmail.com
+        Contacts:
+        [GitHub](https://github.com/TheRealMamoot)
+        [Linkedin](https://www.linkedin.com/in/alireza-mahmoudian-5b0276246/)
+        
+        Bug report, suggestions & feedback: 
+        [@BiblioSupport](https://t.me/BiblioSupport)
 
-            Cool person, check him out! 😏
+        Cool guy, check him out! 😏
     """
     return textwrap.dedent(text)
 

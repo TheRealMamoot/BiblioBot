@@ -30,7 +30,6 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         'created_at': context.user_data.get('created_at', datetime.now(ZoneInfo('Europe/Rome'))),
         'instant': bool(context.user_data.get('instant', False)),
         'status_change': bool(context.user_data.get('status_change', False)),
-        'notified': bool(context.user_data.get('notified', False)),
         'inserted_at': datetime.now(ZoneInfo('Europe/Rome')),
     }
 
