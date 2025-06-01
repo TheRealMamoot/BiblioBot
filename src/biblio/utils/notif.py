@@ -26,12 +26,22 @@ DEPLOY_NOTIF = textwrap.dedent(
     """
 )
 
+# REMINDER = textwrap.dedent(
+#     """
+#     *⏱️ Don't forget to book! ⏱️*
+#     You will have a much better chance if you schedule in advance.
+#     Don't leave it for tommorow.
+#     Do it...*NOW*! 🥸
+#     """
+# )
+
 REMINDER = textwrap.dedent(
     """
-    *⏱️ Don't forget to book! ⏱️*
-    You will have a much better chance if you schedule in advance.
-    Don't leave it for tommorow. 
-    Do it...*NOW*! 🥸
+    *❗️ No booking for tommorow ❗️*
+
+    The library is *closed* tommorow, so there will be no reservations available.
+    Please *DO NOT* try to book, or *CANCEL* if you already have, as it will not work.
+
     """
 )
 
