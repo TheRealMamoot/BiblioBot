@@ -17,6 +17,7 @@ Start the conversation with `/start` to begin reserving your library slots.
 - 📊 PostgreSQL-based storage 
 - 👥 Priority-based scheduling
 - 🔔 Telegram notifications
+- ✅ Automatic reminders
 
 ## ⚙️ Getting Started
 
@@ -62,7 +63,7 @@ Lower values = higher priority (0 = highest).
 To build the database:
 
 ```bash
-python src/biblio/db/build.py
+python -m src.biblio.db.build
 ```
 
 ### ✏️ Required Bot Commands

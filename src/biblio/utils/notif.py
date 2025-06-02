@@ -55,9 +55,19 @@ async def notify_deployment(bot: Bot) -> None:
 
 
 async def notify_reminder(bot: Bot) -> None:
-    chat_ids = await fetch_all_user_chat_ids()
-    tasks = [bot.send_message(chat_id=chat_id, text=REMINDER, parse_mode='Markdown') for chat_id in chat_ids]
+    tomorrow = datetime.now(ZoneInfo('Europe/Rome')) + timedelta(days=1)
+
+    reservations = await fetch_reservations(statuses=['pending'], date=tomorrow.date())
+    all_chat_ids = await fetch_all_user_chat_ids()
+    pending_chat_ids = [res['chat_id'] for res in reservations]
+    to_notify_chat_ids = set(all_chat_ids) - set(pending_chat_ids)
+    if not to_notify_chat_ids:
+        logging.info('[NOTIF] No users to notify.')
+        return
+
+    tasks = [bot.send_message(chat_id=chat_id, text=REMINDER, parse_mode='Markdown') for chat_id in to_notify_chat_ids]
     await asyncio.gather(*tasks)
+    logging.info(f'[NOTIF] Sent {len(tasks)} reminders for tomorrow')
 
 
 async def notify_reservation_activation(bot: Bot) -> None:
