@@ -81,7 +81,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
         status = 'terminated' if retries > 20 else 'fail'
         booking_code = record['booking_code'] if status == 'fail' else 'CLOSED'
         chat_id = record.get('chat_id')
-        if chat_id and (retries % 6 == 0 or status == 'terminated'):
+        if chat_id and (retries % 9 == 0 or status == 'terminated'):
             notif = show_notification(status, record, booking_code)
             await bot.send_message(chat_id=chat_id, text=notif, parse_mode='Markdown')
 

@@ -65,7 +65,7 @@ async def fetch_reservations(statuses: list[str]) -> list[dict]:
     return [dict(row) for row in rows] if rows else []
 
 
-async def fetch_all_reservations():
+async def fetch_all_reservations() -> pd.DataFrame:
     conn = await asyncpg.connect(DATABASE_URL)
     query = """
     SELECT 
@@ -127,7 +127,7 @@ async def fetch_reservation_by_id(reservation_id: str) -> dict | None:
     return dict(row) if row else None
 
 
-async def fetch_all_user_chat_ids():
+async def fetch_all_user_chat_ids() -> list[str]:
     conn = await asyncpg.connect(DATABASE_URL)
     try:
         rows = await conn.fetch('SELECT DISTINCT chat_id FROM users')
@@ -136,7 +136,7 @@ async def fetch_all_user_chat_ids():
         await conn.close()
 
 
-async def fetch_existing_user(chat_id: str):
+async def fetch_existing_user(chat_id: str) -> dict | None:
     conn = await asyncpg.connect(DATABASE_URL)
     query = """
     SELECT 

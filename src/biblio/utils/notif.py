@@ -12,36 +12,17 @@ from src.biblio.db.fetch import fetch_all_user_chat_ids, fetch_reservations
 
 DEPLOY_NOTIF = textwrap.dedent(
     """
-    📦🛠️ *Bot updated v2.0.2* 🎉
-
-    ✅ Added *@BiblioSupport* for bug reports and suggestions. 
-    You can now contact the _Bot Lord_ directly for any issues you encounter.
-
-    ✅ Added *reminders* for reservations. 
-    You will receive a notification *15 minutes* before and after your reservation starts, in case you forget to activate it.
-
-    ✅ Bug fixes.
-
+    📦🛠️ *Bot updated!*
     Please use /start 
     """
 )
 
-# REMINDER = textwrap.dedent(
-#     """
-#     *⏱️ Don't forget to book! ⏱️*
-#     You will have a much better chance if you schedule in advance.
-#     Don't leave it for tommorow.
-#     Do it...*NOW*! 🥸
-#     """
-# )
-
 REMINDER = textwrap.dedent(
     """
-    *❗️ No booking for tommorow ❗️*
-
-    The library is *closed* tommorow, so there will be no reservations available.
-    Please *DO NOT* try to book, or *CANCEL* if you already have, as it will not work.
-
+    *⏱️ Don't forget to book! ⏱️*
+    You will have a much better chance if you schedule in advance.
+    Don't leave it for tommorow.
+    Do it...*NOW*! 🥸
     """
 )
 
