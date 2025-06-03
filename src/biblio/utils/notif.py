@@ -12,8 +12,14 @@ from src.biblio.db.fetch import fetch_all_user_chat_ids, fetch_reservations
 
 DEPLOY_NOTIF = textwrap.dedent(
     """
-    📦🛠️ *Bot updated!*
-    Please use /start 
+    📦🛠️ *Bot updated! v2.0.3* 🎊
+
+    - ✅ Improved performance to reduce morning reservation "fails"
+    - ✅ Introduced "*✴️ existing*" status for partially successful reservations
+    (Issue raised by *Z.A.* and *S.Sh.* 🫶)
+    - ✅ Stability enhancements
+
+    Please use /start again. 
     """
 )
 
