@@ -18,6 +18,9 @@ from src.biblio.reservation.slot_datetime import reserve_datetime
 from src.biblio.utils.notif import notify_reminder, notify_reservation_activation
 from src.biblio.utils.utils import get_wks
 
+SEMAPHORE_LIMIT = 3
+semaphore = asyncio.Semaphore(SEMAPHORE_LIMIT)
+
 
 async def process_reservation(record: dict, bot: Bot) -> dict:
     chat_id = record.get('chat_id')
@@ -102,12 +105,17 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
     return result
 
 
+async def throttled_process_reservation(record: dict, bot: Bot) -> dict:
+    async with semaphore:
+        return await process_reservation(record, bot)
+
+
 async def execute_reservations(bot: Bot) -> None:
     records: list[dict] = await fetch_reservations(statuses=['pending', 'fail'])
     if not records:
         logging.info('[DB-JOB] No pending reservations to process')
         return
-    tasks = [process_reservation(record, bot) for record in records]
+    tasks = [throttled_process_reservation(record, bot) for record in records]
     updates = await asyncio.gather(*tasks)
     await asyncio.gather(
         *(update_record('reservations', r['id'], {k: v for k, v in r.items() if k != 'id'}) for r in updates)
@@ -156,7 +164,7 @@ def schedule_reminder_job(bot: Bot) -> None:
 
 
 def schedule_activation_reminder_job(bot: Bot) -> None:
-    @aiocron.crontab('15,45 9-21 * * 0-5', tz=ZoneInfo('Europe/Rome'))
+    @aiocron.crontab('15,45 8-21 * * 0-5', tz=ZoneInfo('Europe/Rome'))
     async def _reminder_activation_job():
         logging.info('[NOTIF] Sending slot activation reminder notification')
         await notify_reservation_activation(bot)
