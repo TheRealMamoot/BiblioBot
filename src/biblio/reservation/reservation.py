@@ -46,7 +46,7 @@ async def set_reservation(
             response = await client.post(url, json=payload)
             response.raise_for_status()
             response_data = response.json()
-            if 'entry' in response_data:  # entry = Booking Code
+            if 'entry' in response_data:  # entry = NOT Booking Code!
                 logging.info(f'[SET] Reservation successful. Booking Code: {response_data["codice_prenotazione"]}')
                 return response_data
             else:
@@ -69,22 +69,24 @@ async def set_reservation(
             raise
 
 
-async def confirm_reservation(booking_code: int, max_retries: int = 3) -> dict:
+async def confirm_reservation(booking_code: int, max_retries: int = 4) -> dict:
     url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/confirm/{booking_code}'
 
     async with httpx.AsyncClient() as client:
         for attempt in range(max_retries):
+            timeout = calculate_timeout(retries=attempt, base=20, step=20, max_read=60)
+
             try:
-                response = await client.post(url)
+                response = await client.post(url, timeout=timeout)
                 response.raise_for_status()
-                logging.info('[CONFIRM] Reservation confirmed.')
+                logging.info(f'[CONFIRM] Success on attempt {attempt + 1}')
                 return response.json()
 
             except httpx.HTTPStatusError as e:
                 status = e.response.status_code
                 if status == 404:
                     logging.warning(f'[CONFIRM] 404 Not Found — Attempt {attempt + 1}/{max_retries}')
-                    await asyncio.sleep(1.5 + attempt * 0.5)  # backoff
+                    await asyncio.sleep(2 + attempt * 1)  # backoff
                     continue
                 elif status == 400:
                     logging.error('[CONFIRM] 400 Bad Request — Invalid booking_code or payload.')
@@ -97,8 +99,10 @@ async def confirm_reservation(booking_code: int, max_retries: int = 3) -> dict:
                     raise
 
             except httpx.ReadTimeout as e:
-                logging.error(f'[CONFIRM] Timeout: Server took too long to respond – {repr(e)}')
-                raise
+                logging.warning(f'[CONFIRM] Timeout on attempt {attempt + 1} – {repr(e)}')
+                await asyncio.sleep(1 + attempt * 0.5)
+                continue  # retry after timeout
+
             except httpx.RequestError as e:
                 logging.error(f'[CONFIRM] Request error: {type(e).__name__} - {repr(e)}')
                 raise
