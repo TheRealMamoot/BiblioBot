@@ -3,6 +3,7 @@ import logging
 
 import httpx
 
+from src.biblio.utils.utils import ReservationConfirmationConflict
 from src.biblio.utils.validation import validate_user_data
 
 
@@ -93,7 +94,7 @@ async def confirm_reservation(booking_code: int, max_retries: int = 4) -> dict:
                     raise
                 elif status == 401:
                     logging.error('[CONFIRM] 401 Unauthorized — Authentication failed.')
-                    raise
+                    raise ReservationConfirmationConflict('🚫 Reservation already confirmed!') from e
                 else:
                     logging.error(f'[CONFIRM] HTTP error: {status} - {repr(e)}')
                     raise

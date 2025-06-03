@@ -12,6 +12,15 @@ from dotenv import load_dotenv
 CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / 'biblio' / 'config' / 'biblio.json'
 
 
+class ReservationConfirmationConflict(Exception):
+    """
+    Raised when the server returns a 401 Unauthorized during reservation confirmation.
+    This indicates that the reservation is most likely already confirmed!
+    """
+
+    pass
+
+
 def load_env():
     project_root = Path(__file__).resolve().parents[3]
     load_dotenv(dotenv_path=project_root / '.env')

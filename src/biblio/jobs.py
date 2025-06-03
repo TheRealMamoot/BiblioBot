@@ -16,7 +16,7 @@ from src.biblio.db.update import update_record
 from src.biblio.reservation.reservation import calculate_timeout, confirm_reservation, set_reservation
 from src.biblio.reservation.slot_datetime import reserve_datetime
 from src.biblio.utils.notif import notify_reminder, notify_reservation_activation
-from src.biblio.utils.utils import get_wks
+from src.biblio.utils.utils import ReservationConfirmationConflict, get_wks
 
 SEMAPHORE_LIMIT = 3
 semaphore = asyncio.Semaphore(SEMAPHORE_LIMIT)
@@ -43,9 +43,10 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
         if chat_id:
             notif = show_notification(status='terminated', record=record, booking_code=record['booking_code'])
             await bot.send_message(chat_id=chat_id, text=notif, parse_mode='Markdown')
+        status = 'terminated'
         result = {
             'id': record['id'],
-            'status': 'terminated',
+            'status': status,
             'booking_code': 'CLOSED',
             'retries': int(record['retries']),
             'status_change': True,
@@ -66,10 +67,10 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
         if chat_id:
             notif = show_notification(status='success', record=record, booking_code=response['codice_prenotazione'])
             await bot.send_message(chat_id=chat_id, text=notif, parse_mode='Markdown')
-
+        status = 'success'
         result = {
             'id': record['id'],
-            'status': 'success',
+            'status': status,
             'booking_code': response['codice_prenotazione'],
             'retries': int(record['retries']),
             'status_change': record['status'] in ['fail', 'pending'],
@@ -78,13 +79,33 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
 
         retries = result['retries']
 
+    except ReservationConfirmationConflict as e:
+        logging.error(
+            f'[JOB] 🚫 Reservation ALREADY CONFIRMED for {user_data["cognome_nome"]} - ID {record["id"]}: {e}'
+        )
+        retries = int(record['retries'])
+        status = 'existing'
+        booking_code = 'CONFIRMED'
+        if chat_id:
+            notif = show_notification(status, record, booking_code)
+            await bot.send_message(chat_id=chat_id, text=notif, parse_mode='Markdown')
+
+        result = {
+            'id': record['id'],
+            'status': status,
+            'booking_code': booking_code,
+            'retries': retries,
+            'status_change': True,
+            'updated_at': datetime.now(ZoneInfo('Europe/Rome')),
+        }
+
     except Exception as e:
         logging.error(f'[JOB] ❌ Reservation FAILED for {user_data["cognome_nome"]} - ID {record["id"]}: {e}')
         retries = int(record['retries']) + 1
         status = 'terminated' if retries > 20 else 'fail'
         booking_code = record['booking_code'] if status == 'fail' else 'CLOSED'
         chat_id = record.get('chat_id')
-        if chat_id and (retries % 9 == 0 or status == 'terminated'):
+        if chat_id and (retries % 11 == 0 or status == 'terminated'):
             notif = show_notification(status, record, booking_code)
             await bot.send_message(chat_id=chat_id, text=notif, parse_mode='Markdown')
 

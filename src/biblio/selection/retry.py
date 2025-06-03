@@ -55,12 +55,15 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                 if row['status'] == 'fail'
                 else '✅'
                 if row['status'] == 'success'
+                else '🛑'
+                if row['status'] == 'existing'
                 else ''
             )
             start_time_str = row['start_time'].strftime('%H:%M')
             end_time_str = row['end_time'].strftime('%H:%M')
             selected_date = row['selected_date'].strftime('%A, %Y-%m-%d')
             button = f'{status} {selected_date} at {start_time_str} - {end_time_str}'
+
             choices[f'{row["id"]}'] = {
                 'selected_date': selected_date,
                 'start_time': start_time_str,

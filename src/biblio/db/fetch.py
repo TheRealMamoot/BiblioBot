@@ -94,11 +94,12 @@ async def fetch_all_reservations() -> pd.DataFrame:
     status,
 
     CASE 
-    WHEN status = 'fail' THEN 0  
-    WHEN status = 'pending' THEN 1  
-    WHEN status = 'success' THEN 2
-    WHEN status = 'terminated' THEN 3
-    ELSE 4
+    WHEN status = 'existing' THEN 0  
+    WHEN status = 'fail' THEN 1  
+    WHEN status = 'pending' THEN 2  
+    WHEN status = 'success' THEN 3
+    WHEN status = 'terminated' THEN 4
+    ELSE 5
     END AS status_label,
 
     instant,

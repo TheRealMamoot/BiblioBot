@@ -112,6 +112,8 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 if row['status'] == 'fail'
                 else '✅'
                 if row['status'] == 'success'
+                else '🛑'
+                if row['status'] == 'existing'
                 else ''
             )
             start_time_str = row['start_time'].strftime('%H:%M')
