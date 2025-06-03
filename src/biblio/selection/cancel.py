@@ -90,7 +90,12 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
                             textwrap.dedent(
                                 """
                                 ⚠️ You don't appear to have an active reservation! 
-                                The slot has most likely *expired*, was *canceled manually* or was not *activated* by the library staff. 
+                                This may be because the slot:
+                                - has *expired*
+                                - was *canceled manually*
+                                - was *partly successful* 
+                                (status: *existing*)
+                                - wasn't *activated* by the library staff. 
                                 ❗ In any case, you can now *book a new slot*.
                                 """
                             ),

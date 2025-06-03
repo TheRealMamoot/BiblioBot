@@ -85,7 +85,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
         )
         retries = int(record['retries'])
         status = 'existing'
-        booking_code = 'CONFIRMED'
+        booking_code = 'UNKNOWN'
         if chat_id:
             notif = show_notification(status, record, booking_code)
             await bot.send_message(chat_id=chat_id, text=notif, parse_mode='Markdown')

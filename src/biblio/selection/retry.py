@@ -55,7 +55,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                 if row['status'] == 'fail'
                 else '✅'
                 if row['status'] == 'success'
-                else '🛑'
+                else '✴️'
                 if row['status'] == 'existing'
                 else ''
             )
@@ -87,9 +87,10 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             textwrap.dedent(
                 """
                     ❗ *Please make sure your reservation time has not ended*❗
-                    🔄 *Pending*: Reservation will be processed when slots open.
-                    ⚠️ *Failed*: Reservation request will be retried at :00 and :30 again.
-                    ✅ *Success*: Reservation was succesful.
+                    ✅ *Success*: Reservation was _succesful_. Booking code _available_.
+                    🔄 *Pending*: Reservation in progress and will be processed when slots open.
+                    ⚠️ *Failed*: Reservation was _unsucessful_ but the request will be retried at :00 and :30 again.
+                    ✴️ *Existing*: Reservation was _partly succesful_. Booking code _unavailable_. *Check your email.*
 
                     That being said, which one will it be?
                     """

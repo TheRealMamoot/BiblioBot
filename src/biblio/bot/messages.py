@@ -47,7 +47,7 @@ async def show_existing_reservations(
                     if row['status'] == 'fail'
                     else f'❌ {row["status"]}'
                     if row['status'] == 'terminated'
-                    else f'🛑 {row["status"]}'
+                    else f'✴️ {row["status"]}'
                     if row['status'] == 'existing'
                     else 'undefined'
                 )
@@ -90,7 +90,7 @@ def show_notification(status: str, record: dict, booking_code: str) -> str:
         status_message = '⛔️ Reservation *Terminated*!'
         retry_message = '*‼️ No more Retries ‼️*'
     elif status == 'existing':
-        status_message = '🛑 Reservation *Exists* probably!'
+        status_message = '✴️ Reservation *Exists* probably!'
         retry_message = (
             '*❗ Check your email.* There seems to be a reservation already made for this slot. The bot will not retry.'
         )
@@ -192,7 +192,7 @@ def show_help() -> str:
 
         ❌ *Terminated*: Your request has either expired, exceeded the retry limit or canceled by you. You'll need to make a new reservation.
 
-        🛑 *Existing*: The bot has detected that you already have a reservation for this slot. It will not retry.
+        ✴️ *Existing*: The bot has detected that you already have a reservation for this slot. It will not retry.
 
         ℹ️ You'll be notified if your reservation succeeds or fails permanently.
         
