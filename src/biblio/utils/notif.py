@@ -12,13 +12,7 @@ from src.biblio.db.fetch import fetch_all_user_chat_ids, fetch_reservations
 
 DEPLOY_NOTIF = textwrap.dedent(
     """
-    📦🛠️ *Bot updated! v2.0.3* 🎊
-
-    - ✅ Improved performance to reduce morning reservation "fails"
-    - ✅ Introduced "*✴️ existing*" status for partially successful reservations
-    (Issue raised by *Z.A.* and *S.Sh.* 🫶)
-    - ✅ Stability enhancements
-
+    📦🛠️ *Bot updated!*
     Please use /start again. 
     """
 )
@@ -96,7 +90,8 @@ async def notify_reservation_activation(bot: Bot) -> None:
         start_time = reservation['start_time']
         if start_time == past_time:
             reminders_to_send.append((reservation, past_time, 'after'))
-        elif start_time == upcoming_time:
+        elif start_time == upcoming_time:  # skip reminders for upcoming reservations for now
+            continue
             reminders_to_send.append((reservation, upcoming_time, 'before'))
 
     if not reminders_to_send:
@@ -105,14 +100,15 @@ async def notify_reservation_activation(bot: Bot) -> None:
 
     tasks = []
     for reservation, slot_time, phase in reminders_to_send:
-        if phase == 'before':
+        if phase == 'before':  # Skip reminders for the "before" phase for now
+            continue
             reminder = '🕒 *Reminder* 🕒'
             headline = f'Your reservation starts at *{slot_time.strftime("%H:%M")}*.'
             activation_note = '_⚠️ Don’t forget to activate!_'
         else:
-            reminder = '❗️ *Reminder* ❗️'
-            headline = f'You should have activated your reservation at *{slot_time.strftime("%H:%M")}*.'
-            activation_note = '_⚠️ If not, do it now!_'
+            reminder = '❗️🕒 *Reminder* 🕒❗️'
+            headline = f'You have a reservation at *{slot_time.strftime("%H:%M")}*. Have you activated the slot ?'
+            activation_note = '_⚠️ If not, you should do it now!_'
 
         start_str = (
             reservation['start_time'].strftime('%H:%M')
