@@ -3,7 +3,7 @@ __pycache__/
 *.pyo
 .env
 *.log
-.DS_Store
+*.DS_Store
 *.json
 .vscode
 .venv
