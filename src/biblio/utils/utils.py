@@ -59,6 +59,7 @@ def get_database_url() -> str:
 def get_parser():
     parser = argparse.ArgumentParser(description='Telegram Bot')
     parser.add_argument(
+        '-t',
         '--token-env',
         type=str,
         default='prod',
@@ -66,6 +67,7 @@ def get_parser():
         help='Which .env key to use for Telegram bot token',
     )
     parser.add_argument(
+        '-g',
         '--gsheet-auth',
         type=str,
         default='cloud',
