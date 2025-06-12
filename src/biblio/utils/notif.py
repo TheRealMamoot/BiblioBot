@@ -184,13 +184,17 @@ async def notify_reservation_activation(bot: Bot) -> None:
             logging.info(f'[NOTIF] Sent reminder for chat_id {reminders_to_send[i][0]["chat_id"]}')
 
 
+# TODO: Refactor w/ asyncio.gather
 async def notify_donation(bot: Bot):
     chat_ids = await fetch_all_user_chat_ids()
-    tasks = [
-        bot.send_message(chat_id=chat_id, text=notif, parse_mode='Markdown')
-        for notif in [DONATION_NOTIF_ENG, DONATION_NOTIF]
-        for chat_id in chat_ids
-        if chat_id == 115700766  # botlord
-    ]
-    await asyncio.gather(*tasks)
-    logging.info(f'[NOTIF] Sent {len(tasks) // 2} donation notifications.')
+
+    for chat_id in chat_ids:
+        if chat_id != 115700766:  # botlord
+            continue
+        try:
+            await bot.send_message(chat_id=chat_id, text=DONATION_NOTIF_ENG, parse_mode='Markdown')
+            await bot.send_message(chat_id=chat_id, text=DONATION_NOTIF, parse_mode='Markdown')
+        except Exception as e:
+            logging.error(f'[NOTIF] Failed to send to {chat_id}: {e}')
+
+    logging.info(f'[NOTIF] Sent {len(chat_ids) - 1} donation notifications.')
