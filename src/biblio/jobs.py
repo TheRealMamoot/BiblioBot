@@ -15,7 +15,7 @@ from src.biblio.db.fetch import fetch_all_reservations, fetch_reservations
 from src.biblio.db.update import update_record
 from src.biblio.reservation.reservation import calculate_timeout, confirm_reservation, set_reservation
 from src.biblio.reservation.slot_datetime import reserve_datetime
-from src.biblio.utils.notif import notify_reminder, notify_reservation_activation
+from src.biblio.utils.notif import notify_donation, notify_reminder, notify_reservation_activation
 from src.biblio.utils.utils import ReservationConfirmationConflict, get_wks
 
 SEMAPHORE_LIMIT = 3
@@ -185,7 +185,14 @@ def schedule_reminder_job(bot: Bot) -> None:
 
 
 def schedule_activation_reminder_job(bot: Bot) -> None:
-    @aiocron.crontab('15,45 8-21 * * 0-5', tz=ZoneInfo('Europe/Rome'))
+    @aiocron.crontab('15,45 8-21 * * 0-5', tz=ZoneInfo('Europe/Rome'))  # Sun - Fri
     async def _reminder_activation_job():
         logging.info('[NOTIF] Sending slot activation reminder notification')
         await notify_reservation_activation(bot)
+
+
+def schedule_donation_reminder_job(bot: Bot) -> None:
+    @aiocron.crontab('0 18 * * 1,4', tz=ZoneInfo('Europe/Rome'))  # Mon & Thu
+    async def _reminder_donation_job():
+        logging.info('[NOTIF] Sending donation reminder notification')
+        await notify_donation(bot)

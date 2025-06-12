@@ -26,6 +26,42 @@ REMINDER = textwrap.dedent(
     """
 )
 
+DONATION_NOTIF = textwrap.dedent(
+    """سلام به همگی 👋
+برای توسعه و نگهداری این پروژه، هم *هزینه* و هم از اون مهم‌تر، *زمان زیادی* صرف شده تا بتونه به بهترین شکل کار کنه. اگر این بات یه بخش *خیلی کوچیک* از دغدغه‌هاتون رو برطرف کرده، خوشحال می‌شم اگر از طریق لینک‌های زیر دونیت کنین:
+🔗 [Revolut/mamoot](https://revolut.me/mamoot)  
+🔗 [PayPal/TheRealMamoot](https://www.paypal.com/paypalme/TheRealMamoot)
+
+کمک شما هم باعث *دلگرمیه*، هم باعث میشه با *انرژی بیشتری* روی کیفیت بات کار کنم.  
+اگه اکانت GitHub دارید، ممنون می‌شم اگه ریپوی بات رو *استار* کنید: 
+🌟 [GitHub/TheRealMamoot](https://github.com/TheRealMamoot/BiblioBot)
+
+*مرسی از حمایت‌تون!* 🙏
+
+P.S. *English version above ❗️*
+    """
+)
+
+DONATION_NOTIF_ENG = textwrap.dedent(
+    """
+    Hello everyone 👋  
+
+    A lot of *time* — and *money* — has gone into developing and maintaining this project to make it work as well as possible.  
+    If this bot has helped solve *even a small part* of your daily hassle, I’d really appreciate a donation via the links below:
+
+    🔗 [Revolut/mamoot](https://revolut.me/mamoot)  
+    🔗 [PayPal/TheRealMamoot](https://www.paypal.com/paypalme/TheRealMamoot)
+
+    Your support not only boosts morale, but also motivates me to invest *even more energy* into improving the bot.  
+
+    And if you have a GitHub account, I’d be super grateful if you could *star the repo*:  
+
+    🌟 [GitHub/TheRealMamoot](https://github.com/TheRealMamoot/BiblioBot)
+
+    *Thanks a lot for your support!* 🙏
+    """
+)
+
 
 async def notify_deployment(bot: Bot) -> None:
     current_id = os.environ.get('RAILWAY_DEPLOYMENT_ID')
@@ -146,3 +182,15 @@ async def notify_reservation_activation(bot: Bot) -> None:
             logging.error(f'[NOTIF] Error sending reminder to {reminders_to_send[i][0]["chat_id"]}: {result}')
         else:
             logging.info(f'[NOTIF] Sent reminder for chat_id {reminders_to_send[i][0]["chat_id"]}')
+
+
+async def notify_donation(bot: Bot):
+    chat_ids = await fetch_all_user_chat_ids()
+    tasks = [
+        bot.send_message(chat_id=chat_id, text=notif, parse_mode='Markdown')
+        for notif in [DONATION_NOTIF_ENG, DONATION_NOTIF]
+        for chat_id in chat_ids
+        if chat_id == 115700766  # botlord
+    ]
+    await asyncio.gather(*tasks)
+    logging.info(f'[NOTIF] Sent {len(tasks) // 2} donation notifications.')
