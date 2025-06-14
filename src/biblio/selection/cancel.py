@@ -10,16 +10,16 @@ from src.biblio.config.config import States
 from src.biblio.db.fetch import fetch_reservation_by_id
 from src.biblio.db.update import update_cancel_status
 from src.biblio.reservation.reservation import cancel_reservation
-from src.biblio.utils.keyboards import Keyboards, Labels
+from src.biblio.utils.keyboards import Keyboard, Label
 
 
 async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
-    if user_input == Labels.RESERVATION_TYPE_BACK:
+    if user_input == Label.RESERVATION_TYPE_BACK:
         await update.message.reply_text(
             'You are so determined, wow!',
-            reply_markup=Keyboards.reservation_type(),
+            reply_markup=Keyboard.reservation_type(),
         )
         return States.RESERVE_TYPE
 
@@ -48,7 +48,7 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             """
         ),
         parse_mode='Markdown',
-        reply_markup=Keyboards.cancelation_confirm(),
+        reply_markup=Keyboard.cancelation_confirm(),
     )
     return States.CANCELATION_CONFIRMING
 
@@ -56,16 +56,16 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
-    if user_input == Labels.CONFIRM_NO:
+    if user_input == Label.CONFIRM_NO:
         choices: dict = context.user_data['cancelation_choices']
         reservation_buttons = [choice['button'] for choice in choices.values()]
         await update.message.reply_text(
             'God kill me now! 😭',
-            reply_markup=Keyboards.cancelation_options(reservation_buttons),
+            reply_markup=Keyboard.cancelation_options(reservation_buttons),
         )
         return States.CANCELATION_SLOT_CHOICE
 
-    elif user_input == Labels.CANCEL_CONFIRM_YES:
+    elif user_input == Label.CANCEL_CONFIRM_YES:
         reservation_id: str = context.user_data['cancelation_chosen_slot_id']
         history = await fetch_reservation_by_id(reservation_id)
         failure = False
@@ -100,7 +100,7 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
                                 """
                             ),
                             parse_mode='Markdown',
-                            reply_markup=Keyboards.reservation_type(),
+                            reply_markup=Keyboard.reservation_type(),
                         )
 
             await update_cancel_status(reservation_id)
@@ -109,7 +109,7 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
             if not failure:
                 await update.message.reply_text(
                     '✔️ Reservation canceled successfully!',
-                    reply_markup=Keyboards.reservation_type(),
+                    reply_markup=Keyboard.reservation_type(),
                 )
             return States.RESERVE_TYPE
 
@@ -119,7 +119,7 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
             )
             await update.message.reply_text(
                 '⚠️ Reservation cancelation usuccessfull!',
-                reply_markup=Keyboards.reservation_type(),
+                reply_markup=Keyboard.reservation_type(),
             )
             return States.RESERVE_TYPE
 

@@ -8,7 +8,7 @@ from telegram.ext import ContextTypes
 from src.biblio.utils.utils import generate_days
 
 
-class Labels:
+class Label:
     AGREEMENT = '📝 Agreement'
     AGREEMENT_AGREE = '👍 Yes, I agree.'
     AGREEMENT_DISAGREE = "👎 No, I don't agree."
@@ -33,39 +33,39 @@ class Labels:
     SUPPORT = '🤝 Reach out!'
 
 
-class Keyboards:
+class Keyboard:
     @staticmethod
     def agreement():
         return ReplyKeyboardMarkup(
-            [[KeyboardButton(Labels.AGREEMENT_AGREE)], [KeyboardButton(Labels.AGREEMENT_DISAGREE)]],
+            [[KeyboardButton(Label.AGREEMENT_AGREE)], [KeyboardButton(Label.AGREEMENT_DISAGREE)]],
             resize_keyboard=True,
         )
 
     @staticmethod
     def start(edit_credential_stage: bool = False):
         if edit_credential_stage:
-            return ReplyKeyboardMarkup([[KeyboardButton(Labels.CREDENTIALS_RETURN)]], resize_keyboard=True)
+            return ReplyKeyboardMarkup([[KeyboardButton(Label.CREDENTIALS_RETURN)]], resize_keyboard=True)
         return ReplyKeyboardMarkup(
-            [[KeyboardButton(Labels.SUPPORT)], [KeyboardButton(Labels.HELP)]], resize_keyboard=True
+            [[KeyboardButton(Label.SUPPORT)], [KeyboardButton(Label.HELP)]], resize_keyboard=True
         )
 
     @staticmethod
     def welcome_back():
         return ReplyKeyboardMarkup(
-            [[KeyboardButton(Labels.CONTINUE)], [KeyboardButton(Labels.CREDENTIALS_NEW)]],
+            [[KeyboardButton(Label.CONTINUE)], [KeyboardButton(Label.CREDENTIALS_NEW)]],
             resize_keyboard=True,
         )
 
     @staticmethod
     def reservation_type():
         keyboard_buttons = [
-            [KeyboardButton(Labels.DONATE), KeyboardButton(Labels.FEEDBACK)],
-            [KeyboardButton(Labels.CURRENT_RESERVATIONS)],
-            [KeyboardButton(Labels.SLOT_LATER)],
-            [KeyboardButton(Labels.SLOT_INSTANT)],
-            [KeyboardButton(Labels.CANCEL_RESERVATION)],
-            [KeyboardButton(Labels.CREDENTIALS_EDIT)],
-            [KeyboardButton(Labels.AGREEMENT), KeyboardButton(Labels.HELP)],
+            [KeyboardButton(Label.DONATE), KeyboardButton(Label.FEEDBACK)],
+            [KeyboardButton(Label.CURRENT_RESERVATIONS)],
+            [KeyboardButton(Label.SLOT_LATER)],
+            [KeyboardButton(Label.SLOT_INSTANT)],
+            [KeyboardButton(Label.CANCEL_RESERVATION)],
+            [KeyboardButton(Label.CREDENTIALS_EDIT)],
+            [KeyboardButton(Label.AGREEMENT), KeyboardButton(Label.HELP)],
         ]
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
@@ -77,8 +77,8 @@ class Keyboards:
             row = [KeyboardButton(date) for date in dates[i : i + 3]]
             keyboard_buttons.append(row)
 
-        keyboard_buttons.insert(0, [KeyboardButton(Labels.CURRENT_RESERVATIONS)])
-        keyboard_buttons.append([KeyboardButton(Labels.RESERVATION_TYPE_EDIT)])
+        keyboard_buttons.insert(0, [KeyboardButton(Label.CURRENT_RESERVATIONS)])
+        keyboard_buttons.append([KeyboardButton(Label.RESERVATION_TYPE_EDIT)])
 
         return ReplyKeyboardMarkup(keyboard_buttons)
 
@@ -103,10 +103,10 @@ class Keyboards:
             current += timedelta(minutes=30)
 
         keyboard_buttons = [[KeyboardButton(time) for time in times[i : i + 5]] for i in range(0, len(times), 5)]
-        keyboard_buttons.append([KeyboardButton(Labels.BACK)])
+        keyboard_buttons.append([KeyboardButton(Label.BACK)])
 
         if instant:
-            keyboard_buttons.insert(0, [KeyboardButton(Labels.CURRENT_RESERVATIONS)])
+            keyboard_buttons.insert(0, [KeyboardButton(Label.CURRENT_RESERVATIONS)])
 
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
@@ -125,33 +125,33 @@ class Keyboards:
         durations = list(range(1, durations))
 
         keyboard_buttons = [[KeyboardButton(dur) for dur in durations[i : i + 8]] for i in range(0, len(durations), 8)]
-        keyboard_buttons.append([KeyboardButton(Labels.BACK)])
+        keyboard_buttons.append([KeyboardButton(Label.BACK)])
 
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True), durations
 
     @staticmethod
     def confirmation():
-        keyboard_buttons = [[KeyboardButton(Labels.CONFIRM_YES)], [KeyboardButton(Labels.CONFIRM_NO)]]
+        keyboard_buttons = [[KeyboardButton(Label.CONFIRM_YES)], [KeyboardButton(Label.CONFIRM_NO)]]
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod
     def retry():
         keyboard_buttons = [
-            [KeyboardButton(Labels.RETRY)],
-            [KeyboardButton(Labels.CURRENT_RESERVATIONS)],
-            [KeyboardButton(Labels.CANCEL_RESERVATION)],
-            [KeyboardButton(Labels.FEEDBACK)],
-            [KeyboardButton(Labels.DONATE)],
+            [KeyboardButton(Label.RETRY)],
+            [KeyboardButton(Label.CURRENT_RESERVATIONS)],
+            [KeyboardButton(Label.CANCEL_RESERVATION)],
+            [KeyboardButton(Label.FEEDBACK)],
+            [KeyboardButton(Label.DONATE)],
         ]
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod
     def cancelation_options(reservations: list):
         keyboard_buttons = [[KeyboardButton(slot)] for slot in reservations]
-        keyboard_buttons.append([KeyboardButton(Labels.RESERVATION_TYPE_BACK)])
+        keyboard_buttons.append([KeyboardButton(Label.RESERVATION_TYPE_BACK)])
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod
     def cancelation_confirm():
-        keyboard_buttons = [[KeyboardButton(Labels.CANCEL_CONFIRM_YES)], [KeyboardButton(Labels.CONFIRM_NO)]]
+        keyboard_buttons = [[KeyboardButton(Label.CANCEL_CONFIRM_YES)], [KeyboardButton(Label.CONFIRM_NO)]]
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)

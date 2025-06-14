@@ -6,7 +6,7 @@ from telegram.ext import ContextTypes
 from src.biblio.bot.messages import show_donate_message, show_help, show_support_message, show_user_agreement
 from src.biblio.config.config import States
 from src.biblio.db.fetch import fetch_existing_user
-from src.biblio.utils.keyboards import Keyboards
+from src.biblio.utils.keyboards import Keyboard
 from src.biblio.utils.utils import get_priorities
 
 
@@ -46,7 +46,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text(
             message,
             parse_mode='Markdown',
-            reply_markup=Keyboards.welcome_back(),
+            reply_markup=Keyboard.welcome_back(),
         )
         return States.WELCOME_BACK
 
@@ -54,7 +54,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         show_user_agreement(),
         parse_mode='Markdown',
-        reply_markup=Keyboards.agreement(),
+        reply_markup=Keyboard.agreement(),
     )
     return States.AGREEMENT
 

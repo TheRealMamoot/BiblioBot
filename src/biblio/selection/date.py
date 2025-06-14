@@ -8,21 +8,21 @@ from telegram.ext import ContextTypes
 from src.biblio.bot.messages import show_existing_reservations
 from src.biblio.config.config import States
 from src.biblio.utils import utils
-from src.biblio.utils.keyboards import Keyboards, Labels
+from src.biblio.utils.keyboards import Keyboard, Label
 
 
 async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
-    if user_input == Labels.RESERVATION_TYPE_EDIT:
+    if user_input == Label.RESERVATION_TYPE_EDIT:
         await update.message.reply_text(
             'Fine, just be quick. 🙄',
             parse_mode='Markdown',
-            reply_markup=Keyboards.reservation_type(),
+            reply_markup=Keyboard.reservation_type(),
         )
         return States.RESERVE_TYPE
 
-    elif user_input == Labels.CURRENT_RESERVATIONS:
+    elif user_input == Label.CURRENT_RESERVATIONS:
         text = await show_existing_reservations(update, context)
         if not text:
             text = '_No reservations found._'
@@ -43,7 +43,7 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return States.CHOOSING_DATE
 
     context.user_data['selected_date'] = user_input
-    keyboard = Keyboards.time(user_input)
+    keyboard = Keyboard.time(user_input)
 
     if len(keyboard.keyboard) <= 1:
         await update.message.reply_text(

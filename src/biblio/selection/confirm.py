@@ -10,7 +10,7 @@ from src.biblio.config.config import States
 from src.biblio.db.insert import writer
 from src.biblio.reservation.reservation import calculate_timeout, confirm_reservation, set_reservation
 from src.biblio.reservation.slot_datetime import reserve_datetime
-from src.biblio.utils.keyboards import Keyboards, Labels
+from src.biblio.utils.keyboards import Keyboard, Label
 
 
 async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -23,7 +23,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     selected_duration = int(context.user_data['selected_duration'])
     start, end, duration = reserve_datetime(date, start_time, selected_duration)
 
-    if user_input == Labels.CONFIRM_YES:
+    if user_input == Label.CONFIRM_YES:
         user_data = {
             'codice_fiscale': context.user_data['codice_fiscale'],
             'cognome_nome': context.user_data['name'],
@@ -84,19 +84,19 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                     """
             ),
             parse_mode='Markdown',
-            reply_markup=Keyboards.retry(),
+            reply_markup=Keyboard.retry(),
         )
 
         return States.RETRY
 
-    elif user_input == Labels.CONFIRM_NO:
-        keyboard = Keyboards.duration(context.user_data.get('selected_time'), context)[0]
+    elif user_input == Label.CONFIRM_NO:
+        keyboard = Keyboard.duration(context.user_data.get('selected_time'), context)[0]
         await update.message.reply_text('I overestimated you it seems. Duration please. 😬', reply_markup=keyboard)
         return States.CHOOSING_DUR
 
     else:
         await update.message.reply_text(
             'JUST.CLICK...PLEASE!',
-            reply_markup=Keyboards.confirmation(),
+            reply_markup=Keyboard.confirmation(),
         )
         return States.CONFIRMING

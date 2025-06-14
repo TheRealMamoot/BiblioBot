@@ -15,14 +15,14 @@ from src.biblio.bot.messages import (
     show_user_agreement,
 )
 from src.biblio.config.config import States
-from src.biblio.utils.keyboards import Keyboards, Labels
+from src.biblio.utils.keyboards import Keyboard, Label
 
 
 async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
-    keyboard = Keyboards.reservation_type()
+    keyboard = Keyboard.reservation_type()
 
-    if user_input == Labels.CREDENTIALS_EDIT:
+    if user_input == Label.CREDENTIALS_EDIT:
         await update.message.reply_text(
             textwrap.dedent(
                 """
@@ -37,12 +37,12 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             """
             ),
             parse_mode='Markdown',
-            reply_markup=Keyboards.start(edit_credential_stage=True),
+            reply_markup=Keyboard.start(edit_credential_stage=True),
         )
         return States.CREDENTIALS
 
-    elif user_input == Labels.SLOT_LATER:
-        keyboard = Keyboards.date()
+    elif user_input == Label.SLOT_LATER:
+        keyboard = Keyboard.date()
         await update.message.reply_text('So, when will it be? 📅', reply_markup=keyboard)
         context.user_data['instant'] = False
         logging.info(
@@ -50,7 +50,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return States.CHOOSING_DATE
 
-    elif user_input == Labels.SLOT_INSTANT:
+    elif user_input == Label.SLOT_INSTANT:
         now = datetime.now(ZoneInfo('Europe/Rome'))
         now_day = now.strftime('%A')
         now_date = now.strftime('%Y-%m-%d')
@@ -63,21 +63,21 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if now.hour < (open_time - 2) or now.hour >= close_time:
             await update.message.reply_text(
                 "It's over for today! Go home. 😌",
-                reply_markup=Keyboards.reservation_type(),
+                reply_markup=Keyboard.reservation_type(),
             )
             return States.RESERVE_TYPE
 
         if week_day == 6:  # Sunday
             await update.message.reply_text(
                 "It's Sunday! Come on, chill. 😌",
-                reply_markup=Keyboards.reservation_type(),
+                reply_markup=Keyboard.reservation_type(),
             )
             return States.RESERVE_TYPE
 
         date = f'{now_day}, {now_date}'
         await update.message.reply_text(
             'So, when will it be? 🕑',
-            reply_markup=Keyboards.time(date, instant=True),
+            reply_markup=Keyboard.time(date, instant=True),
         )
         context.user_data['instant'] = True
         context.user_data['selected_date'] = date
@@ -86,14 +86,14 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return States.CHOOSING_TIME
 
-    elif user_input == Labels.CURRENT_RESERVATIONS:
+    elif user_input == Label.CURRENT_RESERVATIONS:
         text = await show_existing_reservations(update, context)
         if not text:
             text = '_No reservations found._'
         await update.message.reply_text(text, parse_mode='Markdown')
         return States.RESERVE_TYPE
 
-    elif user_input == Labels.CANCEL_RESERVATION:
+    elif user_input == Label.CANCEL_RESERVATION:
         reservations = await show_existing_reservations(update, context, cancel_stage=True)
         choices = {}
         buttons = []
@@ -137,7 +137,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             return States.RESERVE_TYPE
 
         context.user_data['cancelation_choices'] = choices
-        keyboard = Keyboards.cancelation_options(buttons)
+        keyboard = Keyboard.cancelation_options(buttons)
 
         logging.info(f'🔄 {update.effective_user} started cancelation at {datetime.now(ZoneInfo("Europe/Rome"))}')
         await update.message.reply_text(
@@ -157,35 +157,35 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return States.CANCELATION_SLOT_CHOICE
 
-    elif user_input == Labels.HELP:
+    elif user_input == Label.HELP:
         await update.message.reply_text(
             show_help(),
             parse_mode='Markdown',
-            reply_markup=Keyboards.reservation_type(),
+            reply_markup=Keyboard.reservation_type(),
         )
         return States.RESERVE_TYPE
 
-    elif user_input == Labels.DONATE:
+    elif user_input == Label.DONATE:
         await update.message.reply_text(
             show_donate_message(),
             parse_mode='Markdown',
-            reply_markup=Keyboards.reservation_type(),
+            reply_markup=Keyboard.reservation_type(),
         )
         return States.RESERVE_TYPE
 
-    elif user_input == Labels.AGREEMENT:
+    elif user_input == Label.AGREEMENT:
         await update.message.reply_text(
             show_user_agreement(),
             parse_mode='Markdown',
-            reply_markup=Keyboards.reservation_type(),
+            reply_markup=Keyboard.reservation_type(),
         )
         return States.RESERVE_TYPE
 
-    elif user_input == Labels.FEEDBACK:
+    elif user_input == Label.FEEDBACK:
         await update.message.reply_text(
             show_support_message(),
             parse_mode='Markdown',
-            reply_markup=Keyboards.reservation_type(),
+            reply_markup=Keyboard.reservation_type(),
         )
         return States.RESERVE_TYPE
 
