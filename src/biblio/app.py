@@ -13,7 +13,7 @@ from src.biblio.config.config import States
 from src.biblio.jobs import (
     schedule_activation_reminder_job,
     schedule_backup_job,
-    schedule_donation_reminder_job,
+    # schedule_donation_reminder_job,
     schedule_reminder_job,
     schedule_reserve_job,
 )
@@ -63,6 +63,6 @@ def build_app(token_env='prod', gsheet_auth_mode='cloud'):
     schedule_backup_job(gsheet_auth_mode)
     schedule_reminder_job(app.bot)
     schedule_activation_reminder_job(app.bot)
-    schedule_donation_reminder_job(app.bot)
+    # schedule_donation_reminder_job(app.bot) #! Not a good time :(
 
     return app
