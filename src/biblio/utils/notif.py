@@ -13,16 +13,6 @@ from src.biblio.db.fetch import fetch_all_user_chat_ids, fetch_reservations
 DEPLOY_NOTIF = textwrap.dedent(
     """
     📦🛠️ *Bot updated!*
-
-    ‼️ *Important* ‼️
-
-    From *Saturday, June 28th* until *Sunday, July 27th* the opening hours of *BICF* is as follows:
-
-    *Saturday: 09:00 - 19:00*
-    *Sunday: 09:00 - 14:00*
-
-    The bot has been modified accordingly.
-    
     *Please use /start again*. 
     """
 )
