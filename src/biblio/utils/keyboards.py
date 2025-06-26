@@ -5,7 +5,10 @@ from zoneinfo import ZoneInfo
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 
+from src.biblio.config.config import Schedule
 from src.biblio.utils.utils import generate_days
+
+LIB_SCHEDULE = Schedule.default()
 
 
 class Label:
@@ -89,9 +92,9 @@ class Keyboard:
         date_obj = date_obj.replace(tzinfo=ZoneInfo('Europe/Rome'))
         year = now.year if now.month <= date_obj.month else now.year + 1
         full_date = datetime(year, date_obj.month, date_obj.day, tzinfo=ZoneInfo('Europe/Rome'))
-        end_hour = 13 if full_date.weekday() == 5 else 22
-        current = datetime(year, date_obj.month, date_obj.day, 9, 0, tzinfo=ZoneInfo('Europe/Rome'))
-        if full_date.date() == now.date() and now.hour >= 9:
+        start_hour, end_hour = LIB_SCHEDULE.get_hours(full_date.weekday())
+        current = datetime(year, date_obj.month, date_obj.day, start_hour, 0, tzinfo=ZoneInfo('Europe/Rome'))
+        if full_date.date() == now.date() and now.hour >= start_hour:
             hour = now.hour
             minute = 0 if now.minute < 30 else 30
             current = datetime(year, date_obj.month, date_obj.day, hour, minute, tzinfo=ZoneInfo('Europe/Rome'))
@@ -118,8 +121,8 @@ class Keyboard:
         time_obj = datetime.strptime(selected_time, '%H:%M')
         date_obj = datetime(selected_date.year, selected_date.month, selected_date.day, time_obj.hour, time_obj.minute)
 
-        end_hour = 14 if selected_date.weekday() == 5 else 23
-        selected_date = selected_date + timedelta(hours=end_hour)
+        _, end_hour = LIB_SCHEDULE.get_hours(selected_date.weekday())
+        selected_date = selected_date + timedelta(hours=end_hour + 1)  # ! for duration: +1 unlike time
 
         durations = ceil((selected_date - date_obj + timedelta(minutes=30)).seconds / 3600)
         durations = list(range(1, durations))

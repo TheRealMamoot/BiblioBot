@@ -9,7 +9,10 @@ from zoneinfo import ZoneInfo
 import pygsheets
 from dotenv import load_dotenv
 
+from src.biblio.config.config import Schedule
+
 CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / 'biblio' / 'config' / 'biblio.json'
+LIB_SCHEDULE = Schedule.default()
 
 
 class ReservationConfirmationConflict(Exception):
@@ -31,7 +34,8 @@ def generate_days() -> list:
     days = []
     for i in range(7):
         next_day = today + timedelta(days=i)
-        if next_day.weekday() != 6:  # Skip Sunday
+        library_hours = LIB_SCHEDULE.get_hours(next_day.weekday())
+        if library_hours != (0, 0):
             day_name = next_day.strftime('%A')
             formatted_date = next_day.strftime('%Y-%m-%d')
             days.append(f'{day_name}, {formatted_date}')

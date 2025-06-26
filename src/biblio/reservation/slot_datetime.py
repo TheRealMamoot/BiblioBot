@@ -3,6 +3,10 @@ from zoneinfo import ZoneInfo
 
 import pytz
 
+from src.biblio.config.config import Schedule
+
+LIB_SCHEDULE = Schedule.default()
+
 
 def round_time_to_nearest_half_hour(time_obj: datetime) -> datetime:
     minutes = time_obj.minute
@@ -31,10 +35,10 @@ def reserve_datetime(date: str, start: str, duration: int) -> tuple[int, int, in
     except ValueError:
         raise ValueError('Invalid date format. Use YYYY-MM-DD.')
 
-    # Validate day of the week (0 = Monday, 6 = Sunday)
-    weekday = date_obj.weekday()
-    if weekday == 6:
-        raise ValueError('Reservations are not allowed on Sundays.')
+    # * Sundays are temporarily open
+    # weekday = date_obj.weekday()
+    # if weekday == 6:
+    #     raise ValueError('Reservations are not allowed on Sundays.')
 
     try:
         time_obj = datetime.strptime(start, '%H:%M').replace(tzinfo=ZoneInfo('Europe/Rome'))
@@ -43,13 +47,9 @@ def reserve_datetime(date: str, start: str, duration: int) -> tuple[int, int, in
 
     time_obj = round_time_to_nearest_half_hour(time_obj)
 
-    # Saturday rules
-    max_duration = 14  # Default max duration
-    closing_hour = 23  # Default closing hour
-
-    if weekday == 5:  # Saturday
-        max_duration = 5
-        closing_hour = 14
+    opening_hour, closing_hour = LIB_SCHEDULE.get_hours(date_obj.weekday())
+    closing_hour += 1
+    max_duration = closing_hour - opening_hour
 
     if not isinstance(duration, int) or duration < 1 or duration > max_duration:
         raise ValueError(f'Duration must be an between 1 and {max_duration} hours.')

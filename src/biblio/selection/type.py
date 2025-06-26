@@ -14,8 +14,10 @@ from src.biblio.bot.messages import (
     show_support_message,
     show_user_agreement,
 )
-from src.biblio.config.config import States
+from src.biblio.config.config import Schedule, States
 from src.biblio.utils.keyboards import Keyboard, Label
+
+LIB_SCHEDULE = Schedule.default()
 
 
 async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -54,12 +56,9 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         now = datetime.now(ZoneInfo('Europe/Rome'))
         now_day = now.strftime('%A')
         now_date = now.strftime('%Y-%m-%d')
-        week_day = now.weekday()
 
-        open_time = 9
-        close_time = 22
-        if week_day == 5:
-            close_time = 13
+        open_time, close_time = LIB_SCHEDULE.get_hours(now.weekday())
+
         if now.hour < (open_time - 2) or now.hour >= close_time:
             await update.message.reply_text(
                 "It's over for today! Go home. 😌",
@@ -67,12 +66,13 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             )
             return States.RESERVE_TYPE
 
-        if week_day == 6:  # Sunday
-            await update.message.reply_text(
-                "It's Sunday! Come on, chill. 😌",
-                reply_markup=Keyboard.reservation_type(),
-            )
-            return States.RESERVE_TYPE
+        # * Sundays are temporarily open
+        # if week_day == 6:  # Sunday
+        #     await update.message.reply_text(
+        #         "It's Sunday! Come on, chill. 😌",
+        #         reply_markup=Keyboard.reservation_type(),
+        #     )
+        #     return States.RESERVE_TYPE
 
         date = f'{now_day}, {now_date}'
         await update.message.reply_text(
