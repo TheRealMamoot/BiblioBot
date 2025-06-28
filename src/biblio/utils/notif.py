@@ -187,14 +187,15 @@ async def notify_reservation_activation(bot: Bot) -> None:
 # TODO: Refactor w/ asyncio.gather
 async def notify_donation(bot: Bot):
     chat_ids = await fetch_all_user_chat_ids()
-
+    sent = 0
     for chat_id in chat_ids:
-        if chat_id != 115700766:  # botlord
+        if chat_id == 115700766:  # botlord
             continue
         try:
             await bot.send_message(chat_id=chat_id, text=DONATION_NOTIF_ENG, parse_mode='Markdown')
             await bot.send_message(chat_id=chat_id, text=DONATION_NOTIF, parse_mode='Markdown')
+            sent += 1
         except Exception as e:
             logging.error(f'[NOTIF] Failed to send to {chat_id}: {e}')
 
-    logging.info(f'[NOTIF] Sent {len(chat_ids) - 1} donation notifications.')
+    logging.info(f'[NOTIF] Sent {sent - 1} donation notifications.')

@@ -164,8 +164,11 @@ def schedule_reserve_job(bot: Bot) -> None:
     trigger = CronTrigger(second='*/20', minute='5,7,10,12,15,17,20', hour='5', day_of_week='mon-fri')  # UTC
     scheduler.add_job(execute_reservations, trigger, args=[bot])
 
-    trigger_sat = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-11', day_of_week='sat')  # UTC
+    trigger_sat = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-16', day_of_week='sat')  # UTC
     scheduler.add_job(execute_reservations, trigger_sat, args=[bot])
+
+    trigger_sun = CronTrigger(second='*/20', minute='0,1,2,3,30,31,32,33', hour='5-11', day_of_week='sun')  # UTC
+    scheduler.add_job(execute_reservations, trigger_sun, args=[bot])
 
     scheduler.start()
 
@@ -192,7 +195,7 @@ def schedule_activation_reminder_job(bot: Bot) -> None:
 
 
 def schedule_donation_reminder_job(bot: Bot) -> None:
-    @aiocron.crontab('0 18 * * 1,4', tz=ZoneInfo('Europe/Rome'))  # Mon & Thu
+    @aiocron.crontab('0 18 * * 1,3,5', tz=ZoneInfo('Europe/Rome'))  # Mon, Wed & Fri
     async def _reminder_donation_job():
         logging.info('[NOTIF] Sending donation reminder notification')
         await notify_donation(bot)
