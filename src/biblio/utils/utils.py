@@ -30,9 +30,14 @@ def load_env():
 
 
 def generate_days() -> list:
-    today = datetime.now(ZoneInfo('Europe/Rome')).date()
+    now = datetime.now(ZoneInfo('Europe/Rome'))
+    today = now.date()
     days = []
-    for i in range(7):
+
+    _, end_hour = LIB_SCHEDULE.get_hours(today.weekday())
+    offset = 1 if now.hour == end_hour and now.minute >= 30 else 0  # * exclude today after closing hours
+
+    for i in range(offset, 7 + offset):
         next_day = today + timedelta(days=i)
         library_hours = LIB_SCHEDULE.get_hours(next_day.weekday())
         if library_hours != (0, 0):
