@@ -110,6 +110,7 @@ async def fetch_all_reservations() -> pd.DataFrame:
     r.created_at AT TIME ZONE 'Europe/Rome' as created_at
     FROM reservations r
     JOIN users u ON r.user_id = u.id
+    WHERE selected_date >= (CURRENT_DATE - INTERVAL '1 days')
     ORDER BY selected_date DESC, status_label ASC, priority ASC, selected_duration DESC, start_time ASC
     """
     rows = await conn.fetch(query)
