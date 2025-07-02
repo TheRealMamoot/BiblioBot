@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 import aiofiles
 from telegram import Bot
+from telegram.error import Forbidden, TelegramError
 
 from src.biblio.db.fetch import fetch_all_user_chat_ids, fetch_reservations
 
@@ -63,6 +64,15 @@ DONATION_NOTIF_ENG = textwrap.dedent(
 )
 
 
+async def _safe_notify(bot: Bot, chat_id: int, text: str, context: str) -> None:
+    try:
+        await bot.send_message(chat_id=chat_id, text=text, parse_mode='Markdown')
+    except Forbidden:
+        logging.warning(f'[{context.upper()}] Bot was blocked by user {chat_id}, skipping.')
+    except TelegramError as e:
+        logging.error(f'[{context.upper()}] Failed to notify {chat_id}: {e}')
+
+
 async def notify_deployment(bot: Bot) -> None:
     current_id = os.environ.get('RAILWAY_DEPLOYMENT_ID')
     cache_file = '.last_deploy_id'
@@ -86,7 +96,7 @@ async def notify_deployment(bot: Bot) -> None:
     logging.info('[DEPLY] New Railway deployment detected — notifying users.')
 
     chat_ids = await fetch_all_user_chat_ids()
-    tasks = [bot.send_message(chat_id=chat_id, text=DEPLOY_NOTIF, parse_mode='Markdown') for chat_id in chat_ids]
+    tasks = [_safe_notify(bot=bot, chat_id=chat_id, text=DEPLOY_NOTIF, context='deploy') for chat_id in chat_ids]
     await asyncio.gather(*tasks)
 
 
@@ -101,7 +111,7 @@ async def notify_reminder(bot: Bot) -> None:
         logging.info('[NOTIF] No users to notify.')
         return
 
-    tasks = [bot.send_message(chat_id=chat_id, text=REMINDER, parse_mode='Markdown') for chat_id in to_notify_chat_ids]
+    tasks = [_safe_notify(bot=bot, chat_id=chat_id, text=REMINDER, context='deploy') for chat_id in to_notify_chat_ids]
     await asyncio.gather(*tasks)
     logging.info(f'[NOTIF] Sent {len(tasks)} reminders for tomorrow')
 
@@ -172,7 +182,12 @@ async def notify_reservation_activation(bot: Bot) -> None:
             """
         )
 
-        task = bot.send_message(chat_id=reservation['chat_id'], text=message, parse_mode='Markdown')
+        task = _safe_notify(
+            bot=bot,
+            chat_id=reservation['chat_id'],
+            text=message,
+            context='reminder',
+        )
         tasks.append(task)
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -185,17 +200,21 @@ async def notify_reservation_activation(bot: Bot) -> None:
 
 
 # TODO: Refactor w/ asyncio.gather
-async def notify_donation(bot: Bot):
+async def notify_donation(bot: Bot) -> None:
+    BOTLORD_CHAT_ID = 115700766
+
     chat_ids = await fetch_all_user_chat_ids()
     sent = 0
     for chat_id in chat_ids:
-        if chat_id == 115700766:  # botlord
+        if chat_id == BOTLORD_CHAT_ID:
             continue
         try:
             await bot.send_message(chat_id=chat_id, text=DONATION_NOTIF_ENG, parse_mode='Markdown')
             await bot.send_message(chat_id=chat_id, text=DONATION_NOTIF, parse_mode='Markdown')
             sent += 1
+        except Forbidden:
+            logging.warning(f'[NOTIF] Bot was blocked by user {chat_id}, skipping.')
         except Exception as e:
             logging.error(f'[NOTIF] Failed to send to {chat_id}: {e}')
 
-    logging.info(f'[NOTIF] Sent {sent - 1} donation notifications.')
+    logging.info(f'[NOTIF] Sent {sent} donation notifications.')
