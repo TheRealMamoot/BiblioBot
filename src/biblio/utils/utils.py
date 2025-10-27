@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from src.biblio.config.config import Schedule
 
 CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / 'biblio' / 'config' / 'biblio.json'
-LIB_SCHEDULE = Schedule.default()
+LIB_SCHEDULE = Schedule.weekly()
 
 
 class ReservationConfirmationConflict(Exception):

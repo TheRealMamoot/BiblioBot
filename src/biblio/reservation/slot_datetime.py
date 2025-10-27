@@ -5,7 +5,7 @@ import pytz
 
 from src.biblio.config.config import Schedule
 
-LIB_SCHEDULE = Schedule.default()
+LIB_SCHEDULE = Schedule.weekly()
 
 
 def round_time_to_nearest_half_hour(time_obj: datetime) -> datetime:

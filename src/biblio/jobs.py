@@ -11,6 +11,7 @@ from pygsheets import Worksheet
 from telegram import Bot
 
 from src.biblio.bot.messages import show_notification
+from src.biblio.config.config import Schedule
 from src.biblio.db.fetch import fetch_all_reservations, fetch_reservations
 from src.biblio.db.update import update_record
 from src.biblio.reservation.reservation import calculate_timeout, confirm_reservation, set_reservation
@@ -18,6 +19,7 @@ from src.biblio.reservation.slot_datetime import reserve_datetime
 from src.biblio.utils.notif import notify_donation, notify_reminder, notify_reservation_activation
 from src.biblio.utils.utils import ReservationConfirmationConflict, get_wks
 
+JOB_SCHEDULE = Schedule.jobs(daylight_saving=True)
 SEMAPHORE_LIMIT = 3
 semaphore = asyncio.Semaphore(SEMAPHORE_LIMIT)
 
@@ -158,16 +160,19 @@ async def backup_reservations(auth_mode: str = 'cloud'):
 
 def schedule_reserve_job(bot: Bot) -> None:
     scheduler = AsyncIOScheduler(timezone='Europe/Rome')
-    trigger = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-20', day_of_week='mon-fri')  # UTC
+    start, end = JOB_SCHEDULE.get_hours('weekday')  # UTC hours
+    trigger = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour=f'{start}-{end}', day_of_week='mon-fri')
     scheduler.add_job(execute_reservations, trigger, args=[bot])
 
-    trigger = CronTrigger(second='*/20', minute='5,7,10,12,15,17,20', hour='5', day_of_week='mon-fri')  # UTC
+    trigger = CronTrigger(second='*/20', minute='5,7,10,12,15,17,20', hour=start, day_of_week='mon-fri')
     scheduler.add_job(execute_reservations, trigger, args=[bot])
 
-    trigger_sat = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour='5-16', day_of_week='sat')  # UTC
+    start, end = JOB_SCHEDULE.get_hours('sat')
+    trigger_sat = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour=f'{start}-{end}', day_of_week='sat')
     scheduler.add_job(execute_reservations, trigger_sat, args=[bot])
 
-    trigger_sun = CronTrigger(second='*/20', minute='0,1,2,3,30,31,32,33', hour='5-11', day_of_week='sun')  # UTC
+    start, end = JOB_SCHEDULE.get_hours('sun')
+    trigger_sun = CronTrigger(second='*/20', minute='0,1,2,3,30,31,32,33', hour=f'{start}-{end}', day_of_week='sun')
     scheduler.add_job(execute_reservations, trigger_sun, args=[bot])
 
     scheduler.start()

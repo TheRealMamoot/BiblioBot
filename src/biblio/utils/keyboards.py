@@ -8,7 +8,7 @@ from telegram.ext import ContextTypes
 from src.biblio.config.config import Schedule
 from src.biblio.utils.utils import generate_days
 
-LIB_SCHEDULE = Schedule.default()
+LIB_SCHEDULE = Schedule.weekly()
 
 
 class Label:

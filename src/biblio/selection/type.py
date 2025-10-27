@@ -17,7 +17,7 @@ from src.biblio.bot.messages import (
 from src.biblio.config.config import Schedule, States
 from src.biblio.utils.keyboards import Keyboard, Label
 
-LIB_SCHEDULE = Schedule.default()
+LIB_SCHEDULE = Schedule.weekly()
 
 
 async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

@@ -18,10 +18,10 @@ class States(IntEnum):
 
 @dataclass
 class Schedule:
-    weekly_hours: dict[int, tuple[int, int]]
+    hours: dict
 
     @staticmethod
-    def default():
+    def weekly():
         return Schedule(
             {
                 0: (9, 22),
@@ -34,5 +34,16 @@ class Schedule:
             }
         )
 
-    def get_hours(self, weekday: int) -> tuple[int, int]:
-        return self.weekly_hours.get(weekday, (0, 0))
+    @staticmethod
+    def jobs(daylight_saving=False):
+        adjustment = 1 if daylight_saving else 0  # hour
+        return Schedule(
+            {
+                'weekday': (5 + adjustment, 20 + adjustment),
+                'sat': (5 + adjustment, 16 + adjustment),
+                'sun': (5 + adjustment, 11 + adjustment),
+            }
+        )
+
+    def get_hours(self, key):
+        return self.hours.get(key, (0, 0))
