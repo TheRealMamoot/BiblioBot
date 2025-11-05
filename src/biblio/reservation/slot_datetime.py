@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 import pytz
@@ -77,14 +77,16 @@ def reserve_datetime(date: str, start: str, duration: int) -> tuple[int, int, in
 
 
 def extract_available_seats(schedule: dict[str, dict], filter_past: bool = True) -> dict[str, int]:
-    now = datetime.now(ZoneInfo('Europe/Rome')).time()
+    now = datetime.now(ZoneInfo('Europe/Rome'))
+    now_minutes = 0 if now.minute < 30 else 30
+    now_rounded = time(now.hour, now_minutes)
 
     result = {}
     for slot, info in schedule.items():
-        _, end_time = slot.split('-')
-        end_time = datetime.strptime(end_time, '%H:%M').time()
+        start_time, _ = slot.split('-')
+        start_time = datetime.strptime(start_time, '%H:%M').time()
 
-        if not filter_past or now < end_time:
+        if not filter_past or start_time >= now_rounded:
             result[slot] = info['disponibili']
 
     return result

@@ -171,6 +171,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         time = now.replace(minute=(0 if now.minute < 30 else 30), second=0, microsecond=0)
         time = time.strftime('%H:%M')
+        context.user_data['selected_time'] = time
 
         await update.message.reply_text(
             'How many hours are we looking at? 🕦',

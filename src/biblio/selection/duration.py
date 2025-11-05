@@ -7,6 +7,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.biblio.config.config import States
+from src.biblio.reservation.reservation import get_available_slots
 from src.biblio.utils.keyboards import Keyboard, Label
 from src.biblio.utils.validation import duration_overlap
 
@@ -75,3 +76,34 @@ async def duration_availability(update: Update, context: ContextTypes.DEFAULT_TY
         keyboard = Keyboard.reservation_type()
         await update.message.reply_text('Whatever 🙄', reply_markup=keyboard)
         return States.RESERVE_TYPE
+
+    if not user_input.isdigit():
+        await update.message.reply_text("Now you're just messing with me. Just pick the duration!")
+        return States.CHOOSING_AVAILABLE
+
+    selected_time = context.user_data.get('selected_time')
+    duration_selection = Keyboard.duration(selected_time, context, show_available=True)[1]
+    max_dur = max(duration_selection)
+
+    if int(user_input) > max_dur:
+        await update.message.reply_text('Well they are not going to let you sleep there! Try again. 🤷‍♂️')
+        return States.CHOOSING_AVAILABLE
+
+    hour = int(int(user_input) * 60 * 60)
+    await update.message.reply_text(
+        textwrap.dedent('🔄 Getting data...'),
+        parse_mode='Markdown',
+    )
+
+    slots = await get_available_slots(hour=str(hour))
+    message = ''
+
+    for slot, free in slots.items():
+        message += textwrap.dedent(f'*{slot}* - Available: *{free:02d}*\n')
+
+    await update.message.reply_text(
+        textwrap.dedent(f'*Free Slots*:\n{message}'),
+        parse_mode='Markdown',
+    )
+
+    return States.CHOOSING_AVAILABLE
