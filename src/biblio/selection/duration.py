@@ -66,3 +66,12 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
         reply_markup=keyboard,
     )
     return States.CONFIRMING
+
+
+async def duration_availability(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user_input = update.message.text.strip()
+
+    if user_input == Label.BACK:
+        keyboard = Keyboard.reservation_type()
+        await update.message.reply_text('Whatever 🙄', reply_markup=keyboard)
+        return States.RESERVE_TYPE

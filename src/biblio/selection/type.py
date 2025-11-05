@@ -157,6 +157,28 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return States.CANCELATION_SLOT_CHOICE
 
+    elif user_input == Label.AVAILABLE_SLOTS:
+        now = datetime.now(ZoneInfo('Europe/Rome'))
+
+        open_time, close_time = LIB_SCHEDULE.get_hours(now.weekday())
+
+        if now.hour < (open_time - 2) or now.hour >= close_time:
+            await update.message.reply_text(
+                "It's over for today! Go home. 😌",
+                reply_markup=Keyboard.reservation_type(),
+            )
+            return States.RESERVE_TYPE
+
+        time = now.replace(minute=(0 if now.minute < 30 else 30), second=0, microsecond=0)
+        time = time.strftime('%H:%M')
+
+        await update.message.reply_text(
+            'How many hours are we looking at? 🕦',
+            parse_mode='Markdown',
+            reply_markup=Keyboard.duration(time, context, show_available=True)[0],
+        )
+        return States.CHOOSING_AVAILABLE
+
     elif user_input == Label.HELP:
         await update.message.reply_text(
             show_help(),

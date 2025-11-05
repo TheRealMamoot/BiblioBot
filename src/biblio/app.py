@@ -20,7 +20,7 @@ from src.biblio.jobs import (
 from src.biblio.selection.cancel import cancelation, cancelation_confirmation
 from src.biblio.selection.confirm import confirmation
 from src.biblio.selection.date import date_selection
-from src.biblio.selection.duration import duration_selection
+from src.biblio.selection.duration import duration_availability, duration_selection
 from src.biblio.selection.retry import retry
 from src.biblio.selection.time import time_selection
 from src.biblio.selection.type import type_selection
@@ -39,6 +39,7 @@ def build_app(token_env='prod', gsheet_auth_mode='cloud'):
             States.CHOOSING_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, date_selection)],
             States.CHOOSING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, time_selection)],
             States.CHOOSING_DUR: [MessageHandler(filters.TEXT & ~filters.COMMAND, duration_selection)],
+            States.CHOOSING_AVAILABLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, duration_availability)],
             States.CONFIRMING: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirmation)],
             States.CANCELATION_SLOT_CHOICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, cancelation)],
             States.CANCELATION_CONFIRMING: [MessageHandler(filters.TEXT & ~filters.COMMAND, cancelation_confirmation)],

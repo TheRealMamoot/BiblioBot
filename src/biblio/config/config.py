@@ -10,6 +10,7 @@ class States(IntEnum):
     CHOOSING_DATE = auto()
     CHOOSING_TIME = auto()
     CHOOSING_DUR = auto()
+    CHOOSING_AVAILABLE = auto()
     CONFIRMING = auto()
     CANCELATION_SLOT_CHOICE = auto()
     CANCELATION_CONFIRMING = auto()

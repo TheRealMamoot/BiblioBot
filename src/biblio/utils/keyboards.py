@@ -15,6 +15,7 @@ class Label:
     AGREEMENT = '📝 Agreement'
     AGREEMENT_AGREE = '👍 Yes, I agree.'
     AGREEMENT_DISAGREE = "👎 No, I don't agree."
+    AVAILABLE_SLOTS = '🗒️ Available slots'
     BACK = '⬅️'
     CANCEL_CONFIRM_YES = "📅❌ Yes, I'm sure."
     CANCEL_RESERVATION = '🚫 Cancel reservation'
@@ -24,7 +25,7 @@ class Label:
     CREDENTIALS_EDIT = '⬅️ Edit credentials'
     CREDENTIALS_NEW = '🆕 No, I want to change.'
     CREDENTIALS_RETURN = '➡️ Changed my mind.'
-    CURRENT_RESERVATIONS = '🗓️ Current reservations'
+    CURRENT_RESERVATIONS = '🗓️ Reservations'
     DONATE = '🫶 Donate'
     FEEDBACK = '💡 Feedback'
     HELP = '❓ Help'
@@ -63,7 +64,7 @@ class Keyboard:
     def reservation_type():
         keyboard_buttons = [
             [KeyboardButton(Label.DONATE), KeyboardButton(Label.FEEDBACK)],
-            [KeyboardButton(Label.CURRENT_RESERVATIONS)],
+            [KeyboardButton(Label.CURRENT_RESERVATIONS), KeyboardButton(Label.AVAILABLE_SLOTS)],
             [KeyboardButton(Label.SLOT_LATER)],
             [KeyboardButton(Label.SLOT_INSTANT)],
             [KeyboardButton(Label.CANCEL_RESERVATION)],
@@ -80,7 +81,7 @@ class Keyboard:
             row = [KeyboardButton(date) for date in dates[i : i + 3]]
             keyboard_buttons.append(row)
 
-        keyboard_buttons.insert(0, [KeyboardButton(Label.CURRENT_RESERVATIONS)])
+        keyboard_buttons.insert(0, [KeyboardButton(Label.CURRENT_RESERVATIONS), KeyboardButton(Label.AVAILABLE_SLOTS)])
         keyboard_buttons.append([KeyboardButton(Label.RESERVATION_TYPE_EDIT)])
 
         return ReplyKeyboardMarkup(keyboard_buttons)
@@ -109,22 +110,30 @@ class Keyboard:
         keyboard_buttons.append([KeyboardButton(Label.BACK)])
 
         if instant:
-            keyboard_buttons.insert(0, [KeyboardButton(Label.CURRENT_RESERVATIONS)])
+            keyboard_buttons.insert(
+                0, [KeyboardButton(Label.CURRENT_RESERVATIONS), KeyboardButton(Label.AVAILABLE_SLOTS)]
+            )
 
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod
-    def duration(selected_time: str, context: ContextTypes.DEFAULT_TYPE):
-        selected_date = context.user_data.get('selected_date')
-        selected_date = datetime.strptime(selected_date.split(' ')[-1], '%Y-%m-%d')
+    def duration(selected_time: str, context: ContextTypes.DEFAULT_TYPE, show_available: bool = False):
+        if show_available:
+            selected_date = datetime.now()
+        else:
+            selected_date: str = context.user_data.get('selected_date')
+            selected_date = datetime.strptime(selected_date.split(' ')[-1], '%Y-%m-%d')
 
         time_obj = datetime.strptime(selected_time, '%H:%M')
         date_obj = datetime(selected_date.year, selected_date.month, selected_date.day, time_obj.hour, time_obj.minute)
 
         _, end_hour = LIB_SCHEDULE.get_hours(selected_date.weekday())
-        selected_date = selected_date + timedelta(hours=end_hour + 1)  # ! for duration: +1 unlike time
+        end_dt = datetime(
+            selected_date.year, selected_date.month, selected_date.day, end_hour + 1, 0
+        )  # ! for duration: +1 unlike time
 
-        durations = ceil((selected_date - date_obj + timedelta(minutes=30)).seconds / 3600)
+        durations = ceil((end_dt - date_obj + timedelta(minutes=30)).seconds / 3600)
+
         durations = list(range(1, durations))
 
         keyboard_buttons = [[KeyboardButton(dur) for dur in durations[i : i + 8]] for i in range(0, len(durations), 8)]
