@@ -74,3 +74,17 @@ def reserve_datetime(date: str, start: str, duration: int) -> tuple[int, int, in
     durata = duration * 3600
 
     return start_time, end_time, durata
+
+
+def extract_available_seats(schedule: dict[str, dict], filter_past: bool = True) -> dict[str, int]:
+    now = datetime.now(ZoneInfo('Europe/Rome')).time()
+
+    result = {}
+    for slot, info in schedule.items():
+        _, end_time = slot.split('-')
+        end_time = datetime.strptime(end_time, '%H:%M').time()
+
+        if not filter_past or now < end_time:
+            result[slot] = info['disponibili']
+
+    return result

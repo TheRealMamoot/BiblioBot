@@ -1,8 +1,11 @@
 import asyncio
 import logging
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import httpx
 
+from src.biblio.reservation.slot_datetime import extract_available_seats
 from src.biblio.utils.utils import ReservationConfirmationConflict
 from src.biblio.utils.validation import validate_user_data
 
@@ -151,3 +154,33 @@ async def cancel_reservation(codice: str, booking_code: str, mode: str = 'delete
         except Exception as e:
             logging.exception(f'[CANCEL] Unexpected error: {type(e).__name__} - {repr(e)}')
             raise RuntimeError('Unexpected cancellation error') from e
+
+
+async def get_available_slots(hour: str, filter_past: bool = True) -> dict:
+    now = datetime.now(ZoneInfo('Europe/Rome'))
+    today = str(now.date())
+    url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/50/schedule/{today}/25/{hour}'
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url)
+            response.raise_for_status()
+            response_data: dict = response.json()
+            schedule = response_data.get('schedule')[today]
+
+            return extract_available_seats(schedule=schedule, filter_past=filter_past)
+
+        except httpx.ReadTimeout as e:
+            logging.error(f'[GET] Timeout: Server took too long to respond – {repr(e)}')
+            raise TimeoutError('Reservation request timed out') from e
+
+        except httpx.RequestError as e:
+            logging.error(f'[GET] Request failed: {type(e).__name__} - {repr(e)}')
+            raise ConnectionError('Network error during reservation') from e
+        except ValueError as e:
+            logging.error(f'[GET] Value error: {type(e).__name__} - {e}')
+            raise
+
+        except Exception as e:
+            logging.exception(f'[GET] Unexpected error: {type(e).__name__} - {repr(e)}')
+            raise
