@@ -7,9 +7,11 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.biblio.bot.messages import show_existing_reservations
-from src.biblio.config.config import States
+from src.biblio.config.config import Schedule, States
 from src.biblio.utils.keyboards import Keyboard, Label
 from src.biblio.utils.validation import time_not_overlap
+
+LIB_SCHEDULE = Schedule.weekly()
 
 
 async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -18,11 +20,7 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if user_input == Label.BACK:
         if context.user_data['instant']:
             await update.message.reply_text(
-                textwrap.dedent(
-                    """
-                Just decide already!
-                """
-                ),
+                textwrap.dedent('Just decide already!'),
                 parse_mode='Markdown',
                 reply_markup=Keyboard.reservation_type(),
             )
@@ -38,6 +36,32 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             parse_mode='Markdown',
         )
         return States.CHOOSING_TIME
+
+    elif user_input == Label.AVAILABLE_SLOTS:
+        context.user_data['state'] = States.CHOOSING_TIME
+        now = datetime.now(ZoneInfo('Europe/Rome'))
+
+        open_time, close_time = LIB_SCHEDULE.get_hours(now.weekday())
+
+        if now.hour < (open_time - 2) or now.hour >= close_time:
+            await update.message.reply_text(
+                "It's over for today! Go home. 😌",
+                reply_markup=Keyboard.time(
+                    selected_date=context.user_data.get('selected_date'), instant=context.user_data.get('instant')
+                ),
+            )
+            return States.CHOOSING_TIME
+
+        time = now.replace(minute=(0 if now.minute < 30 else 30), second=0, microsecond=0)
+        time = time.strftime('%H:%M')
+        context.user_data['selected_time'] = time
+
+        await update.message.reply_text(
+            'How many hours are we looking at? 🕦',
+            parse_mode='Markdown',
+            reply_markup=Keyboard.duration(time, context, show_available=True)[0],
+        )
+        return States.CHOOSING_AVAILABLE
 
     try:
         datetime.strptime(user_input, '%H:%M')

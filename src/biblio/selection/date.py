@@ -6,9 +6,11 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.biblio.bot.messages import show_existing_reservations
-from src.biblio.config.config import States
+from src.biblio.config.config import Schedule, States
 from src.biblio.utils import utils
 from src.biblio.utils.keyboards import Keyboard, Label
+
+LIB_SCHEDULE = Schedule.weekly()
 
 
 async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -28,6 +30,30 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             text = '_No reservations found._'
         await update.message.reply_text(text, parse_mode='Markdown')
         return States.CHOOSING_DATE
+
+    elif user_input == Label.AVAILABLE_SLOTS:
+        context.user_data['state'] = States.CHOOSING_DATE
+        now = datetime.now(ZoneInfo('Europe/Rome'))
+
+        open_time, close_time = LIB_SCHEDULE.get_hours(now.weekday())
+
+        if now.hour < (open_time - 2) or now.hour >= close_time:
+            await update.message.reply_text(
+                "It's over for today! Go home. 😌",
+                reply_markup=Keyboard.date(),
+            )
+            return States.CHOOSING_DATE
+
+        time = now.replace(minute=(0 if now.minute < 30 else 30), second=0, microsecond=0)
+        time = time.strftime('%H:%M')
+        context.user_data['selected_time'] = time
+
+        await update.message.reply_text(
+            'How many hours are we looking at? 🕦',
+            parse_mode='Markdown',
+            reply_markup=Keyboard.duration(time, context, show_available=True)[0],
+        )
+        return States.CHOOSING_AVAILABLE
 
     try:
         datetime.strptime(user_input.split(' ')[-1], '%Y-%m-%d')

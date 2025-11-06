@@ -166,9 +166,11 @@ async def get_available_slots(hour: str, filter_past: bool = True) -> dict:
             response = await client.get(url)
             response.raise_for_status()
             response_data: dict = response.json()
-            schedule = response_data.get('schedule')[today]
-
-            return extract_available_seats(schedule=schedule, filter_past=filter_past)
+            schedule = response_data.get('schedule')
+            if len(schedule) == 0:
+                return schedule
+            else:
+                return extract_available_seats(schedule=schedule[today], filter_past=filter_past)
 
         except httpx.ReadTimeout as e:
             logging.error(f'[GET] Timeout: Server took too long to respond – {repr(e)}')

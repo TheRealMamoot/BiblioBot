@@ -158,6 +158,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return States.CANCELATION_SLOT_CHOICE
 
     elif user_input == Label.AVAILABLE_SLOTS:
+        context.user_data['state'] = States.RESERVE_TYPE
         now = datetime.now(ZoneInfo('Europe/Rome'))
 
         open_time, close_time = LIB_SCHEDULE.get_hours(now.weekday())

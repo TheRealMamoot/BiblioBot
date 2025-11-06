@@ -73,9 +73,20 @@ async def duration_availability(update: Update, context: ContextTypes.DEFAULT_TY
     user_input = update.message.text.strip()
 
     if user_input == Label.BACK:
-        keyboard = Keyboard.reservation_type()
+        state = context.user_data.get('state')
+        instant = True if context.user_data.get('instant') else False
+        date = context.user_data.get('selected_date')
+        keyboard = (
+            Keyboard.reservation_type()
+            if state == States.RESERVE_TYPE
+            else Keyboard.date()
+            if state == States.CHOOSING_DATE
+            else Keyboard.time(selected_date=date, instant=instant)
+            if state == States.CHOOSING_TIME
+            else None
+        )
         await update.message.reply_text('Whatever 🙄', reply_markup=keyboard)
-        return States.RESERVE_TYPE
+        return state
 
     if not user_input.isdigit():
         await update.message.reply_text("Now you're just messing with me. Just pick the duration!")
@@ -98,8 +109,12 @@ async def duration_availability(update: Update, context: ContextTypes.DEFAULT_TY
     slots = await get_available_slots(hour=str(hour))
     message = ''
 
-    for slot, free in slots.items():
-        message += textwrap.dedent(f'*{slot}* - Available: *{free:02d}*\n')
+    if not slots:
+        message = '_There are no free slots at the moment_'
+    else:
+        for slot, free in slots.items():
+            status = '🔴' if free == 0 else '🟠' if free < 10 else '🟡' if free < 20 else '🟢'
+            message += textwrap.dedent(f'*{slot}* - Available: *{free:02d}* {status}\n')
 
     await update.message.reply_text(
         textwrap.dedent(f'*Free Slots*:\n{message}'),
