@@ -80,6 +80,21 @@ async def insert_user(data: dict) -> str:
         await conn.close()
 
 
+async def insert_slots(slots: dict[str, int]) -> None:
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        async with conn.transaction():
+            for slot, available in slots.items():
+                query = """
+                INSERT INTO slots (slot, available)
+                VALUES ($1, $2)
+                """
+                await conn.execute(query, slot, available)
+        logging.info(f'[DB] Inserted {len(slots)} slot records in batch.')
+    finally:
+        await conn.close()
+
+
 def _prepare_insert_parts(data: dict):
     columns = ', '.join(data.keys())
     placeholders = ', '.join(f'${i}' for i in range(1, len(data) + 1))

@@ -21,4 +21,5 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     import asyncio
 
-    asyncio.run(build_db(env='staging'))
+    asyncio.run(build_db())
+    

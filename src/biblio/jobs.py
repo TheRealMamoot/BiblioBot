@@ -13,8 +13,14 @@ from telegram import Bot
 from src.biblio.bot.messages import show_notification
 from src.biblio.config.config import Schedule
 from src.biblio.db.fetch import fetch_all_reservations, fetch_reservations
+from src.biblio.db.insert import insert_slots
 from src.biblio.db.update import update_record
-from src.biblio.reservation.reservation import calculate_timeout, confirm_reservation, set_reservation
+from src.biblio.reservation.reservation import (
+    calculate_timeout,
+    confirm_reservation,
+    get_available_slots,
+    set_reservation,
+)
 from src.biblio.reservation.slot_datetime import reserve_datetime
 from src.biblio.utils.notif import notify_donation, notify_reminder, notify_reservation_activation
 from src.biblio.utils.utils import ReservationConfirmationConflict, get_wks
@@ -146,7 +152,7 @@ async def execute_reservations(bot: Bot) -> None:
     logging.info(f'[DB-JOB] Reservation job completed: {len(updates)} updated')
 
 
-async def backup_reservations(auth_mode: str = 'cloud'):
+async def backup_reservations(auth_mode: str = 'cloud') -> None:
     df = await fetch_all_reservations()
     if df.empty:
         logging.info('[GSHEET] No data to write to the sheet')
@@ -156,6 +162,17 @@ async def backup_reservations(auth_mode: str = 'cloud'):
     wks.clear(start='A1')
     wks.set_dataframe(df, (1, 1))
     logging.info('[GSHEET] Data written to Google Sheet successfully')
+
+
+async def execute_slot_snapshot() -> None:
+    all_slots = await get_available_slots('3600')  # one-hour slotS
+
+    if not all_slots:
+        logging.info('[DB-JOB] No slots to insert — snapshot skipped')
+        return
+
+    await insert_slots(all_slots)
+    logging.info('[DB-JOB] Snapshot saved!')
 
 
 def schedule_reserve_job(bot: Bot) -> None:
@@ -171,9 +188,26 @@ def schedule_reserve_job(bot: Bot) -> None:
     trigger_sat = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour=f'{start}-{end}', day_of_week='sat')
     scheduler.add_job(execute_reservations, trigger_sat, args=[bot])
 
-    start, end = JOB_SCHEDULE.get_hours('sun')
-    trigger_sun = CronTrigger(second='*/20', minute='0,1,2,3,30,31,32,33', hour=f'{start}-{end}', day_of_week='sun')
-    scheduler.add_job(execute_reservations, trigger_sun, args=[bot])
+    # start, end = JOB_SCHEDULE.get_hours('sun')
+    # trigger_sun = CronTrigger(second='*/20', minute='0,1,2,3,30,31,32,33', hour=f'{start}-{end}', day_of_week='sun')
+    # scheduler.add_job(execute_reservations, trigger_sun, args=[bot])
+
+    scheduler.start()
+
+
+def schedule_slot_snapshot_job() -> None:
+    scheduler = AsyncIOScheduler(timezone='Europe/Rome')
+
+    start, end = JOB_SCHEDULE.get_hours('availability')  # TODO: update if needed
+    trigger = CronTrigger(second='*/10', minute='0,1,2,30,31,32', hour=f'{start}-{end}', day_of_week='mon-fri')
+    scheduler.add_job(execute_slot_snapshot, trigger)
+
+    trigger = CronTrigger(second='*/30', minute='5,10,15,20,25', hour=f'{start}-{end}', day_of_week='mon-fri')
+    scheduler.add_job(execute_slot_snapshot, trigger)
+
+    start, end = JOB_SCHEDULE.get_hours('availability_sat')
+    trigger_sat = CronTrigger(second='*/15', minute='0,1,2,30,31', hour=f'{start}-{end}', day_of_week='sat')
+    scheduler.add_job(execute_slot_snapshot, trigger_sat)
 
     scheduler.start()
 

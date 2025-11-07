@@ -33,3 +33,10 @@ CREATE TABLE IF NOT EXISTS reservations (
     status_change BOOLEAN DEFAULT FALSE,
     notified BOOLEAN DEFAULT FALSE
 );
+
+CREATE TABLE IF NOT EXISTS slots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    job_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    slot TEXT NOT NULL,
+    available INTEGER NOT NULL
+);

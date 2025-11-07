@@ -41,8 +41,10 @@ class Schedule:
         return Schedule(
             {
                 'weekday': (5 + adjustment, 20 + adjustment),
-                'sat': (5 + adjustment, 16 + adjustment),
+                'sat': (5 + adjustment, 11 + adjustment),
                 'sun': (5 + adjustment, 11 + adjustment),
+                'availability': (7 + adjustment, 16 + adjustment),
+                'availability_sat': (7 + adjustment, 11 + adjustment),
             }
         )
 

@@ -16,6 +16,7 @@ from src.biblio.jobs import (
     schedule_donation_reminder_job,
     schedule_reminder_job,
     schedule_reserve_job,
+    schedule_slot_snapshot_job,
 )
 from src.biblio.selection.cancel import cancelation, cancelation_confirmation
 from src.biblio.selection.confirm import confirmation
@@ -65,5 +66,6 @@ def build_app(token_env='prod', gsheet_auth_mode='cloud'):
     schedule_reminder_job(app.bot)
     schedule_activation_reminder_job(app.bot)
     schedule_donation_reminder_job(app.bot)
+    schedule_slot_snapshot_job()
 
     return app
