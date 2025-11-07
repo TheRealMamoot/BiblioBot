@@ -107,17 +107,19 @@ async def duration_availability(update: Update, context: ContextTypes.DEFAULT_TY
     )
 
     slots = await get_available_slots(hour=str(hour))
-    message = ''
 
     if not slots:
-        message = '_There are no free slots at the moment_'
+        formatted = '_There are no free slots at the moment_'
     else:
+        message_lines = []
         for slot, free in slots.items():
             status = '🔴' if free == 0 else '🟠' if free < 10 else '🟡' if free < 20 else '🟢'
-            message += textwrap.dedent(f'*{slot}* - Available: *{free:02d}* {status}\n')
+            message_lines.append(f'{slot} | {str(free).ljust(3)} {status}')
+
+        formatted = '```\n' + '\n'.join(message_lines) + '\n```'
 
     await update.message.reply_text(
-        textwrap.dedent(f'*Free Slots*:\n{message}'),
+        textwrap.dedent(f'*Free Slots:*\n{formatted}'),
         parse_mode='Markdown',
     )
 
