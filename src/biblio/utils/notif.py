@@ -13,8 +13,21 @@ from src.biblio.db.fetch import fetch_all_user_chat_ids, fetch_reservations
 
 DEPLOY_NOTIF = textwrap.dedent(
     """
-    📦🛠️ *Bot updated!*
-    *Please use /start again*. 
+    📦🛠️ *Bot Updated! v2.1.0* 🎊  
+
+    🎉 *150+ Users!* 🎉  
+
+    Welcome to all the new faces! A couple of highlights from this update:
+
+    - ✅ You can now check free slots using the *“🗒️ Available slots”* button.  
+    - ✅ Slot availability is now being tracked. soon you'll be able to see when traffic is at its peak!
+
+    ❗*Some issues have occurred with morning reservations. I'm actively working on fixing them. With the new slot monitoring, I hope to identify the root cause soon.*
+
+    Yours truly,  
+    _The Botlord_
+
+    👉 *Please use /start again to refresh your session.*
     """
 )
 
