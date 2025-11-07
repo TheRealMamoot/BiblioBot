@@ -165,7 +165,7 @@ async def backup_reservations(auth_mode: str = 'cloud') -> None:
 
 
 async def execute_slot_snapshot() -> None:
-    all_slots = await get_available_slots('3600')  # one-hour slotS
+    all_slots = await get_available_slots('3600', filter_past=False)  # one-hour slots
 
     if not all_slots:
         logging.info('[DB-JOB] No slots to insert — snapshot skipped')
@@ -188,9 +188,9 @@ def schedule_reserve_job(bot: Bot) -> None:
     trigger_sat = CronTrigger(second='*/10', minute='0,1,2,3,30,31,32,33', hour=f'{start}-{end}', day_of_week='sat')
     scheduler.add_job(execute_reservations, trigger_sat, args=[bot])
 
-    # start, end = JOB_SCHEDULE.get_hours('sun')
-    # trigger_sun = CronTrigger(second='*/20', minute='0,1,2,3,30,31,32,33', hour=f'{start}-{end}', day_of_week='sun')
-    # scheduler.add_job(execute_reservations, trigger_sun, args=[bot])
+    start, end = JOB_SCHEDULE.get_hours('sun')
+    trigger_sun = CronTrigger(second='*/20', minute='0,1,2,3,30,31,32,33', hour=f'{start}-{end}', day_of_week='sun')
+    scheduler.add_job(execute_reservations, trigger_sun, args=[bot])
 
     scheduler.start()
 
@@ -198,16 +198,19 @@ def schedule_reserve_job(bot: Bot) -> None:
 def schedule_slot_snapshot_job() -> None:
     scheduler = AsyncIOScheduler(timezone='Europe/Rome')
 
-    start, end = JOB_SCHEDULE.get_hours('availability')  # TODO: update if needed
+    start, end = JOB_SCHEDULE.get_hours('availability')
     trigger = CronTrigger(second='*/10', minute='0,1,2,30,31,32', hour=f'{start}-{end}', day_of_week='mon-fri')
     scheduler.add_job(execute_slot_snapshot, trigger)
 
-    trigger = CronTrigger(second='*/30', minute='5,10,15,20,25', hour=f'{start}-{end}', day_of_week='mon-fri')
+    trigger = CronTrigger(second='*/45', minute='5,15,25,35,45,55', hour=f'{start}-{end}', day_of_week='mon-fri')
     scheduler.add_job(execute_slot_snapshot, trigger)
 
     start, end = JOB_SCHEDULE.get_hours('availability_sat')
     trigger_sat = CronTrigger(second='*/15', minute='0,1,2,30,31', hour=f'{start}-{end}', day_of_week='sat')
     scheduler.add_job(execute_slot_snapshot, trigger_sat)
+
+    trigger_sun = CronTrigger(second='*/15', minute='0,1,2,30,31', hour=f'{start}-{end}', day_of_week='sun')
+    scheduler.add_job(execute_slot_snapshot, trigger_sun)
 
     scheduler.start()
 
