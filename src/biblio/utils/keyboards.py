@@ -151,6 +151,7 @@ class Keyboard:
         keyboard_buttons = [
             [KeyboardButton(Label.RETRY)],
             [KeyboardButton(Label.CURRENT_RESERVATIONS)],
+            [KeyboardButton(Label.AVAILABLE_SLOTS)],
             [KeyboardButton(Label.CANCEL_RESERVATION)],
             [KeyboardButton(Label.FEEDBACK)],
             [KeyboardButton(Label.DONATE)],

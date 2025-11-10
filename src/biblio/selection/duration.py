@@ -83,6 +83,8 @@ async def duration_availability(update: Update, context: ContextTypes.DEFAULT_TY
             if state == States.CHOOSING_DATE
             else Keyboard.time(selected_date=date, instant=instant)
             if state == States.CHOOSING_TIME
+            else Keyboard.retry()
+            if state == States.RETRY
             else None
         )
         await update.message.reply_text('Whatever 🙄', reply_markup=keyboard)

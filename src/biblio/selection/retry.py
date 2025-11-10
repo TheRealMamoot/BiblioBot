@@ -8,8 +8,10 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.biblio.bot.messages import show_donate_message, show_existing_reservations, show_support_message
-from src.biblio.config.config import States
+from src.biblio.config.config import Schedule, States
 from src.biblio.utils.keyboards import Keyboard, Label
+
+LIB_SCHEDULE = Schedule.weekly()
 
 
 async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -35,6 +37,27 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             parse_mode='Markdown',
         )
         return States.RETRY
+
+    elif user_input == Label.AVAILABLE_SLOTS:
+        context.user_data['state'] = States.RETRY
+        now = datetime.now(ZoneInfo('Europe/Rome'))
+
+        open_time, close_time = LIB_SCHEDULE.get_hours(now.weekday())
+
+        if now.hour < (open_time - 2) or now.hour >= close_time:
+            await update.message.reply_text("It's over for today! Go home. 😌", reply_markup=Keyboard.retry())
+            return States.RETRY
+
+        time = now.replace(minute=(0 if now.minute < 30 else 30), second=0, microsecond=0)
+        time = time.strftime('%H:%M')
+        context.user_data['selected_time'] = time
+
+        await update.message.reply_text(
+            'How many hours are we looking at? 🕦',
+            parse_mode='Markdown',
+            reply_markup=Keyboard.duration(time, context, show_available=True)[0],
+        )
+        return States.CHOOSING_AVAILABLE
 
     elif user_input == Label.CANCEL_RESERVATION:
         reservations = await show_existing_reservations(update, context, cancel_stage=True)
