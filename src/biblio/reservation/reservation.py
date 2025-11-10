@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -161,6 +162,7 @@ async def get_available_slots(hour: str, filter_past: bool = True, max_retries: 
     today = str(now.date())
     url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/50/schedule/{today}/25/{hour}'
 
+    start_time = time.perf_counter()
     async with httpx.AsyncClient() as client:
         for attempt in range(max_retries):
             timeout = calculate_timeout(retries=attempt, base=40, step=20, max_read=100)
@@ -170,19 +172,25 @@ async def get_available_slots(hour: str, filter_past: bool = True, max_retries: 
                 response.raise_for_status()
                 response_data: dict = response.json()
                 schedule = response_data.get('schedule')
+
+                duration = time.perf_counter() - start_time
+                logging.info(f'[SLOT] Slots fetched in {duration:.2f}s on attempt {attempt + 1}')
+
                 if len(schedule) == 0:
                     return schedule
                 else:
                     return extract_available_seats(schedule=schedule[today], filter_past=filter_past)
 
             except httpx.ReadTimeout as e:
-                logging.warning(f'[SLOT] Timeout on attempt {attempt + 1} – {repr(e)}')
+                duration = time.perf_counter() - start_time
+                logging.warning(f'[SLOT] Timeout on attempt {attempt + 1} after {duration:.2f}s – {repr(e)}')
                 await asyncio.sleep(1 + attempt * 0.5)
                 continue
 
             except httpx.RequestError as e:
                 logging.error(f'[SLOT] Request failed: {type(e).__name__} - {repr(e)}')
                 raise ConnectionError('Network error during reservation') from e
+
             except ValueError as e:
                 logging.error(f'[SLOT] Value error: {type(e).__name__} - {e}')
                 raise
@@ -191,4 +199,5 @@ async def get_available_slots(hour: str, filter_past: bool = True, max_retries: 
                 logging.exception(f'[SLOT] Unexpected error: {type(e).__name__} - {repr(e)}')
                 raise
 
-        raise RuntimeError('[SLOT] Gave up after max retries — could not fetch data.')
+        duration = time.perf_counter() - start_time
+        raise RuntimeError(f'[SLOT] Gave up after {duration:.2f}s — could not fetch data.')
