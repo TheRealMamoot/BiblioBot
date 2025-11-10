@@ -106,7 +106,14 @@ async def duration_availability(update: Update, context: ContextTypes.DEFAULT_TY
         parse_mode='Markdown',
     )
 
-    slots = await get_available_slots(hour=str(hour))
+    try:
+        slots = await get_available_slots(hour=str(hour))
+    except Exception:
+        logging.error('[GET] Failed to fetch available slots')
+        await update.message.reply_text(
+            '😵‍💫 Something went wrong while checking availability.\nPlease try again in a moment.'
+        )
+        return States.CHOOSING_AVAILABLE
 
     if not slots:
         formatted = '_There are no free slots at the moment_'

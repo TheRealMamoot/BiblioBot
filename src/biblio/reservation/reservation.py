@@ -160,8 +160,9 @@ async def get_available_slots(hour: str, filter_past: bool = True) -> dict:
     now = datetime.now(ZoneInfo('Europe/Rome'))
     today = str(now.date())
     url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/50/schedule/{today}/25/{hour}'
+    timeout = calculate_timeout(retries=0, base=25)
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             response = await client.get(url)
             response.raise_for_status()
