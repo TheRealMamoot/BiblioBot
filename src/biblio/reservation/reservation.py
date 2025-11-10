@@ -156,34 +156,39 @@ async def cancel_reservation(codice: str, booking_code: str, mode: str = 'delete
             raise RuntimeError('Unexpected cancellation error') from e
 
 
-async def get_available_slots(hour: str, filter_past: bool = True) -> dict:
+async def get_available_slots(hour: str, filter_past: bool = True, max_retries: int = 4) -> dict:
     now = datetime.now(ZoneInfo('Europe/Rome'))
     today = str(now.date())
     url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/50/schedule/{today}/25/{hour}'
-    timeout = calculate_timeout(retries=0, base=25)
 
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        try:
-            response = await client.get(url)
-            response.raise_for_status()
-            response_data: dict = response.json()
-            schedule = response_data.get('schedule')
-            if len(schedule) == 0:
-                return schedule
-            else:
-                return extract_available_seats(schedule=schedule[today], filter_past=filter_past)
+    async with httpx.AsyncClient() as client:
+        for attempt in range(max_retries):
+            timeout = calculate_timeout(retries=attempt, base=40, step=20, max_read=100)
 
-        except httpx.ReadTimeout as e:
-            logging.error(f'[GET] Timeout: Server took too long to respond – {repr(e)}')
-            raise TimeoutError('Reservation request timed out') from e
+            try:
+                response = await client.get(url, timeout=timeout)
+                response.raise_for_status()
+                response_data: dict = response.json()
+                schedule = response_data.get('schedule')
+                if len(schedule) == 0:
+                    return schedule
+                else:
+                    return extract_available_seats(schedule=schedule[today], filter_past=filter_past)
 
-        except httpx.RequestError as e:
-            logging.error(f'[GET] Request failed: {type(e).__name__} - {repr(e)}')
-            raise ConnectionError('Network error during reservation') from e
-        except ValueError as e:
-            logging.error(f'[GET] Value error: {type(e).__name__} - {e}')
-            raise
+            except httpx.ReadTimeout as e:
+                logging.warning(f'[SLOT] Timeout on attempt {attempt + 1} – {repr(e)}')
+                await asyncio.sleep(1 + attempt * 0.5)
+                continue
 
-        except Exception as e:
-            logging.exception(f'[GET] Unexpected error: {type(e).__name__} - {repr(e)}')
-            raise
+            except httpx.RequestError as e:
+                logging.error(f'[SLOT] Request failed: {type(e).__name__} - {repr(e)}')
+                raise ConnectionError('Network error during reservation') from e
+            except ValueError as e:
+                logging.error(f'[SLOT] Value error: {type(e).__name__} - {e}')
+                raise
+
+            except Exception as e:
+                logging.exception(f'[SLOT] Unexpected error: {type(e).__name__} - {repr(e)}')
+                raise
+
+        raise RuntimeError('[SLOT] Gave up after max retries — could not fetch data.')
