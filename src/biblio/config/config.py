@@ -43,7 +43,7 @@ class Schedule:
                 'weekday': (5 + adjustment, 20 + adjustment),
                 'sat': (5 + adjustment, 11 + adjustment),
                 'sun': (5 + adjustment, 11 + adjustment),
-                'availability': (5 + adjustment, 16 + adjustment),
+                'availability': (5 + adjustment, 18 + adjustment),
                 'availability_sat': (5 + adjustment, 11 + adjustment),
             }
         )

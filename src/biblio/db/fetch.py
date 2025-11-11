@@ -62,7 +62,7 @@ async def fetch_reservations(statuses: list[str], date: datetime.date = None) ->
     JOIN users u ON r.user_id = u.id
     WHERE r.selected_date = $2
     AND r.status = ANY($1)
-    ORDER BY u.priority, r.selected_date, r.selected_duration DESC, r.start_time;
+    ORDER BY u.priority, r.created_at ASC, r.selected_date, r.selected_duration DESC, r.start_time;
     """
     rows = await conn.fetch(query, statuses, date)
     await conn.close()

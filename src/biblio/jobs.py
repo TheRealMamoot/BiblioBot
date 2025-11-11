@@ -26,7 +26,7 @@ from src.biblio.utils.notif import notify_donation, notify_reminder, notify_rese
 from src.biblio.utils.utils import ReservationConfirmationConflict, get_wks
 
 JOB_SCHEDULE = Schedule.jobs(daylight_saving=True)
-SEMAPHORE_LIMIT = 3
+SEMAPHORE_LIMIT = 4
 semaphore = asyncio.Semaphore(SEMAPHORE_LIMIT)
 
 
@@ -202,7 +202,9 @@ def schedule_slot_snapshot_job() -> None:
     trigger = CronTrigger(second='*/10', minute='0,1,2,30,31,32', hour=f'{start}-{end}', day_of_week='mon-fri')
     scheduler.add_job(execute_slot_snapshot, trigger)
 
-    trigger = CronTrigger(second='*/45', minute='5,15,25,35,45,55', hour=f'{start}-{end}', day_of_week='mon-fri')
+    trigger = CronTrigger(
+        second='*/45', minute='5,10,15,25,30,35,36,38,40,42,45,55', hour=f'{start}-{end}', day_of_week='mon-fri'
+    )
     scheduler.add_job(execute_slot_snapshot, trigger)
 
     start, end = JOB_SCHEDULE.get_hours('availability_sat')
