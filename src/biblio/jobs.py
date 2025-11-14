@@ -207,7 +207,7 @@ def schedule_slot_snapshot_job() -> None:
     )
     scheduler.add_job(execute_slot_snapshot, trigger)
 
-    trigger = CronTrigger(second='*/30', minute='17,19,21,23,27,29,50', hour=f'{start}', day_of_week='mon-fri')
+    trigger = CronTrigger(second='*/30', minute='11,13,14,17,19,21,23,27,29,50', hour=f'{start}', day_of_week='mon-fri')
     scheduler.add_job(execute_slot_snapshot, trigger)
 
     start, end = JOB_SCHEDULE.get_hours('availability_sat')
