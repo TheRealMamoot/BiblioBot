@@ -29,6 +29,7 @@ class Label:
     DONATE = '🫶 Donate'
     FEEDBACK = '💡 Feedback'
     HELP = '❓ Help'
+    HISTORY = '📊 Available slots history'
     RESERVATION_TYPE_BACK = '⬅️ Back to reservation type'
     RESERVATION_TYPE_EDIT = '⬅️ Edit reservation type'
     RETRY = "🆕 Let's go again!"
@@ -65,6 +66,7 @@ class Keyboard:
         keyboard_buttons = [
             [KeyboardButton(Label.DONATE), KeyboardButton(Label.FEEDBACK)],
             [KeyboardButton(Label.CURRENT_RESERVATIONS), KeyboardButton(Label.AVAILABLE_SLOTS)],
+            [KeyboardButton(Label.HISTORY)],
             [KeyboardButton(Label.SLOT_LATER)],
             [KeyboardButton(Label.SLOT_INSTANT)],
             [KeyboardButton(Label.CANCEL_RESERVATION)],
@@ -74,8 +76,8 @@ class Keyboard:
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod
-    def date():
-        dates = generate_days()
+    def date(days_past: int = 0, days_future: int = 5):
+        dates = generate_days(past=days_past, future=days_future)
         keyboard_buttons = []
         for i in range(0, len(dates), 3):
             row = [KeyboardButton(date) for date in dates[i : i + 3]]

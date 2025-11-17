@@ -32,7 +32,7 @@ def load_env():
     load_dotenv(dotenv_path=project_root / '.env')
 
 
-def generate_days() -> list:
+def generate_days(past: int = 0, future: int = 5) -> list:
     now = datetime.now(ZoneInfo('Europe/Rome'))
     today = now.date()
     days = []
@@ -40,15 +40,20 @@ def generate_days() -> list:
     _, end_hour = LIB_SCHEDULE.get_hours(today.weekday())
     offset = 1 if now.hour == end_hour and now.minute >= 30 else 0  # * exclude today after closing hours
 
-    for i in range(offset, 7 + offset):
-        next_day = today + timedelta(days=i)
-        library_hours = LIB_SCHEDULE.get_hours(next_day.weekday())
+    start_offset = -past if past > 0 else 0
+    end_offset = future + offset
+
+    for i in range(start_offset, end_offset + 1):
+        day = today + timedelta(days=i)
+        library_hours = LIB_SCHEDULE.get_hours(day.weekday())
         if library_hours != (0, 0):
-            day_name = next_day.strftime('%A')
-            formatted_date = next_day.strftime('%Y-%m-%d')
+            day_name = day.strftime('%A')
+            formatted_date = day.strftime('%Y-%m-%d')
             days.append(f'{day_name}, {formatted_date}')
-        if len(days) == 6:
-            break
+
+    if past > 0 and future == 0:
+        days.reverse()
+
     return days
 
 
@@ -113,13 +118,16 @@ def get_wks(auth_mode: str = 'cloud'):
 def plot_slot_history(
     df: pd.DataFrame, date: str, slot: str, start: str = None, end: str = None, output_path: str = 'slot_history.jpg'
 ):
+    day_label = datetime.strptime(date, '%Y-%m-%d').strftime('%A, %Y-%m-%d')
+    title = f'{day_label} for Slot {slot}'
+    if start and end:
+        title += f' (Range: {start}–{end})'
+
     fig = px.line(
         df,
         x='time',
         y='available',
-        title=f'Availability on {date} for Slot {slot} ({start}–{end})'
-        if start and end
-        else f'Availability on {date} for Slot {slot}',
+        title=title,
         markers=True,
     )
 
