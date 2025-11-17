@@ -158,3 +158,23 @@ async def fetch_existing_user(chat_id: str) -> dict | None:
     row = await conn.fetchrow(query, chat_id)
     await conn.close()
     return row
+
+
+async def fetch_slot_history(date: str) -> pd.DataFrame | None:
+    if isinstance(date, str):
+        date = datetime.strptime(date, '%Y-%m-%d').date()
+
+    conn = await asyncpg.connect(DATABASE_URL)
+    query = """
+    SELECT job_timestamp,
+        slot,
+        available
+    FROM slots
+    WHERE job_timestamp::date = $1
+    ORDER BY slot ASC, job_timestamp ASC
+    """
+    rows = await conn.fetch(query, date)
+    await conn.close()
+    logging.info(f'[DB] available slots fetched - {len(rows)} results')
+    result = pd.DataFrame(rows, columns=['job_timestamp', 'slot', 'available']) if rows else None
+    return result

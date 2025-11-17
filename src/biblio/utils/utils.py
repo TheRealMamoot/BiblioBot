@@ -6,6 +6,9 @@ from functools import cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pandas as pd
+import plotly.express as px
+import plotly.io as pio
 import pygsheets
 from dotenv import load_dotenv
 
@@ -105,3 +108,46 @@ def get_gsheet_client(auth_mode: str = 'cloud'):
 def get_wks(auth_mode: str = 'cloud'):
     gc = get_gsheet_client(auth_mode)
     return gc.open('Biblio-logs').worksheet_by_title('backup')
+
+
+def plot_slot_history(
+    df: pd.DataFrame, date: str, slot: str, start: str = None, end: str = None, output_path: str = 'slot_history.jpg'
+):
+    fig = px.line(
+        df,
+        x='time',
+        y='available',
+        title=f'Availability on {date} for Slot {slot} ({start}–{end})'
+        if start and end
+        else f'Availability on {date} for Slot {slot}',
+        markers=True,
+    )
+
+    fig.update_traces(line=dict(width=3))
+
+    fig.update_layout(
+        xaxis_title='Time',
+        yaxis_title='Available Seats',
+        template='plotly_white',
+        title_font=dict(size=28),
+        xaxis_title_font=dict(size=22),
+        yaxis_title_font=dict(size=22),
+        font=dict(size=18),
+        yaxis=dict(
+            dtick=10,
+            tickmode='linear',
+            range=[0, df['available'].max() + 5],
+            zeroline=True,
+            zerolinewidth=3,
+            zerolinecolor='gray',
+        ),
+    )
+
+    pio.write_image(fig, output_path, format='jpg', width=1200, height=900)
+
+
+def utc_tuple_to_rome_time(hour_minute: tuple[int, int]) -> tuple[int, int]:
+    hour, minute = hour_minute
+    dt_utc = datetime(2000, 1, 1, hour, minute, tzinfo=ZoneInfo('UTC'))
+    dt_rome = dt_utc.astimezone(ZoneInfo('Europe/Rome'))
+    return dt_rome.hour, dt_rome.minute
