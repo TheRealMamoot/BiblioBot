@@ -37,6 +37,19 @@ def validate_user_data(user_data: dict):
     logging.info('User data validated successfully.')
 
 
+def normalize_slot_input(hour: str) -> str | None:
+    if re.fullmatch(r'^\d{1,2}$', str):  # e.g. '7' → '07:00'
+        hour = int(str)
+        return f'{hour:02}:00' if 0 <= hour < 24 else None
+
+    if re.fullmatch(r'^\d{1,2}:\d{1,2}$', str):  # e.g. '7:5', '7:05'
+        hour, minute = map(int, str.split(':'))
+        if 0 <= hour < 24 and 0 <= minute < 60:
+            return f'{hour:02}:{minute:02}'
+
+    return None
+
+
 async def duration_overlap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     codice = context.user_data['codice_fiscale']
     email = context.user_data['email']

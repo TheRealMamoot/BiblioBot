@@ -219,6 +219,7 @@ def show_help() -> str:
 async def show_slot_history(
     # update: Update,
     # context: ContextTypes.DEFAULT_TYPE,
+    history: pd.DataFrame,
     date: str,
     slot: str,
     start: str = time(*MIN_AVAILABILITY_START).strftime('%H:%M'),
@@ -243,7 +244,7 @@ async def show_slot_history(
         # await update.message.reply_text('❌ Invalid time format. Use HH:MM (e.g. 08:30).')
         return
 
-    history = await fetch_slot_history(date=date)
+    # history = await fetch_slot_history(date=date)
     history.rename(columns={'job_timestamp': 'time'}, inplace=True)
 
     history['time'] = history['time'].apply(
@@ -259,6 +260,5 @@ async def show_slot_history(
     if selected_slot.empty:
         # await update.message.reply_text('ℹ️ No data available for this time range.')
         return
-
-    plot_slot_history(selected_slot, date, slot, start, end)
+    plot_slot_history(selected_slot, date, slot, start, end=parsed_end.strftime('%H:%M'))
     # await update.message.reply_text('✅ Slot history chart generated.')

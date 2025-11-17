@@ -6,11 +6,11 @@ from functools import cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import pandas as pd
 import plotly.express as px
 import plotly.io as pio
 import pygsheets
 from dotenv import load_dotenv
+from pandas import DataFrame
 
 from src.biblio.config.config import Schedule
 
@@ -116,7 +116,7 @@ def get_wks(auth_mode: str = 'cloud'):
 
 
 def plot_slot_history(
-    df: pd.DataFrame, date: str, slot: str, start: str = None, end: str = None, output_path: str = 'slot_history.jpg'
+    df: DataFrame, date: str, slot: str, start: str = None, end: str = None, output_path: str = 'slot_history.jpg'
 ):
     day_label = datetime.strptime(date, '%Y-%m-%d').strftime('%A, %Y-%m-%d')
     title = f'{day_label} for Slot {slot}'

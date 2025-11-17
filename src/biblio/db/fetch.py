@@ -3,14 +3,14 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import asyncpg
-import pandas as pd
+from pandas import DataFrame
 
 from src.biblio.utils.utils import get_database_url
 
 DATABASE_URL = get_database_url()
 
 
-async def fetch_user_reservations(*user_details, include_date: bool = True) -> pd.DataFrame:
+async def fetch_user_reservations(*user_details, include_date: bool = True) -> DataFrame:
     conn = await asyncpg.connect(DATABASE_URL)
     query = """
     SELECT
@@ -38,12 +38,12 @@ async def fetch_user_reservations(*user_details, include_date: bool = True) -> p
     rows = await conn.fetch(query, *user_details)
     await conn.close()
     if not rows:
-        return pd.DataFrame()
+        return DataFrame()
 
     # Convert asyncpg.Record to list of dicts
     data = [dict(row) for row in rows]
     logging.info('[DB] *user* reservations fetched')
-    return pd.DataFrame(data)
+    return DataFrame(data)
 
 
 async def fetch_reservations(statuses: list[str], date: datetime.date = None) -> list[dict]:
@@ -70,7 +70,7 @@ async def fetch_reservations(statuses: list[str], date: datetime.date = None) ->
     return [dict(row) for row in rows] if rows else []
 
 
-async def fetch_all_reservations() -> pd.DataFrame:
+async def fetch_all_reservations() -> DataFrame:
     conn = await asyncpg.connect(DATABASE_URL)
     query = """
     SELECT 
@@ -116,10 +116,10 @@ async def fetch_all_reservations() -> pd.DataFrame:
     rows = await conn.fetch(query)
     await conn.close()
     if not rows:
-        return pd.DataFrame()
+        return DataFrame()
 
     data = [dict(row) for row in rows]
-    return pd.DataFrame(data)
+    return DataFrame(data)
 
 
 async def fetch_reservation_by_id(reservation_id: str) -> dict | None:
@@ -160,7 +160,7 @@ async def fetch_existing_user(chat_id: str) -> dict | None:
     return row
 
 
-async def fetch_slot_history(date: str) -> pd.DataFrame | None:
+async def fetch_slot_history(date: str) -> DataFrame | None:
     if isinstance(date, str):
         date = datetime.strptime(date, '%Y-%m-%d').date()
 
@@ -176,5 +176,5 @@ async def fetch_slot_history(date: str) -> pd.DataFrame | None:
     rows = await conn.fetch(query, date)
     await conn.close()
     logging.info(f'[DB] available slots fetched - {len(rows)} results')
-    result = pd.DataFrame(rows, columns=['job_timestamp', 'slot', 'available']) if rows else None
+    result = DataFrame(rows, columns=['job_timestamp', 'slot', 'available']) if rows else None
     return result

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from math import ceil
 from zoneinfo import ZoneInfo
 
+from pandas import DataFrame
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 
@@ -76,14 +77,16 @@ class Keyboard:
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod
-    def date(days_past: int = 0, days_future: int = 5):
+    def date(days_past: int = 0, days_future: int = 5, history_state=False):
         dates = generate_days(past=days_past, future=days_future)
         keyboard_buttons = []
         for i in range(0, len(dates), 3):
             row = [KeyboardButton(date) for date in dates[i : i + 3]]
             keyboard_buttons.append(row)
-
-        keyboard_buttons.insert(0, [KeyboardButton(Label.CURRENT_RESERVATIONS), KeyboardButton(Label.AVAILABLE_SLOTS)])
+        if not history_state:
+            keyboard_buttons.insert(
+                0, [KeyboardButton(Label.CURRENT_RESERVATIONS), KeyboardButton(Label.AVAILABLE_SLOTS)]
+            )
         keyboard_buttons.append([KeyboardButton(Label.RESERVATION_TYPE_EDIT)])
 
         return ReplyKeyboardMarkup(keyboard_buttons)
@@ -116,6 +119,19 @@ class Keyboard:
                 0, [KeyboardButton(Label.CURRENT_RESERVATIONS), KeyboardButton(Label.AVAILABLE_SLOTS)]
             )
 
+        return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+    @staticmethod
+    def slot(history: DataFrame):
+        slots = list(history['slot'].unique())
+        keyboard_buttons = [[KeyboardButton(slot) for slot in slots[i : i + 3]] for i in range(0, len(slots), 5)]
+        keyboard_buttons.append([KeyboardButton(Label.BACK)])
+
+        return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+    @staticmethod
+    def back():
+        keyboard_buttons = [[KeyboardButton(Label.BACK)]]
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod
