@@ -31,6 +31,15 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         )
         return States.RETRY
 
+    elif user_input == Label.HISTORY:
+        keyboard = Keyboard.date(days_past=5, days_future=0, history_state=True)
+        await update.message.reply_text(
+            'So, when will it be? You can see the data for the past *6 days*. 📅',
+            reply_markup=keyboard,
+            parse_mode='Markdown',
+        )
+        return States.CHOOSING_DATE_HISTORY
+
     elif user_input == Label.CURRENT_RESERVATIONS:
         await update.message.reply_text(
             await show_existing_reservations(update, context),

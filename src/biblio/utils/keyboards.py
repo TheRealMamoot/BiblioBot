@@ -129,7 +129,7 @@ class Keyboard:
         slots = list(history['slot'].unique())
         n = 3
         keyboard_buttons = [[KeyboardButton(slot) for slot in slots[i : i + n]] for i in range(0, len(slots), n)]
-        keyboard_buttons.append([KeyboardButton(Label.BACK)])
+        keyboard_buttons.insert(0, [KeyboardButton(Label.BACK)])
 
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
@@ -200,12 +200,11 @@ class Keyboard:
     @staticmethod
     def retry():
         keyboard_buttons = [
+            [KeyboardButton(Label.CURRENT_RESERVATIONS), KeyboardButton(Label.AVAILABLE_SLOTS)],
             [KeyboardButton(Label.RETRY)],
-            [KeyboardButton(Label.CURRENT_RESERVATIONS)],
-            [KeyboardButton(Label.AVAILABLE_SLOTS)],
+            [KeyboardButton(Label.HISTORY)],
             [KeyboardButton(Label.CANCEL_RESERVATION)],
-            [KeyboardButton(Label.FEEDBACK)],
-            [KeyboardButton(Label.DONATE)],
+            [KeyboardButton(Label.FEEDBACK), KeyboardButton(Label.DONATE)],
         ]
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
