@@ -2,6 +2,7 @@ import logging
 import textwrap
 import traceback
 from datetime import datetime, time
+from io import BytesIO
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -223,7 +224,7 @@ async def show_slot_history(
     slot: str,
     start: str = time(*MIN_AVAILABILITY_START).strftime('%H:%M'),
     end: str | None = None,
-) -> None:
+) -> None | BytesIO:
     slot_end_str = slot.split('-')[1]
     slot_end = datetime.strptime(slot_end_str, '%H:%M').time()
     parsed_start = datetime.strptime(start, '%H:%M').time()

@@ -26,7 +26,7 @@ from src.biblio.utils.notif import notify_donation, notify_reminder, notify_rese
 from src.biblio.utils.utils import ReservationConfirmationConflict, get_wks
 
 JOB_SCHEDULE = Schedule.jobs(daylight_saving=True)
-SEMAPHORE_LIMIT = 4
+SEMAPHORE_LIMIT = 5
 semaphore = asyncio.Semaphore(SEMAPHORE_LIMIT)
 
 

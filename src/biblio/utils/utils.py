@@ -123,6 +123,27 @@ def plot_slot_history(df: DataFrame, date: str, slot: str, start: str = None, en
     if start and end:
         title += f' (Range: {start}–{end})'
 
+    y_min = df['available'].min()
+    y_max = df['available'].max()
+
+    # Padding above
+    y_padding_top = max(int(0.05 * (y_max - y_min)), 1)
+    y_range_max = min(300, y_max + y_padding_top)
+
+    y_padding_bottom = min(max(1, int(0.05 * y_max)), 10)
+    y_range_min = -y_padding_bottom
+
+    y_range_span = y_range_max
+    dtick = 1 if y_range_span <= 5 else 2 if y_range_span <= 10 else 5 if y_range_span <= 30 else 10
+
+    # Height scaling to positive range (extra 50px for padding under 0)
+    height = 500 + int(y_range_span * 10) + 50
+    height = min(height, 1200)
+
+    # Tick labels: only for 0 and up
+    tickvals = list(range(y_range_min, y_range_max + 1, dtick))
+    ticktext = [str(val) if val >= 0 else '' for val in tickvals]
+
     fig = px.line(
         df,
         x='time',
@@ -146,9 +167,11 @@ def plot_slot_history(df: DataFrame, date: str, slot: str, start: str = None, en
             gridwidth=1,
         ),
         yaxis=dict(
-            dtick=10,
-            tickmode='linear',
-            range=[0, df['available'].max() + 5],
+            range=[y_range_min, y_range_max],
+            tickmode='array',
+            tickvals=tickvals,
+            ticktext=ticktext,
+            dtick=dtick,
             zeroline=True,
             zerolinewidth=3,
             zerolinecolor='gray',
@@ -158,7 +181,7 @@ def plot_slot_history(df: DataFrame, date: str, slot: str, start: str = None, en
     )
 
     buffer = BytesIO()
-    fig.write_image(buffer, format='jpg', width=1500, height=1150)
+    fig.write_image(buffer, format='jpg', width=1500, height=height)
     buffer.seek(0)
     return buffer
 
