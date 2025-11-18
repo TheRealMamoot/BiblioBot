@@ -151,7 +151,11 @@ def plot_slot_history(df: DataFrame, date: str, slot: str, start: str = None, en
     ax.set_yticklabels(ticktext)
     ax.grid(True, which='both', linestyle='--', linewidth=0.7, alpha=0.5)
 
-    ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=1))  # ← show every 1 minute
+    time_span_minutes = (df['time'].max() - df['time'].min()).total_seconds() / 60
+    base_minutes = 20
+    interval = max(1, int(time_span_minutes // base_minutes))
+
+    ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=interval))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
     fig.autofmt_xdate(rotation=45)
