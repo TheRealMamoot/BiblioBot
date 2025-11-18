@@ -7,7 +7,9 @@ from io import BytesIO
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import plotly.express as px
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
+import pandas as pd
 import pygsheets
 from dateutil.parser import parse
 from dotenv import load_dotenv
@@ -123,10 +125,10 @@ def plot_slot_history(df: DataFrame, date: str, slot: str, start: str = None, en
     if start and end:
         title += f' (Range: {start}–{end})'
 
+    df['time'] = pd.to_datetime(df['time'])
     y_min = df['available'].min()
     y_max = df['available'].max()
 
-    # Padding above
     y_padding_top = max(int(0.05 * (y_max - y_min)), 1)
     y_range_max = min(300, y_max + y_padding_top)
 
@@ -135,54 +137,34 @@ def plot_slot_history(df: DataFrame, date: str, slot: str, start: str = None, en
 
     y_range_span = y_range_max
     dtick = 1 if y_range_span <= 5 else 2 if y_range_span <= 10 else 5 if y_range_span <= 30 else 10
-
-    # Height scaling to positive range (extra 50px for padding under 0)
-    height = 500 + int(y_range_span * 10) + 50
-    height = min(height, 1200)
-
-    # Tick labels: only for 0 and up
     tickvals = list(range(y_range_min, y_range_max + 1, dtick))
     ticktext = [str(val) if val >= 0 else '' for val in tickvals]
 
-    fig = px.line(
-        df,
-        x='time',
-        y='available',
-        title=title,
-        markers=True,
-    )
+    fig, ax = plt.subplots(figsize=(15, 8))
+    ax.plot(df['time'], df['available'], marker='o', linewidth=3)
 
-    fig.update_traces(line=dict(width=3))
+    ax.set_title(title, fontsize=22, weight='bold', pad=20)
+    ax.set_xlabel('Time', fontsize=16)
+    ax.set_ylabel('Available Seats', fontsize=16)
+    ax.set_ylim(y_range_min, y_range_max)
+    ax.set_yticks(tickvals)
+    ax.set_yticklabels(ticktext)
+    ax.grid(True, which='both', linestyle='--', linewidth=0.7, alpha=0.5)
 
-    fig.update_layout(
-        xaxis_title='Time',
-        yaxis_title='Available Seats',
-        template='plotly_white',
-        title_font=dict(size=28),
-        xaxis_title_font=dict(size=22),
-        yaxis_title_font=dict(size=22),
-        font=dict(size=22),
-        xaxis=dict(
-            gridcolor='rgba(50, 50, 50, 0.3)',
-            gridwidth=1,
-        ),
-        yaxis=dict(
-            range=[y_range_min, y_range_max],
-            tickmode='array',
-            tickvals=tickvals,
-            ticktext=ticktext,
-            dtick=dtick,
-            zeroline=True,
-            zerolinewidth=3,
-            zerolinecolor='gray',
-            gridcolor='rgba(50, 50, 50, 0.3)',
-            gridwidth=1,
-        ),
-    )
+    ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=1))  # ← show every 1 minute
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+
+    fig.autofmt_xdate(rotation=45)
+
+    ax.axhline(0, color='gray', linewidth=2)
+
+    plt.tight_layout()
 
     buffer = BytesIO()
-    fig.write_image(buffer, format='jpg', width=1500, height=height)
+    fig.savefig(buffer, format='jpg', dpi=150)
+    plt.close(fig)
     buffer.seek(0)
+
     return buffer
 
 
