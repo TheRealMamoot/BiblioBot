@@ -235,13 +235,7 @@ async def show_slot_history(
     all_slots['time'] = all_slots['time'].apply(
         lambda t: t.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo('Europe/Rome')).strftime('%H:%M:%S')
     )
-    all_slots = all_slots[
-        all_slots['time'].apply(lambda t: parsed_start <= datetime.strptime(t, '%H:%M:%S').time() < parsed_end)
-    ]
 
-    all_slots = all_slots[
-        all_slots['time'].apply(lambda t: parsed_start <= datetime.strptime(t, '%H:%M:%S').time() < parsed_end)
-    ]
     all_slots = all_slots[
         all_slots['time'].apply(lambda t: parsed_start <= datetime.strptime(t, '%H:%M:%S').time() < parsed_end)
     ]

@@ -159,6 +159,11 @@ async def filter_start_selection(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text('Just choose a slot. 😒', reply_markup=keyboard)
         return States.CHOOSING_SLOT
 
+    elif user_input == Label.HOME:
+        keyboard = Keyboard.reservation_type()
+        await update.message.reply_text("Let's try again, shall we? 😪", reply_markup=keyboard)
+        return States.RESERVE_TYPE
+
     filter_start = normalize_slot_input(hour=user_input)
     if filter_start is None:
         await update.message.reply_text(
@@ -214,6 +219,11 @@ async def filter_end_selection(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text('Starting time please!', reply_markup=keyboard)
         return States.CHOOSING_FILTER_START
 
+    elif user_input == Label.HOME:
+        keyboard = Keyboard.reservation_type()
+        await update.message.reply_text("Let's try again, shall we? 😪", reply_markup=keyboard)
+        return States.RESERVE_TYPE
+
     filter_end = normalize_slot_input(hour=user_input)
     if filter_end is None:
         await update.message.reply_text(
@@ -246,7 +256,7 @@ async def filter_end_selection(update: Update, context: ContextTypes.DEFAULT_TYP
 
     context.user_data['filter_end'] = filter_end
     await update.message.reply_text(
-        f'🔄 Preparing history from *{context.user_data["filter_start"]} to {context.user_data["filter_end"]}*',
+        f'🔄 Preparing history: *{context.user_data["filter_start"]} - {context.user_data["filter_end"]}*',
         parse_mode='Markdown',
     )
 

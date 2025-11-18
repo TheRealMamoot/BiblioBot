@@ -31,6 +31,7 @@ class Label:
     FEEDBACK = '💡 Feedback'
     HELP = '❓ Help'
     HISTORY = '📊 Available slots history'
+    HOME = '🏠 Home'
     RESERVATION_TYPE_BACK = '⬅️ Back to reservation type'
     RESERVATION_TYPE_EDIT = '⬅️ Edit reservation type'
     RETRY = "🆕 Let's go again!"
@@ -80,8 +81,9 @@ class Keyboard:
     def date(days_past: int = 0, days_future: int = 5, history_state=False):
         dates = generate_days(past=days_past, future=days_future)
         keyboard_buttons = []
-        for i in range(0, len(dates), 3):
-            row = [KeyboardButton(date) for date in dates[i : i + 3]]
+        n = 3
+        for i in range(0, len(dates), n):
+            row = [KeyboardButton(date) for date in dates[i : i + n]]
             keyboard_buttons.append(row)
         if not history_state:
             keyboard_buttons.insert(
@@ -111,7 +113,8 @@ class Keyboard:
             times.append(current.strftime('%H:%M'))
             current += timedelta(minutes=30)
 
-        keyboard_buttons = [[KeyboardButton(time) for time in times[i : i + 5]] for i in range(0, len(times), 5)]
+        n = 5
+        keyboard_buttons = [[KeyboardButton(time) for time in times[i : i + n]] for i in range(0, len(times), n)]
         keyboard_buttons.append([KeyboardButton(Label.BACK)])
 
         if instant:
@@ -124,7 +127,8 @@ class Keyboard:
     @staticmethod
     def slot(history: DataFrame):
         slots = list(history['slot'].unique())
-        keyboard_buttons = [[KeyboardButton(slot) for slot in slots[i : i + 2]] for i in range(0, len(slots), 5)]
+        n = 3
+        keyboard_buttons = [[KeyboardButton(slot) for slot in slots[i : i + n]] for i in range(0, len(slots), n)]
         keyboard_buttons.append([KeyboardButton(Label.BACK)])
 
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
@@ -157,8 +161,9 @@ class Keyboard:
         ]
         times = start_times if start_state else end_times
 
-        keyboard_buttons = [[KeyboardButton(t) for t in times[i : i + 5]] for i in range(0, len(times), 5)]
-        keyboard_buttons.append([KeyboardButton(Label.BACK)])
+        n = 5
+        keyboard_buttons = [[KeyboardButton(t) for t in times[i : i + n]] for i in range(0, len(times), n)]
+        keyboard_buttons.append([KeyboardButton(Label.BACK), KeyboardButton(Label.HOME)])
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod
@@ -181,7 +186,8 @@ class Keyboard:
 
         durations = list(range(1, durations))
 
-        keyboard_buttons = [[KeyboardButton(dur) for dur in durations[i : i + 8]] for i in range(0, len(durations), 8)]
+        n = 8
+        keyboard_buttons = [[KeyboardButton(dur) for dur in durations[i : i + n]] for i in range(0, len(durations), n)]
         keyboard_buttons.append([KeyboardButton(Label.BACK)])
 
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True), durations
