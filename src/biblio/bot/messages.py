@@ -9,7 +9,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.biblio.config.config import Schedule
-from src.biblio.db.fetch import fetch_slot_history, fetch_user_reservations
+from src.biblio.db.fetch import fetch_user_reservations
 from src.biblio.utils.utils import plot_slot_history, utc_tuple_to_rome_time
 
 JOB_SCHEDULE = Schedule.jobs(daylight_saving=True)
@@ -217,48 +217,38 @@ def show_help() -> str:
 
 
 async def show_slot_history(
-    # update: Update,
-    # context: ContextTypes.DEFAULT_TYPE,
+    update: Update,
     history: pd.DataFrame,
     date: str,
     slot: str,
     start: str = time(*MIN_AVAILABILITY_START).strftime('%H:%M'),
     end: str | None = None,
 ) -> None:
-    try:
-        slot_end_str = slot.split('-')[1]
-        slot_end = datetime.strptime(slot_end_str, '%H:%M').time()
-        parsed_start = datetime.strptime(start, '%H:%M').time()
-        parsed_end = datetime.strptime(end, '%H:%M').time() if end else slot_end
-        # if parsed_start < MIN_AVAILABILITY_START:
-        #     await update.message.reply_text('⚠️ Start time cannot be earlier than 07:00.')
-        #     return
-        # if parsed_end > slot_end:
-        #     await update.message.reply_text(f'⚠️ End time cannot be later than slot end: {slot_end_str}.')
-        #     return
-        # if parsed_start >= parsed_end:
-        #     await update.message.reply_text('⚠️ Start time must be before end time.')
-        #     return
+    slot_end_str = slot.split('-')[1]
+    slot_end = datetime.strptime(slot_end_str, '%H:%M').time()
+    parsed_start = datetime.strptime(start, '%H:%M').time()
+    parsed_end = datetime.strptime(end, '%H:%M').time() if end else slot_end
 
-    except ValueError:
-        # await update.message.reply_text('❌ Invalid time format. Use HH:MM (e.g. 08:30).')
-        return
+    all_slots = history.copy()
+    all_slots.rename(columns={'job_timestamp': 'time'}, inplace=True)
 
-    # history = await fetch_slot_history(date=date)
-    history.rename(columns={'job_timestamp': 'time'}, inplace=True)
-
-    history['time'] = history['time'].apply(
+    all_slots['time'] = all_slots['time'].apply(
         lambda t: t.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo('Europe/Rome')).strftime('%H:%M:%S')
     )
-
-    history = history[
-        history['time'].apply(lambda t: parsed_start <= datetime.strptime(t, '%H:%M:%S').time() < parsed_end)
+    all_slots = all_slots[
+        all_slots['time'].apply(lambda t: parsed_start <= datetime.strptime(t, '%H:%M:%S').time() < parsed_end)
     ]
 
-    selected_slot = history[history['slot'] == slot][['time', 'available']]
+    all_slots = all_slots[
+        all_slots['time'].apply(lambda t: parsed_start <= datetime.strptime(t, '%H:%M:%S').time() < parsed_end)
+    ]
+    all_slots = all_slots[
+        all_slots['time'].apply(lambda t: parsed_start <= datetime.strptime(t, '%H:%M:%S').time() < parsed_end)
+    ]
 
+    selected_slot = all_slots[all_slots['slot'] == slot][['time', 'available']]
     if selected_slot.empty:
-        # await update.message.reply_text('ℹ️ No data available for this time range.')
-        return
-    plot_slot_history(selected_slot, date, slot, start, end=parsed_end.strftime('%H:%M'))
-    # await update.message.reply_text('✅ Slot history chart generated.')
+        return None
+
+    history_graph = plot_slot_history(selected_slot, date, slot, start, end=parsed_end.strftime('%H:%M'))
+    return history_graph

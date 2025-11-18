@@ -3,12 +3,13 @@ import json
 import os
 from datetime import datetime, timedelta
 from functools import cache
+from io import BytesIO
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import plotly.express as px
-import plotly.io as pio
 import pygsheets
+from dateutil.parser import parse
 from dotenv import load_dotenv
 from pandas import DataFrame
 
@@ -115,10 +116,9 @@ def get_wks(auth_mode: str = 'cloud'):
     return gc.open('Biblio-logs').worksheet_by_title('backup')
 
 
-def plot_slot_history(
-    df: DataFrame, date: str, slot: str, start: str = None, end: str = None, output_path: str = 'slot_history.jpg'
-):
-    day_label = datetime.strptime(date, '%Y-%m-%d').strftime('%A, %Y-%m-%d')
+def plot_slot_history(df: DataFrame, date: str, slot: str, start: str = None, end: str = None) -> BytesIO:
+    parsed_date = parse(date)
+    day_label = parsed_date.strftime('%A, %Y-%m-%d')
     title = f'{day_label} for Slot {slot}'
     if start and end:
         title += f' (Range: {start}–{end})'
@@ -140,7 +140,11 @@ def plot_slot_history(
         title_font=dict(size=28),
         xaxis_title_font=dict(size=22),
         yaxis_title_font=dict(size=22),
-        font=dict(size=18),
+        font=dict(size=22),
+        xaxis=dict(
+            gridcolor='rgba(50, 50, 50, 0.3)',
+            gridwidth=1,
+        ),
         yaxis=dict(
             dtick=10,
             tickmode='linear',
@@ -148,10 +152,15 @@ def plot_slot_history(
             zeroline=True,
             zerolinewidth=3,
             zerolinecolor='gray',
+            gridcolor='rgba(50, 50, 50, 0.3)',
+            gridwidth=1,
         ),
     )
 
-    pio.write_image(fig, output_path, format='jpg', width=1200, height=900)
+    buffer = BytesIO()
+    fig.write_image(buffer, format='jpg', width=1500, height=1150)
+    buffer.seek(0)
+    return buffer
 
 
 def utc_tuple_to_rome_time(hour_minute: tuple[int, int]) -> tuple[int, int]:

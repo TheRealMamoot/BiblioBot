@@ -124,14 +124,41 @@ class Keyboard:
     @staticmethod
     def slot(history: DataFrame):
         slots = list(history['slot'].unique())
-        keyboard_buttons = [[KeyboardButton(slot) for slot in slots[i : i + 3]] for i in range(0, len(slots), 5)]
+        keyboard_buttons = [[KeyboardButton(slot) for slot in slots[i : i + 2]] for i in range(0, len(slots), 5)]
         keyboard_buttons.append([KeyboardButton(Label.BACK)])
 
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod
-    def back():
-        keyboard_buttons = [[KeyboardButton(Label.BACK)]]
+    def filter(start_state=True):
+        start_times = [
+            '07:00',
+            '07:10',
+            '07:15',
+            '07:20',
+            '07:25',
+            '07:30',
+            '07:35',
+            '07:40',
+            '07:45',
+            '07:50',
+        ]
+        end_times = [
+            '07:10',
+            '07:20',
+            '07:30',
+            '07:40',
+            '07:50',
+            '08:00',
+            '08:10',
+            '08:20',
+            '08:30',
+            '08:40',
+        ]
+        times = start_times if start_state else end_times
+
+        keyboard_buttons = [[KeyboardButton(t) for t in times[i : i + 5]] for i in range(0, len(times), 5)]
+        keyboard_buttons.append([KeyboardButton(Label.BACK)])
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod

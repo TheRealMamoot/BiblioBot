@@ -38,14 +38,29 @@ def validate_user_data(user_data: dict):
 
 
 def normalize_slot_input(hour: str) -> str | None:
-    if re.fullmatch(r'^\d{1,2}$', str):  # e.g. '7' → '07:00'
-        hour = int(str)
-        return f'{hour:02}:00' if 0 <= hour < 24 else None
+    hour = hour.strip()
 
-    if re.fullmatch(r'^\d{1,2}:\d{1,2}$', str):  # e.g. '7:5', '7:05'
-        hour, minute = map(int, str.split(':'))
-        if 0 <= hour < 24 and 0 <= minute < 60:
-            return f'{hour:02}:{minute:02}'
+    if re.fullmatch(r'\d{1,2}', hour):
+        h = int(hour)
+        return f'{h:02}:00' if 0 <= h < 24 else None
+
+    if re.fullmatch(r'\d{1,2}:\d{1,4}', hour):
+        h_str, m_str = hour.split(':')
+        try:
+            h = int(h_str)
+            m = int(m_str)
+
+            if not (0 <= h < 24):
+                return None
+
+            if m >= 60:
+                return None
+            if m < 0:
+                return None
+
+            return f'{h:02}:{m:02}'
+        except ValueError:
+            return None
 
     return None
 
