@@ -152,13 +152,13 @@ async def execute_reservations(bot: Bot) -> None:
     logging.info(f'[DB-JOB] Reservation job completed: {len(updates)} updated')
 
 
-async def backup_reservations(auth_mode: str = 'cloud') -> None:
+async def backup_reservations() -> None:
     df = await fetch_all_reservations()
     if df.empty:
         logging.info('[GSHEET] No data to write to the sheet')
         return
 
-    wks: Worksheet = get_wks(auth_mode)
+    wks: Worksheet = get_wks()
     wks.clear(start='A1')
     wks.set_dataframe(df, (1, 1))
     logging.info('[GSHEET] Data written to Google Sheet successfully')
@@ -222,11 +222,11 @@ def schedule_slot_snapshot_job() -> None:
     scheduler.start()
 
 
-def schedule_backup_job(auth_mode: str = 'cloud') -> None:
+def schedule_backup_job() -> None:
     @aiocron.crontab('*/1 * * * *', tz=ZoneInfo('Europe/Rome'))
     async def _backup_job():
         logging.info('[GSHEET] Starting Google Sheets backup')
-        await backup_reservations(auth_mode)
+        await backup_reservations()
 
 
 def schedule_reminder_job(bot: Bot) -> None:

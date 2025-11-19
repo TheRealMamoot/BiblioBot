@@ -106,14 +106,6 @@ def get_parser():
         choices=['prod', 'staging'],
         help='Environment to run',
     )
-    parser.add_argument(
-        '-g',
-        '--gsheet-auth',
-        type=str,
-        default='cloud',
-        choices=['cloud', 'local'],
-        help='Which .env key to use for gsheet credentials',
-    )
     return parser
 
 
@@ -124,17 +116,12 @@ def get_priorities():
 
 
 @cache
-def get_gsheet_client(auth_mode: str = 'cloud'):
-    if auth_mode == 'cloud':
-        return pygsheets.authorize(service_account_json=os.environ['GSHEETS'])
-    elif auth_mode == 'local':
-        return pygsheets.authorize(service_file=CREDENTIALS_PATH)
-    else:
-        raise ValueError('Wrong mode')
+def get_gsheet_client():
+    return pygsheets.authorize(service_account_json=os.environ['GSHEETS'])
 
 
-def get_wks(auth_mode: str = 'cloud'):
-    gc = get_gsheet_client(auth_mode)
+def get_wks():
+    gc = get_gsheet_client()
     return gc.open('Biblio-logs').worksheet_by_title('backup')
 
 

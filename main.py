@@ -14,7 +14,7 @@ async def main():
     parser = get_parser()
     args = parser.parse_args()
     set_env(args.env)
-    app: Application = build_app(token_env=args.env, gsheet_auth_mode=args.gsheet_auth)
+    app: Application = build_app(token_env=args.env)
     await build_db()
     await app.initialize()
     await notify_deployment(app.bot)
