@@ -2,16 +2,15 @@ import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-import asyncpg
 from pandas import DataFrame
 
-from src.biblio.utils.utils import get_database_url
+from src.biblio.utils.utils import connect_db
 
-DATABASE_URL = get_database_url()
+# DATABASE_URL = get_database_url()
 
 
 async def fetch_user_reservations(*user_details, include_date: bool = True) -> DataFrame:
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await connect_db()
     query = """
     SELECT
         r.id AS id,
@@ -50,7 +49,7 @@ async def fetch_reservations(statuses: list[str], date: datetime.date = None) ->
     if date is None:
         date = datetime.now(ZoneInfo('Europe/Rome')).date()
 
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await connect_db()
     query = """
     SELECT r.*,
     u.codice_fiscale,
@@ -71,7 +70,7 @@ async def fetch_reservations(statuses: list[str], date: datetime.date = None) ->
 
 
 async def fetch_all_reservations() -> DataFrame:
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await connect_db()
     query = """
     SELECT 
     r.id as id,
@@ -123,7 +122,7 @@ async def fetch_all_reservations() -> DataFrame:
 
 
 async def fetch_reservation_by_id(reservation_id: str) -> dict | None:
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await connect_db()
     query = """
     SELECT r.booking_code
     FROM reservations r
@@ -135,7 +134,7 @@ async def fetch_reservation_by_id(reservation_id: str) -> dict | None:
 
 
 async def fetch_all_user_chat_ids() -> list[str]:
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await connect_db()
     try:
         rows = await conn.fetch('SELECT DISTINCT chat_id FROM users')
         return [row['chat_id'] for row in rows]
@@ -144,7 +143,7 @@ async def fetch_all_user_chat_ids() -> list[str]:
 
 
 async def fetch_existing_user(chat_id: str) -> dict | None:
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await connect_db()
     query = """
     SELECT 
     id,
@@ -164,7 +163,7 @@ async def fetch_slot_history(date: str) -> DataFrame | None:
     if isinstance(date, str):
         date = datetime.strptime(date, '%Y-%m-%d').date()
 
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await connect_db()
     query = """
     SELECT job_timestamp,
         slot,

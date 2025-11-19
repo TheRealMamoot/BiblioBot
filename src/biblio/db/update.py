@@ -1,15 +1,11 @@
 import logging
 from typing import Any
 
-import asyncpg
-
-from src.biblio.utils.utils import get_database_url
-
-DATABASE_URL = get_database_url()
+from src.biblio.utils.utils import connect_db
 
 
 async def update_cancel_status(reservation_id: str) -> None:
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await connect_db()
     query = """
     UPDATE reservations
     SET status = 'terminated',
@@ -27,7 +23,7 @@ async def update_record(table: str, row_id: str, updates: dict[str, Any]) -> Non
     if not updates:
         raise ValueError('No columns provided to update.')
 
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await connect_db()
 
     # Dynamically build column assignments like col1 = $1, col2 = $2 ...
     columns = list(updates.keys())

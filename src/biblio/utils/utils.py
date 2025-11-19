@@ -7,6 +7,7 @@ from io import BytesIO
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import asyncpg
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -17,6 +18,7 @@ from pandas import DataFrame
 
 from src.biblio.config.config import Schedule
 
+_CURRENT_ENV = 'prod'
 CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / 'biblio' / 'config' / 'biblio.json'
 LIB_SCHEDULE = Schedule.weekly()
 
@@ -28,6 +30,15 @@ class ReservationConfirmationConflict(Exception):
     """
 
     pass
+
+
+def set_env(env: str):
+    global _CURRENT_ENV
+    _CURRENT_ENV = env
+
+
+def get_current_env():
+    return _CURRENT_ENV
 
 
 def load_env():
@@ -72,19 +83,28 @@ def get_token(token_env: str = 'prod'):
 
 
 def get_database_url() -> str:
-    load_env()
-    return os.getenv('DATABASE_URL')
+    load_dotenv()
+
+    mapping = {
+        'prod': 'DATABASE_URL',
+        'staging': 'DATABASE_URL_S',
+    }
+    return os.getenv(mapping.get(_CURRENT_ENV, 'DATABASE_URL_S'))
+
+
+async def connect_db():
+    url = get_database_url()
+    return await asyncpg.connect(url)
 
 
 def get_parser():
     parser = argparse.ArgumentParser(description='Telegram Bot')
     parser.add_argument(
-        '-t',
-        '--token-env',
+        '-env',
         type=str,
         default='prod',
         choices=['prod', 'staging'],
-        help='Which .env key to use for Telegram bot token',
+        help='Environment to run',
     )
     parser.add_argument(
         '-g',
@@ -92,7 +112,7 @@ def get_parser():
         type=str,
         default='cloud',
         choices=['cloud', 'local'],
-        help='Which .env key to use for Telegram bot token',
+        help='Which .env key to use for gsheet credentials',
     )
     return parser
 
@@ -118,6 +138,7 @@ def get_wks(auth_mode: str = 'cloud'):
     return gc.open('Biblio-logs').worksheet_by_title('backup')
 
 
+# !TODO: fix for edge case: only one point!
 def plot_slot_history(df: DataFrame, date: str, slot: str, start: str = None, end: str = None) -> BytesIO:
     parsed_date = parse(date)
     day_label = parsed_date.strftime('%A, %Y-%m-%d')

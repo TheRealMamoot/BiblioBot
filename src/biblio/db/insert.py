@@ -2,13 +2,10 @@ import logging
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-import asyncpg
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.utils.utils import get_database_url
-
-DATABASE_URL = get_database_url()
+from src.biblio.utils.utils import connect_db
 
 
 async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -39,7 +36,7 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def insert_reservation(data: dict):
     columns, placeholders, values = _prepare_insert_parts(data)
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await connect_db()
     query = f"""
     INSERT INTO reservations ({columns})
     VALUES ({placeholders})
@@ -59,7 +56,7 @@ async def insert_user(data: dict) -> str:
     RETURNING id
     """
 
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await connect_db()
     try:
         row = await conn.fetchrow(query, *values)
         if row:
@@ -81,7 +78,7 @@ async def insert_user(data: dict) -> str:
 
 
 async def insert_slots(slots: dict[str, int]) -> None:
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await connect_db()
     try:
         async with conn.transaction():
             for slot, available in slots.items():

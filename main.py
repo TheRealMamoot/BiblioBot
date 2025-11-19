@@ -6,14 +6,15 @@ from src.biblio.app import build_app
 from src.biblio.config.logger import setup_logger
 from src.biblio.db.build import build_db
 from src.biblio.utils.notif import notify_deployment
-from src.biblio.utils.utils import get_parser
+from src.biblio.utils.utils import get_parser, set_env
 
 
 async def main():
     setup_logger()
     parser = get_parser()
     args = parser.parse_args()
-    app: Application = build_app(token_env=args.token_env, gsheet_auth_mode=args.gsheet_auth)
+    set_env(args.env)
+    app: Application = build_app(token_env=args.env, gsheet_auth_mode=args.gsheet_auth)
     await build_db()
     await app.initialize()
     await notify_deployment(app.bot)
