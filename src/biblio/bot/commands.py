@@ -4,10 +4,9 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.biblio.bot.messages import show_donate_message, show_help, show_support_message, show_user_agreement
-from src.biblio.config.config import States
+from src.biblio.config.config import States, get_priorities
 from src.biblio.db.fetch import fetch_existing_user
 from src.biblio.utils.keyboards import Keyboard
-from src.biblio.utils.utils import get_priorities
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

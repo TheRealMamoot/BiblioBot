@@ -3,18 +3,18 @@ import asyncio
 from telegram.ext import Application
 
 from src.biblio.app import build_app
+from src.biblio.config.config import get_parser, load_env
 from src.biblio.config.logger import setup_logger
 from src.biblio.db.build import build_db
 from src.biblio.utils.notif import notify_deployment
-from src.biblio.utils.utils import get_parser, set_env
 
 
 async def main():
     setup_logger()
     parser = get_parser()
     args = parser.parse_args()
-    set_env(args.env)
-    app: Application = build_app(token_env=args.env)
+    load_env(args.env)
+    app: Application = build_app()
     await build_db()
     await app.initialize()
     await notify_deployment(app.bot)

@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from src.biblio.utils.utils import connect_db
+from src.biblio.config.config import connect_db
 
 
 async def update_cancel_status(reservation_id: str) -> None:

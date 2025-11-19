@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.utils.utils import connect_db
+from src.biblio.config.config import connect_db
 
 
 async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

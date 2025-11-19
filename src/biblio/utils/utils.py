@@ -1,49 +1,16 @@
-import argparse
-import json
-import os
 from datetime import datetime, timedelta
-from functools import cache
 from io import BytesIO
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import asyncpg
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import pandas as pd
-import pygsheets
 from dateutil.parser import parse
-from dotenv import load_dotenv
 from pandas import DataFrame
 
 from src.biblio.config.config import Schedule
 
-_CURRENT_ENV = 'prod'
-CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / 'biblio' / 'config' / 'biblio.json'
 LIB_SCHEDULE = Schedule.weekly()
-
-
-class ReservationConfirmationConflict(Exception):
-    """
-    Raised when the server returns a 401 Unauthorized during reservation confirmation.
-    This indicates that the reservation is most likely already confirmed!
-    """
-
-    pass
-
-
-def set_env(env: str):
-    global _CURRENT_ENV
-    _CURRENT_ENV = env
-
-
-def get_current_env():
-    return _CURRENT_ENV
-
-
-def load_env():
-    project_root = Path(__file__).resolve().parents[3]
-    load_dotenv(dotenv_path=project_root / '.env')
 
 
 def generate_days(past: int = 0, future: int = 5) -> list:
@@ -69,60 +36,6 @@ def generate_days(past: int = 0, future: int = 5) -> list:
         days.reverse()
 
     return days
-
-
-def get_token(token_env: str = 'prod'):
-    load_env()
-    if token_env == 'prod':
-        token: str = os.getenv('TELEGRAM_TOKEN')
-    elif token_env == 'staging':
-        token: str = os.getenv('TELEGRAM_TOKEN_S')
-    else:
-        raise ValueError('Wrong mode')
-    return token
-
-
-def get_database_url() -> str:
-    load_dotenv()
-
-    mapping = {
-        'prod': 'DATABASE_URL',
-        'staging': 'DATABASE_URL_S',
-    }
-    return os.getenv(mapping.get(_CURRENT_ENV, 'DATABASE_URL_S'))
-
-
-async def connect_db():
-    url = get_database_url()
-    return await asyncpg.connect(url)
-
-
-def get_parser():
-    parser = argparse.ArgumentParser(description='Telegram Bot')
-    parser.add_argument(
-        '-env',
-        type=str,
-        default='prod',
-        choices=['prod', 'staging'],
-        help='Environment to run',
-    )
-    return parser
-
-
-def get_priorities():
-    priority_codes: dict = os.environ['PRIORITY_CODES']
-    priority_codes = json.loads(priority_codes)
-    return priority_codes
-
-
-@cache
-def get_gsheet_client():
-    return pygsheets.authorize(service_account_json=os.environ['GSHEETS'])
-
-
-def get_wks():
-    gc = get_gsheet_client()
-    return gc.open('Biblio-logs').worksheet_by_title('backup')
 
 
 # !TODO: fix for edge case: only one point!

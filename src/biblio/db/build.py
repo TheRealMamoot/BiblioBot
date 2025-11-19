@@ -1,8 +1,7 @@
 import logging
 from pathlib import Path
 
-# import asyncpg
-from src.biblio.utils.utils import connect_db
+from src.biblio.config.config import connect_db
 
 SCHEMA_PATH = Path(__file__).parent / 'schema.sql'
 

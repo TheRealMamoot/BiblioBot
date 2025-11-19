@@ -4,9 +4,7 @@ from zoneinfo import ZoneInfo
 
 from pandas import DataFrame
 
-from src.biblio.utils.utils import connect_db
-
-# DATABASE_URL = get_database_url()
+from src.biblio.config.config import connect_db
 
 
 async def fetch_user_reservations(*user_details, include_date: bool = True) -> DataFrame:

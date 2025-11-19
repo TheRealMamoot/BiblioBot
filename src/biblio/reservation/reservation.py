@@ -6,8 +6,8 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
+from src.biblio.config.config import ReservationConfirmationConflict
 from src.biblio.reservation.slot_datetime import extract_available_seats
-from src.biblio.utils.utils import ReservationConfirmationConflict
 from src.biblio.utils.validation import validate_user_data
 
 

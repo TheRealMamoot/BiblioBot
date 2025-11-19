@@ -1,5 +1,14 @@
+import argparse
+import json
+import os
 from dataclasses import dataclass
 from enum import IntEnum, auto
+from functools import cache
+from pathlib import Path
+
+import asyncpg
+import pygsheets
+from dotenv import load_dotenv
 
 
 class States(IntEnum):
@@ -54,3 +63,55 @@ class Schedule:
 
     def get_hours(self, key):
         return self.hours.get(key, (0, 0))
+
+
+class ReservationConfirmationConflict(Exception):
+    """
+    Raised when the server returns a 401 Unauthorized during reservation confirmation.
+    This indicates that the reservation is most likely already confirmed!
+    """
+
+    pass
+
+
+def load_env(name: str = 'prod'):
+    global _CURRENT_ENV
+    _CURRENT_ENV = name
+    project_root = Path(__file__).resolve().parents[3]
+
+    load_dotenv(project_root / '.env.production')
+    if name == 'staging':
+        load_dotenv(project_root / '.env.staging', override=True)
+
+
+def get_parser():
+    parser = argparse.ArgumentParser(description='Telegram Bot')
+    parser.add_argument(
+        '-env',
+        type=str,
+        default='prod',
+        choices=['prod', 'staging'],
+        help='Environment to run',
+    )
+    return parser
+
+
+@cache
+def get_gsheet_client():
+    return pygsheets.authorize(service_account_json=os.getenv('GSHEETS'))
+
+
+def get_wks():
+    gc = get_gsheet_client()
+    return gc.open('Biblio-logs').worksheet_by_title('backup')
+
+
+async def connect_db():
+    url = os.getenv('DATABASE_URL')
+    return await asyncpg.connect(url)
+
+
+def get_priorities():
+    priority_codes: dict = os.getenv('PRIORITY_CODES')
+    priority_codes = json.loads(priority_codes)
+    return priority_codes

@@ -1,3 +1,5 @@
+import os
+
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -25,11 +27,10 @@ from src.biblio.selection.duration import duration_availability, duration_select
 from src.biblio.selection.retry import retry
 from src.biblio.selection.time import filter_end_selection, filter_start_selection, slot_selection, time_selection
 from src.biblio.selection.type import type_selection
-from src.biblio.utils.utils import get_token
 
 
-def build_app(token_env='prod'):
-    app = Application.builder().token(get_token(token_env)).build()
+def build_app():
+    app = Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={

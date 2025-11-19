@@ -7,10 +7,9 @@ from telegram import ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from src.biblio.bot.messages import show_help, show_support_message
-from src.biblio.config.config import States
+from src.biblio.config.config import States, get_priorities
 from src.biblio.db.insert import insert_user
 from src.biblio.utils.keyboards import Keyboard, Label
-from src.biblio.utils.utils import get_priorities
 from src.biblio.utils.validation import validate_codice_fiscale, validate_email
 
 

@@ -11,7 +11,7 @@ from pygsheets import Worksheet
 from telegram import Bot
 
 from src.biblio.bot.messages import show_notification
-from src.biblio.config.config import Schedule
+from src.biblio.config.config import ReservationConfirmationConflict, Schedule, get_wks
 from src.biblio.db.fetch import fetch_all_reservations, fetch_reservations
 from src.biblio.db.insert import insert_slots
 from src.biblio.db.update import update_record
@@ -23,7 +23,6 @@ from src.biblio.reservation.reservation import (
 )
 from src.biblio.reservation.slot_datetime import reserve_datetime
 from src.biblio.utils.notif import notify_donation, notify_reminder, notify_reservation_activation
-from src.biblio.utils.utils import ReservationConfirmationConflict, get_wks
 
 JOB_SCHEDULE = Schedule.jobs(daylight_saving=True)
 SEMAPHORE_LIMIT = 5
