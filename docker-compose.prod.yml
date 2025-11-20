@@ -1,0 +1,10 @@
+services:
+  bot:
+    env_file:
+      - .env.staging
+    command: ["python", "main.py", "-env", "staging"]
+    depends_on: {}
+
+  postgres:
+    deploy:
+      replicas: 0
