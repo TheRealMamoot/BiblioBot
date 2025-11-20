@@ -1,13 +1,28 @@
-FROM python:3.13.4-slim-bookworm AS builder
+FROM python:3.13.4-slim AS builder
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc \
-    && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install --prefix=/install -r requirements.txt
 
-FROM python:3.13.4-slim-bookworm AS runtime
+RUN pip install uv && \
+    rm -rf /root/.cache/pip
+
+COPY pyproject.toml pyproject.toml
+COPY uv.lock uv.lock
+
+ENV VIRTUAL_ENV=/venv
+RUN python -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+RUN uv pip install .
+
+
+FROM python:3.13.4-slim AS runtime
 WORKDIR /app
-COPY --from=builder /install /usr/local
-COPY . .
-CMD ["python", "main.py", "-env", "prod"]
+
+ENV VIRTUAL_ENV=/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+COPY --from=builder /venv /venv
+
+COPY main.py .
+COPY src/ src/
+
+CMD ["python", "main.py"]
