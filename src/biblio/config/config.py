@@ -10,6 +10,8 @@ import asyncpg
 import pygsheets
 from dotenv import load_dotenv
 
+CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / 'biblio' / 'config' / 'biblio.json'
+
 
 class States(IntEnum):
     AGREEMENT = auto()
@@ -74,14 +76,18 @@ class ReservationConfirmationConflict(Exception):
     pass
 
 
-def load_env(name: str = 'prod'):
+def load_env(name: str = 'prod') -> None:
     global _CURRENT_ENV
     _CURRENT_ENV = name
     project_root = Path(__file__).resolve().parents[3]
-
-    load_dotenv(project_root / '.env.production')
-    if name == 'staging':
-        load_dotenv(project_root / '.env.staging', override=True)
+    mapping = {
+        'local': '.env',
+        'staging': '.env.staging',
+        'prod': '.env.production',
+    }
+    env_file = project_root / mapping.get(name)
+    if env_file.exists():
+        load_dotenv(env_file, override=False)
 
 
 def get_parser():
@@ -89,8 +95,8 @@ def get_parser():
     parser.add_argument(
         '-env',
         type=str,
-        default='prod',
-        choices=['prod', 'staging'],
+        default='local',
+        choices=['prod', 'staging', 'local'],
         help='Environment to run',
     )
     return parser
@@ -98,7 +104,11 @@ def get_parser():
 
 @cache
 def get_gsheet_client():
-    return pygsheets.authorize(service_account_json=os.getenv('GSHEETS'))
+    gsheets = os.getenv('GSHEETS')
+    if gsheets:
+        return pygsheets.authorize(service_account_json=gsheets)
+    else:
+        return pygsheets.authorize(service_file=CREDENTIALS_PATH)
 
 
 def get_wks():

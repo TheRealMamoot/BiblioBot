@@ -1,0 +1,16 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.csv
+*.tsv
+*.xlsx
+*.jpg
+*.png
+.vscode/
+.venv/
+.env
+.env.staging
+.env.production
+.git/

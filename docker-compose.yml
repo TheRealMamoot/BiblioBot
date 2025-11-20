@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: biblio_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: biblio
+      POSTGRES_PASSWORD: biblio
+      POSTGRES_DB: biblio_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U biblio -d biblio_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  bot:
+    build:
+      context: .
+    container_name: biblio_bot
+    restart: always
+
+    env_file:
+      - .env
+
+    command: ["python", "main.py", "-env", "local"]
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
