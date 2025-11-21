@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import os
 from dataclasses import dataclass
 from enum import IntEnum, auto
@@ -14,14 +15,15 @@ CONFIG_DIR = Path(__file__).resolve().parents[2] / "biblio" / "config"
 DEFAULT_CREDENTIALS = CONFIG_DIR / "biblio.json"
 
 
-def _resolve_credentials_path() -> Path:
+def _resolve_credentials_path() -> Path | None:
     if DEFAULT_CREDENTIALS.exists():
         return DEFAULT_CREDENTIALS
-    json_files = list(CONFIG_DIR.glob("*.json"))
 
-    if json_files:
-        return json_files[0]
-    raise FileNotFoundError(f"No credentials JSON file found in {CONFIG_DIR}")
+    path = next(CONFIG_DIR.glob("*.json"), None)
+    if path is None:
+        logging.warning(f"[GSHEETS] No credentials JSON file found in {CONFIG_DIR}")
+
+    return path
 
 
 CREDENTIALS_PATH = _resolve_credentials_path()
