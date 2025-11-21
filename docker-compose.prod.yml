@@ -1,8 +1,8 @@
 services:
   bot:
     env_file:
-      - .env.staging
-    command: ["python", "main.py", "-env", "staging"]
+      - .env.production
+    command: ["python", "main.py", "-env", "prod"]
     depends_on: {}
 
   postgres:

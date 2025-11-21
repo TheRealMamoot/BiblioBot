@@ -82,7 +82,7 @@ GSHEETS=<YOUR_SERVICE_ACOUNT_CONTENT>
 
 ### Google Sheets
 
-You **must** create a new sheet, rename it as **Biblio-logs** and rename the tab as **backup**. You would also have to share the sheet with the **email address** you obtain from the credentials as en **editor**. FInally you need to enable **The Google Sheets API** in the Google cloud console. (Instructions found [here](https://support.google.com/googleapi/answer/6158841?hl=en))
+You **must** create a new sheet, rename it as **Biblio-logs** and rename the tab as **backup**. You would also have to share the sheet with the **email address** you obtain from the credentials as an **editor**. FInally you need to enable **The Google Sheets API** in the Google cloud console. (Instructions found [here](https://support.google.com/googleapi/answer/6158841?hl=en))
 
 ### Required Bot Commands
 
@@ -97,7 +97,7 @@ docker compose up --build
 ```
 
 If you want different enviroments, you can set up `.env.production` and `.env.staging` in the root of the project. This lets you keep different API keys, database URLs, and credentials for each environment.
-You can then start the bot using the same command as above, but simply add flag (e.g., `-f docker-compose.staging.yml`) to include the corresponding compose file.
+You can then start the bot using the same command as above, but simply add a flag such as `-f docker-compose.staging.yml` to include the corresponding compose file.
 For convenience, you can also use the provided `Makefile`:
 
 ```makefile
