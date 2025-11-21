@@ -10,7 +10,21 @@ import asyncpg
 import pygsheets
 from dotenv import load_dotenv
 
-CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / 'biblio' / 'config' / 'biblio.json'
+CONFIG_DIR = Path(__file__).resolve().parents[2] / "biblio" / "config"
+DEFAULT_CREDENTIALS = CONFIG_DIR / "biblio.json"
+
+
+def _resolve_credentials_path() -> Path:
+    if DEFAULT_CREDENTIALS.exists():
+        return DEFAULT_CREDENTIALS
+    json_files = list(CONFIG_DIR.glob("*.json"))
+
+    if json_files:
+        return json_files[0]
+    raise FileNotFoundError(f"No credentials JSON file found in {CONFIG_DIR}")
+
+
+CREDENTIALS_PATH = _resolve_credentials_path()
 
 
 class States(IntEnum):
@@ -55,11 +69,11 @@ class Schedule:
         adjustment = 1 if daylight_saving else 0  # hour
         return Schedule(
             {
-                'weekday': (5 + adjustment, 20 + adjustment),
-                'sat': (5 + adjustment, 11 + adjustment),
-                'sun': (5 + adjustment, 11 + adjustment),
-                'availability': (5 + adjustment, 18 + adjustment),
-                'availability_sat': (5 + adjustment, 11 + adjustment),
+                "weekday": (5 + adjustment, 20 + adjustment),
+                "sat": (5 + adjustment, 11 + adjustment),
+                "sun": (5 + adjustment, 11 + adjustment),
+                "availability": (5 + adjustment, 18 + adjustment),
+                "availability_sat": (5 + adjustment, 11 + adjustment),
             }
         )
 
@@ -76,14 +90,14 @@ class ReservationConfirmationConflict(Exception):
     pass
 
 
-def load_env(name: str = 'prod') -> None:
+def load_env(name: str = "prod") -> None:
     global _CURRENT_ENV
     _CURRENT_ENV = name
     project_root = Path(__file__).resolve().parents[3]
     mapping = {
-        'local': '.env',
-        'staging': '.env.staging',
-        'prod': '.env.production',
+        "local": ".env",
+        "staging": ".env.staging",
+        "prod": ".env.production",
     }
     env_file = project_root / mapping.get(name)
     if env_file.exists():
@@ -91,20 +105,20 @@ def load_env(name: str = 'prod') -> None:
 
 
 def get_parser():
-    parser = argparse.ArgumentParser(description='Telegram Bot')
+    parser = argparse.ArgumentParser(description="Telegram Bot")
     parser.add_argument(
-        '-env',
+        "-env",
         type=str,
-        default='local',
-        choices=['prod', 'staging', 'local'],
-        help='Environment to run',
+        default="local",
+        choices=["prod", "staging", "local"],
+        help="Environment to run",
     )
     return parser
 
 
 @cache
 def get_gsheet_client():
-    gsheets = os.getenv('GSHEETS')
+    gsheets = os.getenv("GSHEETS")
     if gsheets:
         return pygsheets.authorize(service_account_json=gsheets)
     else:
@@ -113,15 +127,17 @@ def get_gsheet_client():
 
 def get_wks():
     gc = get_gsheet_client()
-    return gc.open('Biblio-logs').worksheet_by_title('backup')
+    return gc.open(os.getenv("GSHEETS_NAME")).worksheet_by_title(
+        os.getenv("GSHEETS_TAB")
+    )
 
 
 async def connect_db():
-    url = os.getenv('DATABASE_URL')
+    url = os.getenv("DATABASE_URL")
     return await asyncpg.connect(url)
 
 
 def get_priorities():
-    priority_codes: dict = os.getenv('PRIORITY_CODES')
+    priority_codes: dict = os.getenv("PRIORITY_CODES")
     priority_codes = json.loads(priority_codes)
     return priority_codes

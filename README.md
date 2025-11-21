@@ -1,86 +1,113 @@
 ![Version](https://img.shields.io/github/v/release/TheRealMamoot/BiblioBot?label=BiblioBot&style=flat-square)
-# 📚 BiblioBot — Your Biblioteca Slot Assistant
 
-**Biblio** is a Telegram bot designed to automate and simplify the reservation of study slots at the University of Milan's Library of Biology, Computer Science, Chemistry and Physics (BICF). 
+# 📚 BiblioBot, Your Biblioteca Slot Assistant
+
+**Biblio** is a Telegram bot designed to automate and simplify the reservation of study slots at the University of Milan's Library of Biology, Computer Science, Chemistry and Physics (BICF).
 This project was created to help students book their study slots at BiCF more efficiently, as popular times often fill up quickly if booked late.
 
 ## 🤖 Try Biblio
 
 💬 Talk to [@BiblioBablioBot](https://t.me/BiblioBablioBot)
 
-
 Start the conversation with `/start` to begin reserving your library slots.
 
 ## ✨ Features
 
-- ⏰ Automated slot booking with retry logic
-- 📊 PostgreSQL-based storage 
-- 👥 Priority-based scheduling
-- 🔔 Telegram notifications
-- ✅ Automatic reminders
+#### Reservation Engine
+
+- Automated daily reservation workflow with priority-based queuing.
+- Intelligent retry logic with adaptive timeouts for long-running reservation attempts.
+- Adaptive delays for load distribution and better API reliability.
+
+#### Database & Backend
+
+- Fully asynchronous PostgreSQL backend (Railway-hosted) with connection pooling.
+- Concurrency safeguarded via async semaphores to prevent server overload.
+
+#### Real-Time Monitoring
+
+- Live and historical seat availability lookup with continuous state tracking and custom time-range filtering.
+- Periodic Google Sheets backups using service accounts.
+
+#### Deployment
+
+- Reproducible builds via Docker & Docker Compose (local, staging, prod).
 
 ## ⚙️ Getting Started
 
 Before running the bot, you’ll need:
 
--  **Telegram Bot Token** → [How to get one](https://core.telegram.org/api/bots)
--  **PostgreSQL Database** 
+- **Telegram Bot Token** → [How to get one](https://core.telegram.org/api/bots)
+- **Google Service Account Credentials** → [How to get one](https://docs.cloud.google.com/iam/docs/service-account-creds)
 
+### Setup Instructions
 
-
-### 🧰 Setup Instructions
-
-Clone the repository and install dependencies:
+Clone the repository:
 
 ```bash
 git clone https://github.com/TheRealMamoot/BiblioBot.git
-cd bibliobot
-pip install -r requirements.txt
 ```
+
+Place your _Google Account Service Credentails_ json at `src/biblio/confifg`.
+
 Create a `.env` file to store your environment variables:
+
 ```bash
 touch .env
 ```
-Paste this inside `.env` (replacing the placeholder value):
+
+Paste this inside `.env` (replacing the placeholder values):
+
 ```dotenv
-TELEGRAM_TOKEN=your_bot_token_here
-TELEGRAM_TOKEN_S=your_staging_bot_token_here (optional)
-DATABASE_URL=your_postgres_url_here
-PRIORITIES_CODES=priorities.json
+TELEGRAM_TOKEN=<YOUR_BOT_TOKEN>
+PRIORITIES_CODES=<YOUR_PRIORITES_JSON>
+DATABASE_URL=postgresql://biblio:biblio@postgres:5432/biblio_db
+GSHEET_NAME=Biblio-logs
+GSHEET_TAB=backup
 ```
-Your priorities should look like this:
+
+Priorities are based on _Codice Fiscale_ and should look like this:
+
 ```json
-{
-  "ABCDEF12G34H567I": 0,
-  "LMNOPQ98R76T543U": 1,
-  "XYZABC00A00B000C": 2
-}
+{"ABCDEF12G34H567I": 0, "LMNOPQ98R76T543U": 1, "XYZABC00A00B000C": 2} # noqa
 ```
+
 Lower values = higher priority (0 = highest).
 
+> ❗ **If you are deploying the code, you have to add the contents of the credentials json as an environment varibale in the hosting service's secrets section along with the previous env vars. Be sure to change the `DATABASE_URL` as well**.
 
-### 🗂️ Database Setup
-To build the database:
-
-```bash
-python -m src.biblio.db.build
+```dotenv
+GSHEETS=<YOUR_SERVICE_ACOUNT_CONTENT>
 ```
 
-### ✏️ Required Bot Commands
+### Google Sheets
 
-After setting up your bot, be sure to register these commands in your [BotFather settings](https://core.telegram.org/bots#botfather):
-```txt
-/start - Restart the bot
-/help - Show help and usage instructions
-/feedback - Send feedback to the developer
-/agreement - Show user agreement
-/donate - Show donation links
-```
+You **must** create a new sheet, rename it as **Biblio-logs** and rename the tab as **backup**. You would also have to share the sheet with the **email address** you obtain from the credentials as en **editor**. FInally you need to enable **The Google Sheets API** in the Google cloud console. (Instructions found [here](https://support.google.com/googleapi/answer/6158841?hl=en))
+
+### Required Bot Commands
+
+After setting up your bot, be sure to register the commands in `src/biblio/bot/commands.txt` in your [BotFather settings](https://core.telegram.org/bots#botfather):
 
 ## 🚀 Run the Bot
 
 Launch the bot with:
+
 ```bash
-python main.py
+docker compose up --build
 ```
-Use `--token-env staging` to start the bot with the staging token. 
+
+If you want different enviroments, you can set up `.env.production` and `.env.staging` in the root of the project. This lets you keep different API keys, database URLs, and credentials for each environment.
+You can then start the bot using the same command as above, but simply add flag (e.g., `-f docker-compose.staging.yml`) to include the corresponding compose file.
+For convenience, you can also use the provided `Makefile`:
+
+```makefile
+make staging-ub
+# equivelant to: docker compose -f docker-compose.yml -f docker-compose.staging.yml up --build
+```
+
+or:
+
+```makefile
+make prod-bnc
+# equivelant to:: docker compose build -f docker-compose.yml -f docker-compose.prod.yml --no-cache
+```
