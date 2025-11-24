@@ -1,13 +1,13 @@
 ![Version](https://img.shields.io/github/v/release/TheRealMamoot/BiblioBot?label=BiblioBot&style=flat-square)
 
-# 📚 BiblioBot, Your Biblioteca Slot Assistant
+# 📚 BiblioBot: Your Biblioteca Slot Assistant
 
 **Biblio** is a Telegram bot designed to automate and simplify the reservation of study slots at the University of Milan's Library of Biology, Computer Science, Chemistry and Physics (BICF).
-This project was created to help students book their study slots at BiCF more efficiently, as popular times often fill up quickly if booked late.
+This project was created to help students book their study slots at BICF more efficiently, as popular times often fill up quickly if booked late.
 
 ## 🤖 Try Biblio
 
-💬 Talk to [@BiblioBablioBot](https://t.me/BiblioBablioBot)
+💬 Give it a go [@BiblioBablioBot](https://t.me/BiblioBablioBot)
 
 Start the conversation with `/start` to begin reserving your library slots.
 
@@ -74,19 +74,32 @@ Priorities are based on _Codice Fiscale_ and should look like this:
 
 Lower values = higher priority (0 = highest).
 
-> ❗ **If you are deploying the code, you have to add the contents of the credentials json as an environment varibale in the hosting service's secrets section along with the previous env vars. Be sure to change the `DATABASE_URL` as well**.
+❗ If you are deploying the code, you have to add the contents of the credentials json as an **_environment varibale_** in the hosting service's **_secrets section_** along with the previous env vars. Be sure to change the **`DATABASE_URL`** as well.
 
 ```dotenv
-GSHEETS=<YOUR_SERVICE_ACOUNT_CONTENT>
+TELEGRAM_TOKEN=<YOUR_BOT_TOKEN>
+PRIORITIES_CODES=<YOUR_PRIORITES_JSON>
+DATABASE_URL=<YOUR_DATABASE_URL> # change this accordingly
+GSHEET_NAME=Biblio-logs
+GSHEET_TAB=backup
+GSHEETS=<YOUR_SERVICE_ACOUNT_JSON_CONTENT> # new variable
 ```
 
-### Google Sheets
+#### Google Sheets
 
-You **must** create a new sheet, rename it as **Biblio-logs** and rename the tab as **backup**. You would also have to share the sheet with the **email address** you obtain from the credentials as an **editor**. FInally you need to enable **The Google Sheets API** in the Google cloud console. (Instructions found [here](https://support.google.com/googleapi/answer/6158841?hl=en))
+You **must** create a new sheet, rename it as **"Biblio-logs"** and rename the tab as **"backup"**. You would also have to share the sheet with the **email address** you obtain from the credentials as an **_editor_**. Finally you need to enable **_The Google Sheets API_** in the Google cloud console. (Instructions found [here](https://support.google.com/googleapi/answer/6158841?hl=en))
 
-### Required Bot Commands
+#### Required Bot Commands
 
 After setting up your bot, be sure to register the commands in `src/biblio/bot/commands.txt` in your [BotFather settings](https://core.telegram.org/bots#botfather):
+
+```txt
+donate - Shows donation links ❤️
+start - Restarts the Bot
+help - Shows user guide
+feedback - Shows author's contacts
+agreement - Shows user agreement
+```
 
 ## 🚀 Run the Bot
 
@@ -109,5 +122,5 @@ or:
 
 ```makefile
 make prod-bnc
-# equivelant to:: docker compose build -f docker-compose.yml -f docker-compose.prod.yml --no-cache
+# equivelant to: docker compose build -f docker-compose.yml -f docker-compose.prod.yml --no-cache
 ```
