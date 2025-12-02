@@ -18,16 +18,17 @@ services:
       retries: 5
 
   bot:
-    build:
-      context: .
-    container_name: biblio_bot
-    restart: always
-
-    env_file:
-      - .env
-
+    build: .
     command: ["python", "main.py", "-env", "local"]
+    env_file: [.env]
+    depends_on:
+      postgres:
+        condition: service_healthy
 
+  jobs:
+    build: .                  
+    command: ["python", "jobs_main.py", "-env", "local"]
+    env_file: [.env]
     depends_on:
       postgres:
         condition: service_healthy

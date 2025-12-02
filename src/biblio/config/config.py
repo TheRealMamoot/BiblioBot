@@ -103,7 +103,7 @@ def load_env(name: str = "prod") -> None:
     }
     env_file = project_root / mapping.get(name)
     if env_file.exists():
-        load_dotenv(env_file, override=False)
+        load_dotenv(env_file, override=True)
 
 
 def get_parser():
