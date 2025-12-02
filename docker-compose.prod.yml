@@ -1,9 +1,11 @@
 services:
   bot:
-    env_file:
-      - .env.production
+    env_file: [.env.production]
     command: ["python", "main.py", "-env", "prod"]
-    depends_on: {}
+
+  jobs:
+    env_file: [.env.production]
+    command: ["python", "jobs_main.py", "-env", "prod"]
 
   postgres:
     deploy:

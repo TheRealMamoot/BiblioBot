@@ -23,6 +23,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY --from=builder /venv /venv
 
 COPY main.py .
+COPY jobs_main.py .
 COPY src/ src/
 
 CMD ["python", "main.py"]

@@ -1,9 +1,11 @@
 services:
   bot:
-    env_file:
-      - .env.staging
+    env_file: [.env.staging]
     command: ["python", "main.py", "-env", "staging"]
-    depends_on: {}
+
+  jobs:
+    env_file: [.env.staging]
+    command: ["python", "jobs_main.py", "-env", "staging"]
 
   postgres:
     deploy:
