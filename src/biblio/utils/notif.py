@@ -14,8 +14,10 @@ from src.biblio.db.fetch import fetch_all_user_chat_ids, fetch_reservations
 
 DEPLOY_NOTIF = textwrap.dedent(
     """
-    📦🛠️ *Bot Updated!*
-    
+    📦🛠️ *Bot Updated! v2.3.0 🎊*
+    - ✅ *Increased Job Workers*: The reservations will be processed much faster now.
+    - ✅ Fixed spam notifications
+
     👉 *Please use /start again to refresh your session.*
     """
 )
