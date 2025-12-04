@@ -46,7 +46,7 @@ async def set_reservation(
         'timezone': 'Europe/Rome',
     }
 
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with httpx.AsyncClient(timeout=timeout, verify=False) as client:
         try:
             response = await client.post(url, json=payload)
             response.raise_for_status()
@@ -77,7 +77,7 @@ async def set_reservation(
 async def confirm_reservation(booking_code: int, max_retries: int = 4) -> dict:
     url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/confirm/{booking_code}'
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=False) as client:
         for attempt in range(max_retries):
             timeout = calculate_timeout(retries=attempt, base=20, step=20, max_read=60)
 
@@ -122,7 +122,7 @@ async def cancel_reservation(codice: str, booking_code: str, mode: str = 'delete
     url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/{mode}/{booking_code}?chiave={codice}'
 
     payload = {'type': 'libera_posto'} if mode == 'update' else None
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=False) as client:
         try:
             response = await client.post(url, json=payload)
             response.raise_for_status()
@@ -163,7 +163,7 @@ async def get_available_slots(hour: str, filter_past: bool = True, max_retries: 
     url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/50/schedule/{today}/25/{hour}'
 
     start_time = time.perf_counter()
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=False) as client:
         for attempt in range(max_retries):
             timeout = calculate_timeout(retries=attempt, base=40, step=20, max_read=100)
 
