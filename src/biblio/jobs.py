@@ -12,9 +12,9 @@ from telegram import Bot
 
 from src.biblio.bot.messages import show_notification
 from src.biblio.config.config import ReservationConfirmationConflict, Schedule, get_wks
-from src.biblio.db.fetch import fetch_all_reservations, fetch_reservations
+from src.biblio.db.fetch import claim_reservations, fetch_all_reservations
 from src.biblio.db.insert import insert_slots
-from src.biblio.db.update import update_record
+from src.biblio.db.update import sweep_stuck_reservations, update_record
 from src.biblio.reservation.reservation import (
     calculate_timeout,
     confirm_reservation,
@@ -78,8 +78,13 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
         )
         return result
 
+    await asyncio.sleep(1)
+
     confirm_start = time.perf_counter()
     confirm_status = await _confirm_phase(record, entry, retries)
+    if confirm_status == "fail":
+        confirm_status = "awaiting"
+
     logging.info(
         f"[JOB] 3️⃣ ⏱️ Confirm phase took {time.perf_counter() - confirm_start:.2f}s for ID {record['id']}"
     )
@@ -168,7 +173,7 @@ async def _confirm_phase(record: dict, entry: str | None, retries: int) -> str:
 
 
 def _is_stale_fail(record: dict) -> bool:
-    if record["status"] != "fail":
+    if record["status"] not in ("fail", "awaiting", "processing"):
         return False
     scheduled_dt = datetime.combine(
         record["selected_date"], record["start_time"]
@@ -214,7 +219,7 @@ async def throttled_process_reservation(record: dict, bot: Bot) -> dict:
 
 
 async def execute_reservations(bot: Bot) -> None:
-    records: list[dict] = await fetch_reservations(statuses=["pending", "fail"])
+    records: list[dict] = await claim_reservations(limit=SEMAPHORE_LIMIT * 2)
     if not records:
         logging.info("[DB-JOB] No pending reservations to process")
         return
@@ -362,6 +367,12 @@ def schedule_donation_reminder_job(bot: Bot) -> None:
     async def _reminder_donation_job():
         logging.info("[NOTIF] Sending donation reminder notification")
         await notify_donation(bot)
+
+
+def schedule_sweeper_job() -> None:
+    @aiocron.crontab("*/5 * * * *", tz=ZoneInfo("Europe/Rome"))
+    async def _sweeper():
+        await sweep_stuck_reservations()
 
 
 def start_jobs(bot: Bot) -> None:  #! except reservation

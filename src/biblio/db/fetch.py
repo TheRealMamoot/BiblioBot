@@ -7,7 +7,9 @@ from pandas import DataFrame
 from src.biblio.config.config import connect_db
 
 
-async def fetch_user_reservations(*user_details, include_date: bool = True) -> DataFrame:
+async def fetch_user_reservations(
+    *user_details, include_date: bool = True
+) -> DataFrame:
     conn = await connect_db()
     query = """
     SELECT
@@ -29,8 +31,8 @@ async def fetch_user_reservations(*user_details, include_date: bool = True) -> D
       AND u.email = $2
     """
     if include_date:
-        query += ' AND r.display_date::TEXT = $3\n'
-    query += 'ORDER BY r.selected_date DESC;'
+        query += " AND r.display_date::TEXT = $3\n"
+    query += "ORDER BY r.selected_date DESC;"
 
     rows = await conn.fetch(query, *user_details)
     await conn.close()
@@ -39,13 +41,13 @@ async def fetch_user_reservations(*user_details, include_date: bool = True) -> D
 
     # Convert asyncpg.Record to list of dicts
     data = [dict(row) for row in rows]
-    logging.info('[DB] *user* reservations fetched')
+    logging.info("[DB] *user* reservations fetched")
     return DataFrame(data)
 
 
-async def fetch_reservations(statuses: list[str], date: datetime.date = None) -> list[dict]:
+async def fetch_reservations(statuses: list[str], date=None) -> list[dict]:
     if date is None:
-        date = datetime.now(ZoneInfo('Europe/Rome')).date()
+        date = datetime.now(ZoneInfo("Europe/Rome")).date()
 
     conn = await connect_db()
     query = """
@@ -63,7 +65,7 @@ async def fetch_reservations(statuses: list[str], date: datetime.date = None) ->
     """
     rows = await conn.fetch(query, statuses, date)
     await conn.close()
-    logging.info(f'[DB] *pending* reservations fetched - {len(rows)} results')
+    logging.info(f"[DB] *pending* reservations fetched - {len(rows)} results")
     return [dict(row) for row in rows] if rows else []
 
 
@@ -119,6 +121,50 @@ async def fetch_all_reservations() -> DataFrame:
     return DataFrame(data)
 
 
+async def claim_reservations(limit: int = 10, date=None) -> list[dict]:
+    """
+    Atomically claim up to `limit` reservations for processing by setting status=processing.
+    Returns the claimed rows joined with user info.
+    """
+    if date is None:
+        date = datetime.now(ZoneInfo("Europe/Rome")).date()
+
+    conn = await connect_db()
+    query = """
+    WITH cte AS (
+        SELECT r.id,
+               u.codice_fiscale,
+               u.priority,
+               u.email,
+               u.name,
+               u.chat_id
+        FROM reservations r
+        JOIN users u ON u.id = r.user_id
+        WHERE r.selected_date = $2
+          AND r.status = ANY($1)
+        ORDER BY r.created_at ASC
+        LIMIT $3
+        FOR UPDATE SKIP LOCKED
+    )
+    UPDATE reservations r
+    SET status = 'processing',
+        status_change = TRUE,
+        updated_at = CURRENT_TIMESTAMP
+    FROM cte
+    WHERE r.id = cte.id
+    RETURNING r.*,
+              cte.codice_fiscale,
+              cte.priority,
+              cte.email,
+              cte.name,
+              cte.chat_id
+    """
+    rows = await conn.fetch(query, ["pending", "fail", "awaiting"], date, limit)
+    await conn.close()
+    logging.info(f"[DB] Claimed {len(rows)} reservations for processing")
+    return [dict(row) for row in rows] if rows else []
+
+
 async def fetch_reservation_by_id(reservation_id: str) -> dict | None:
     conn = await connect_db()
     query = """
@@ -134,8 +180,8 @@ async def fetch_reservation_by_id(reservation_id: str) -> dict | None:
 async def fetch_all_user_chat_ids() -> list[str]:
     conn = await connect_db()
     try:
-        rows = await conn.fetch('SELECT DISTINCT chat_id FROM users')
-        return [row['chat_id'] for row in rows]
+        rows = await conn.fetch("SELECT DISTINCT chat_id FROM users")
+        return [row["chat_id"] for row in rows]
     finally:
         await conn.close()
 
@@ -159,7 +205,7 @@ async def fetch_existing_user(chat_id: str) -> dict | None:
 
 async def fetch_slot_history(date: str) -> DataFrame | None:
     if isinstance(date, str):
-        date = datetime.strptime(date, '%Y-%m-%d').date()
+        date = datetime.strptime(date, "%Y-%m-%d").date()
 
     conn = await connect_db()
     query = """
@@ -172,6 +218,10 @@ async def fetch_slot_history(date: str) -> DataFrame | None:
     """
     rows = await conn.fetch(query, date)
     await conn.close()
-    logging.info(f'[DB] available slots fetched - {len(rows)} results')
-    result = DataFrame(rows, columns=['job_timestamp', 'slot', 'available']) if rows else None
+    logging.info(f"[DB] available slots fetched - {len(rows)} results")
+    result = (
+        DataFrame(rows, columns=["job_timestamp", "slot", "available"])
+        if rows
+        else None
+    )
     return result

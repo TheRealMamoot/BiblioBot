@@ -16,22 +16,22 @@ async def update_cancel_status(reservation_id: str) -> None:
     """
     await conn.execute(query, reservation_id)
     await conn.close()
-    logging.info(f'[DB] Reservation {reservation_id} marked as terminated')
+    logging.info(f"[DB] Reservation {reservation_id} marked as terminated")
 
 
 async def update_record(table: str, row_id: str, updates: dict[str, Any]) -> None:
     if not updates:
-        raise ValueError('No columns provided to update.')
+        raise ValueError("No columns provided to update.")
 
     conn = await connect_db()
 
     # Dynamically build column assignments like col1 = $1, col2 = $2 ...
     columns = list(updates.keys())
-    placeholders = [f'{col} = ${i + 1}' for i, col in enumerate(columns)]
-    set_clause = ', '.join(placeholders)
+    placeholders = [f"{col} = ${i + 1}" for i, col in enumerate(columns)]
+    set_clause = ", ".join(placeholders)
 
     # The $N for the WHERE clause (after the update values)
-    where_placeholder = f'${len(columns) + 1}'
+    where_placeholder = f"${len(columns) + 1}"
     query = f"""
     UPDATE {table}
     SET {set_clause}
@@ -43,4 +43,37 @@ async def update_record(table: str, row_id: str, updates: dict[str, Any]) -> Non
     await conn.execute(query, *values)
     await conn.close()
 
-    logging.info(f'[DB] Updated row in {table}, id={row_id}, columns={list(updates.keys())}')
+    logging.info(
+        f"[DB] Updated row in {table}, id={row_id}, columns={list(updates.keys())}"
+    )
+
+
+async def sweep_stuck_reservations(
+    stale_minutes: int = 5,
+    activation_grace_minutes: int = 30,
+) -> list[dict]:
+    """
+    Reset reservations stuck in processing/awaiting_confirmation beyond stale_minutes.
+    If the slot start + activation_grace_minutes has passed, terminate; otherwise mark fail. normal processing will pick them up.
+    """
+    conn = await connect_db()
+    query = """
+    UPDATE reservations r
+    SET status = CASE
+        WHEN (r.selected_date || ' ' || r.start_time)::timestamp
+             AT TIME ZONE 'Europe/Rome' + make_interval(mins => $2) < now() AT TIME ZONE 'Europe/Rome'
+          THEN 'terminated'
+        ELSE 'fail'
+    END,
+        retries = r.retries + 1,
+        status_change = TRUE,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE r.status IN ('processing', 'awaiting')
+      AND r.updated_at < now() - make_interval(mins => $1)
+    RETURNING id, status, retries
+    """
+    rows = await conn.fetch(query, stale_minutes, activation_grace_minutes)
+    await conn.close()
+    if rows:
+        logging.info(f"[DB] Swept {len(rows)} stuck reservations")
+    return [dict(row) for row in rows] if rows else []
