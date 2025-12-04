@@ -74,8 +74,8 @@ async def set_reservation(
             raise
 
 
-async def confirm_reservation(booking_code: int, max_retries: int = 4) -> dict:
-    url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/confirm/{booking_code}'
+async def confirm_reservation(entry: int, max_retries: int = 4) -> dict:
+    url = f'https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/confirm/{entry}'
 
     async with httpx.AsyncClient(verify=False) as client:
         for attempt in range(max_retries):
