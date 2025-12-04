@@ -6,7 +6,7 @@ from telegram import Bot
 from src.biblio.config.config import get_parser, load_env
 from src.biblio.config.logger import setup_logger
 from src.biblio.db.build import build_db
-from src.biblio.jobs import schedule_reserve_job
+from src.biblio.jobs import schedule_reserve_job, schedule_sweeper_job
 
 
 async def main():
@@ -17,6 +17,7 @@ async def main():
     await build_db()
     bot = Bot(token=os.getenv("TELEGRAM_TOKEN"))
     schedule_reserve_job(bot)
+    schedule_sweeper_job()
     await asyncio.Event().wait()  # keep loop alive
 
 

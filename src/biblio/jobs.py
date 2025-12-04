@@ -11,10 +11,15 @@ from pygsheets import Worksheet
 from telegram import Bot
 
 from src.biblio.bot.messages import show_notification
-from src.biblio.config.config import ReservationConfirmationConflict, Schedule, get_wks
-from src.biblio.db.fetch import fetch_all_reservations, fetch_reservations
+from src.biblio.config.config import (
+    ReservationConfirmationConflict,
+    Schedule,
+    Status,
+    get_wks,
+)
+from src.biblio.db.fetch import claim_reservations, fetch_all_reservations
 from src.biblio.db.insert import insert_slots
-from src.biblio.db.update import update_record
+from src.biblio.db.update import sweep_stuck_reservations, update_record
 from src.biblio.reservation.reservation import (
     calculate_timeout,
     confirm_reservation,
@@ -35,126 +40,201 @@ semaphore = asyncio.Semaphore(SEMAPHORE_LIMIT)
 
 async def process_reservation(record: dict, bot: Bot) -> dict:
     chat_id = record.get("chat_id")
-    date = record["selected_date"].strftime("%Y-%m-%d")
-    start_time = record["start_time"].strftime("%H:%M")
-    selected_duration = int(record["selected_duration"])
-    user_data = {
+    user = {
         "codice_fiscale": record["codice_fiscale"],
         "cognome_nome": record["name"],
         "email": record["email"],
     }
+    retries = int(record["retries"])
+    process_start = time.perf_counter()
 
-    now = datetime.now(ZoneInfo("Europe/Rome"))
+    if _is_stale_fail(record):
+        return await _finalize(
+            record, Status.TERMINATED, "CLOSED", retries, chat_id, bot
+        )
+
+    reserve_start = time.perf_counter()
+    start, end, duration = await _reserve_phase(record)
+    logging.info(
+        f"[JOB] 1️⃣ ⏱️ Reserve phase took {time.perf_counter() - reserve_start:.2f}s for ID {record['id']}"
+    )
+    if start is None:
+        return await _finalize(
+            record,
+            Status.FAIL,
+            record["booking_code"],
+            retries + 1,
+            chat_id,
+            bot,
+        )
+
+    set_start = time.perf_counter()
+    booking_code, entry, set_status = await _set_phase(
+        record, start, end, duration, user, retries
+    )
+    logging.info(
+        f"[JOB] 2️⃣ ⏱️ Set phase took {time.perf_counter() - set_start:.2f}s for ID {record['id']}"
+    )
+    if set_status:  # existing/fail/terminated decided in set phase
+        result = await _finalize(
+            record,
+            set_status,
+            booking_code,
+            retries + (set_status == Status.FAIL),
+            chat_id,
+            bot,
+        )
+        process_end = time.perf_counter()
+        logging.info(
+            f"[JOB] 🕒 Process for ID {record['id']} took {process_end - process_start:.2f}s"
+        )
+        return result
+
+    await asyncio.sleep(1)
+
+    confirm_start = time.perf_counter()
+    confirm_status = await _confirm_phase(record, entry, retries)
+    if confirm_status == Status.FAIL:
+        confirm_status = Status.AWAITING
+
+    logging.info(
+        f"[JOB] 3️⃣ ⏱️ Confirm phase took {time.perf_counter() - confirm_start:.2f}s for ID {record['id']}"
+    )
+    result = await _finalize(
+        record,
+        confirm_status,
+        booking_code,
+        retries + (confirm_status == Status.FAIL),
+        chat_id,
+        bot,
+    )
+    process_end = time.perf_counter()
+    logging.info(
+        f"[JOB] 🕒 Process for ID {record['id']} took {process_end - process_start:.2f}s"
+    )
+    return result
+
+
+async def _reserve_phase(record: dict) -> tuple[int | None, int | None, int | None]:
+    try:
+        return reserve_datetime(
+            record["selected_date"].strftime("%Y-%m-%d"),
+            record["start_time"].strftime("%H:%M"),
+            int(record["selected_duration"]),
+        )
+    except Exception as e:
+        logging.error(f"[JOB] ❌ Reserve failed for ID {record['id']}: {e}")
+        return None, None, None
+
+
+async def _set_phase(
+    record: dict, start: int, end: int, duration: int, user: dict, retries: int
+) -> tuple[str | None, str | None, str | None]:
+    """
+    Attempt to create the reservation entry.
+    Returns a tuple of (booking_code, entry, set_status) where:
+    - booking_code: user-facing code (may be None if request failed or not returned yet)
+    - entry: code required for confirm_reservation (None on failure)
+    - set_status: None on success so caller can proceed to confirm; otherwise a terminal status
+      like "existing", "fail", or "terminated" to short-circuit the flow.
+    """
+    booking_code = record.get("booking_code")  # may be None
+    entry = None
+    try:
+        resp = await set_reservation(
+            start, end, duration, user, calculate_timeout(retries)
+        )
+        booking_code = resp.get("codice_prenotazione")
+        entry = resp.get("entry")
+        logging.info(f"[JOB] 2️⃣ ✅ Reservation set for ID {record['id']}")
+        return booking_code, entry, None
+    except ReservationConfirmationConflict as e:
+        logging.error(
+            f"[JOB] 2️⃣ ❌ Already confirmed during set for ID {record['id']}: {e}"
+        )
+        return booking_code or "UNKNOWN", entry, Status.EXISTING
+    except TimeoutError as e:
+        logging.warning(f"[JOB] 2️⃣ ⚠️ Set timed out for ID {record['id']}: {e}")
+        return booking_code, entry, Status.FAIL
+    except Exception as e:
+        logging.error(f"[JOB] 2️⃣ ❌ Set failed for ID {record['id']}: {e}")
+        return (
+            booking_code,
+            entry,
+            (Status.TERMINATED if retries + 1 > 20 else Status.FAIL),
+        )
+
+
+async def _confirm_phase(record: dict, entry: str | None, retries: int) -> str:
+    if not entry:
+        logging.error(
+            f"[JOB] 3️⃣ ❌ No entry code available for confirm on ID {record['id']}"
+        )
+        return Status.FAIL
+    try:
+        await confirm_reservation(entry)
+        logging.info(f"[JOB] 3️⃣ ✅ Confirmed for ID {record['id']}")
+        return Status.SUCCESS
+    except ReservationConfirmationConflict:
+        logging.warning(
+            f"[JOB] 3️⃣ ⚠️ Confirm conflict (already confirmed) for ID {record['id']}"
+        )
+        return Status.EXISTING
+    except TimeoutError as e:
+        logging.warning(f"[JOB] 3️⃣ ⚠️ Confirm timed out for ID {record['id']}: {e}")
+        return Status.FAIL
+    except Exception as e:
+        logging.error(f"[JOB] 3️⃣ ❌ Confirm failed for ID {record['id']}: {e}")
+        return Status.TERMINATED if retries + 1 > 30 else Status.FAIL
+
+
+def _is_stale_fail(record: dict) -> bool:
+    if record["status"] not in (
+        Status.FAIL,
+        Status.AWAITING,
+        Status.PROCESSING,
+    ):
+        return False
     scheduled_dt = datetime.combine(
         record["selected_date"], record["start_time"]
     ).replace(tzinfo=ZoneInfo("Europe/Rome"))
+    return scheduled_dt + timedelta(minutes=30) < datetime.now(ZoneInfo("Europe/Rome"))
 
-    if record["status"] == "fail" and scheduled_dt + timedelta(minutes=8) < now:
-        logging.info(
-            f"[JOB] ⏰ Reservation too old for ID {record['id']} — marked as terminated"
-        )
-        if chat_id:
-            notif = show_notification(
-                status="terminated", record=record, booking_code=record["booking_code"]
+
+async def _finalize(record, status, booking_code, retries, chat_id, bot: Bot) -> dict:
+    old_status = record["status"]
+    status_changed = status != old_status
+    result = {
+        "id": record["id"],
+        "status": status,
+        "booking_code": booking_code,
+        "retries": retries,
+        "status_change": status_changed,
+        "updated_at": datetime.now(ZoneInfo("Europe/Rome")),
+    }
+
+    if chat_id and _should_notify(old_status, status, retries):
+        notif = show_notification(status, record, booking_code)
+        try:
+            await bot.send_message(chat_id=chat_id, text=notif, parse_mode="Markdown")
+        except Exception as e:
+            logging.error(
+                f"[NOTIF] Failed to notify chat_id {chat_id} for ID {record['id']}: {e}"
             )
-            await bot.send_message(chat_id=chat_id, text=notif, parse_mode="Markdown")
-        status = "terminated"
-        result = {
-            "id": record["id"],
-            "status": status,
-            "booking_code": "CLOSED",
-            "retries": int(record["retries"]),
-            "status_change": True,
-            "updated_at": datetime.now(ZoneInfo("Europe/Rome")),
-        }
-        return result
-
-    process_start = time.perf_counter()
-    timeout = calculate_timeout(record["retries"])
-    try:
-        start, end, duration = reserve_datetime(date, start_time, selected_duration)
-        logging.info(
-            f"[JOB] ✅ **1** Slot IDENTIFIED for {user_data['cognome_nome']} - ID {record['id']}"
-        )
-        response = await set_reservation(start, end, duration, user_data, timeout)
-        logging.info(
-            f"[JOB] ✅ **2** Reservation SET for {user_data['cognome_nome']} - ID {record['id']}"
-        )
-        await confirm_reservation(response["entry"])
-        logging.info(
-            f"[JOB] ✅ **3** Reservation CONFIRMED for {user_data['cognome_nome']} - ID {record['id']}"
-        )
-
-        if chat_id:
-            notif = show_notification(
-                status="success",
-                record=record,
-                booking_code=response["codice_prenotazione"],
-            )
-            await bot.send_message(chat_id=chat_id, text=notif, parse_mode="Markdown")
-        status = "success"
-        result = {
-            "id": record["id"],
-            "status": status,
-            "booking_code": response["codice_prenotazione"],
-            "retries": int(record["retries"]),
-            "status_change": record["status"] in ["fail", "pending"],
-            "updated_at": datetime.now(ZoneInfo("Europe/Rome")),
-        }
-
-        retries = result["retries"]
-
-    except ReservationConfirmationConflict as e:
-        logging.error(
-            f"[JOB] 🚫 Reservation ALREADY CONFIRMED for {user_data['cognome_nome']} - ID {record['id']}: {e}"
-        )
-        retries = int(record["retries"])
-        status = "existing"
-        booking_code = "UNKNOWN"
-        if chat_id:
-            notif = show_notification(status, record, booking_code)
-            await bot.send_message(chat_id=chat_id, text=notif, parse_mode="Markdown")
-
-        result = {
-            "id": record["id"],
-            "status": status,
-            "booking_code": booking_code,
-            "retries": retries,
-            "status_change": True,
-            "updated_at": datetime.now(ZoneInfo("Europe/Rome")),
-        }
-
-    except Exception as e:
-        logging.error(
-            f"[JOB] ❌ Reservation FAILED for {user_data['cognome_nome']} - ID {record['id']}: {e}"
-        )
-        retries = int(record["retries"]) + 1
-        status = "terminated" if retries > 20 else "fail"
-        booking_code = record["booking_code"] if status == "fail" else "CLOSED"
-        chat_id = record.get("chat_id")
-        if chat_id and (retries % 11 == 0 or status == "terminated"):
-            notif = show_notification(status, record, booking_code)
-            await bot.send_message(chat_id=chat_id, text=notif, parse_mode="Markdown")
-
-        result = {
-            "id": record["id"],
-            "status": status,
-            "booking_code": booking_code,
-            "retries": retries,
-            "status_change": record["status"] in ["pending", "fail"],
-            "updated_at": datetime.now(ZoneInfo("Europe/Rome")),
-        }
-
-    process_end = time.perf_counter()
-    elapsed = process_end - process_start
-    logging.info(
-        f"[JOB] 🕒 Process for {user_data['cognome_nome']} - ID {result['id']} took {elapsed:.2f}s"
-    )
-    logging.info(
-        f"[JOB] Retry {retries} → Delay {timeout.read:.1f}s for ID {record['id']} in case of timeout"
-    )
-
     return result
+
+
+# TODO: drop old_status in case of no new development
+def _should_notify(old_status: str, new_status: str, retries: int) -> bool:
+    if new_status in (
+        Status.SUCCESS,
+        Status.EXISTING,
+        Status.TERMINATED,
+    ):
+        return True
+    if new_status == Status.FAIL:
+        return retries > 0 and retries % 11 == 0
+    return False
 
 
 async def throttled_process_reservation(record: dict, bot: Bot) -> dict:
@@ -163,7 +243,7 @@ async def throttled_process_reservation(record: dict, bot: Bot) -> dict:
 
 
 async def execute_reservations(bot: Bot) -> None:
-    records: list[dict] = await fetch_reservations(statuses=["pending", "fail"])
+    records: list[dict] = await claim_reservations(limit=SEMAPHORE_LIMIT * 2)
     if not records:
         logging.info("[DB-JOB] No pending reservations to process")
         return
@@ -208,14 +288,17 @@ def schedule_reserve_job(bot: Bot) -> None:
     start, end = JOB_SCHEDULE.get_hours("weekday")  # UTC hours
     trigger = CronTrigger(
         second="*/10",
-        minute="0,1,2,3,30,31,32,33,10,11",
+        minute="0,1,2,3,30,31,32,33",
         hour=f"{start}-{end}",
         day_of_week="mon-fri",
     )
     scheduler.add_job(execute_reservations, trigger, args=[bot])
 
     trigger = CronTrigger(
-        second="*/20", minute="5,7,10,12,15,17,20", hour=start, day_of_week="mon-fri"
+        second="*/20",
+        minute="5,7,10,12,15,17,20",
+        hour=start,
+        day_of_week="mon-fri",
     )
     scheduler.add_job(execute_reservations, trigger, args=[bot])
 
@@ -308,6 +391,12 @@ def schedule_donation_reminder_job(bot: Bot) -> None:
     async def _reminder_donation_job():
         logging.info("[NOTIF] Sending donation reminder notification")
         await notify_donation(bot)
+
+
+def schedule_sweeper_job() -> None:
+    @aiocron.crontab("*/5 * * * *", tz=ZoneInfo("Europe/Rome"))
+    async def _sweeper():
+        await sweep_stuck_reservations()
 
 
 def start_jobs(bot: Bot) -> None:  #! except reservation

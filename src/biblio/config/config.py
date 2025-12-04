@@ -48,6 +48,16 @@ class States(IntEnum):
     RETRY = auto()
 
 
+class Status:
+    PENDING = "pending"
+    PROCESSING = "processing"
+    AWAITING = "awaiting"
+    FAIL = "fail"
+    SUCCESS = "success"
+    EXISTING = "existing"
+    TERMINATED = "terminated"
+
+
 @dataclass
 class Schedule:
     hours: dict

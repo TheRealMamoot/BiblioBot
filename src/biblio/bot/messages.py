@@ -9,12 +9,12 @@ import pandas as pd
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import Schedule
+from src.biblio.config.config import Schedule, Status
 from src.biblio.db.fetch import fetch_user_reservations
 from src.biblio.utils.utils import plot_slot_history, utc_tuple_to_rome_time
 
 JOB_SCHEDULE = Schedule.jobs(daylight_saving=True)
-JOB_START, _ = JOB_SCHEDULE.get_hours('availability')
+JOB_START, _ = JOB_SCHEDULE.get_hours("availability")
 MIN_AVAILABILITY_START = utc_tuple_to_rome_time(hour_minute=(JOB_START, 0))
 
 
@@ -23,21 +23,29 @@ async def show_existing_reservations(
     context: ContextTypes.DEFAULT_TYPE,
     cancel_stage: bool = False,
 ) -> str:
-    coidce = context.user_data['codice_fiscale']
-    email = context.user_data['email']
+    coidce = context.user_data["codice_fiscale"]
+    email = context.user_data["email"]
     try:
-        history: pd.DataFrame = await fetch_user_reservations(coidce, email, include_date=False)
+        history: pd.DataFrame = await fetch_user_reservations(
+            coidce, email, include_date=False
+        )
         if history.empty:
-            return '_You have no reservations at the moment._'
-        history['datetime'] = pd.to_datetime(
-            history['selected_date'].astype(str) + ' ' + history['end_time'].astype(str)
+            return "_You have no reservations at the moment._"
+        history["datetime"] = pd.to_datetime(
+            history["selected_date"].astype(str) + " " + history["end_time"].astype(str)
         )  # ' ' acts as space
-        history['datetime'] = history['datetime'].dt.tz_localize('UTC').dt.tz_convert('Europe/Rome')
-        current = history[history['datetime'] > datetime.now(ZoneInfo('Europe/Rome'))]
-        current = current.sort_values('datetime', ascending=True)
-        name = update.effective_user.username if update.effective_user.username else update.effective_user.first_name
+        history["datetime"] = (
+            history["datetime"].dt.tz_localize("UTC").dt.tz_convert("Europe/Rome")
+        )
+        current = history[history["datetime"] > datetime.now(ZoneInfo("Europe/Rome"))]
+        current = current.sort_values("datetime", ascending=True)
+        name = (
+            update.effective_user.username
+            if update.effective_user.username
+            else update.effective_user.first_name
+        )
         message = textwrap.dedent(
-            f'Reservations for *{name}*\nCodice Fiscale: *{coidce}*\nEmail: {email}\n-----------------------\n'
+            f"Reservations for *{name}*\nCodice Fiscale: *{coidce}*\nEmail: {email}\n-----------------------\n"
         )
         if len(current) != 0:
             if cancel_stage:
@@ -46,66 +54,75 @@ async def show_existing_reservations(
             idx = 1
             for _, row in current.iterrows():
                 status = (
-                    f'✅ {row["status"]}'
-                    if row['status'] == 'success'
-                    else f'🔄 {row["status"]}'
-                    if row['status'] == 'pending'
-                    else f'⚠️ {row["status"]}'
-                    if row['status'] == 'fail'
-                    else f'❌ {row["status"]}'
-                    if row['status'] == 'terminated'
-                    else f'✴️ {row["status"]}'
-                    if row['status'] == 'existing'
-                    else 'undefined'
+                    f"✅ {row['status']}"
+                    if row["status"] == Status.SUCCESS
+                    else f"🔄 {row['status']}"
+                    if row["status"] == Status.PENDING
+                    else f"⚠️ {row['status']}"
+                    if row["status"] == Status.FAIL
+                    else f"❌ {row['status']}"
+                    if row["status"] == Status.TERMINATED
+                    else f"✴️ {row['status']}"
+                    if row["status"] == Status.EXISTING
+                    else "undefined"
                 )
-                booking_code: str = str(row['booking_code'])
-                booking_code = booking_code.replace('.', '').replace('+', '').replace('-', '')
-                if len(booking_code) < 6 and booking_code not in ['TBD', 'NA', 'INF', 'inf']:
+                booking_code: str = str(row["booking_code"])
+                booking_code = (
+                    booking_code.replace(".", "").replace("+", "").replace("-", "")
+                )
+                if len(booking_code) < 6 and booking_code not in [
+                    "TBD",
+                    "NA",
+                    "INF",
+                    "inf",
+                ]:
                     booking_code = booking_code.zfill(6)
-                res_type = 'Instant' if row['instant'] == 'True' else 'Regular'
-                retry = ' - Retry at :00 and :30 of every hour.' if row['status'] == 'fail' else ''
-                start_time_str = row['start_time'].strftime('%H:%M')
-                end_time_str = row['end_time'].strftime('%H:%M')
-                selected_date = row['selected_date'].strftime('%A, %Y-%m-%d')
+                res_type = "Instant" if row["instant"] == "True" else "Regular"
+                retry = (
+                    " - Retry at :00 and :30 of every hour."
+                    if row["status"] == Status.FAIL
+                    else ""
+                )
+                start_time_str = row["start_time"].strftime("%H:%M")
+                end_time_str = row["end_time"].strftime("%H:%M")
+                selected_date = row["selected_date"].strftime("%A, %Y-%m-%d")
                 message += textwrap.dedent(
-                    f'Reservation NO: *{idx:02d}*\n'
-                    f'Date: *{selected_date}*\n'
-                    f'Time: *{start_time_str}* - *{end_time_str}*\n'
-                    f'Duration: *{row["selected_duration"]}* *hours*\n'
-                    f'Booking Code: *{booking_code.upper()}*\n'
-                    f'Reservation Type: *{res_type}*\n'
-                    f'Status: *{status.title()}*_{retry}_\n'
-                    f'-----------------------\n'
+                    f"Reservation NO: *{idx:02d}*\n"
+                    f"Date: *{selected_date}*\n"
+                    f"Time: *{start_time_str}* - *{end_time_str}*\n"
+                    f"Duration: *{row['selected_duration']}* *hours*\n"
+                    f"Booking Code: *{booking_code.upper()}*\n"
+                    f"Reservation Type: *{res_type}*\n"
+                    f"Status: *{status.title()}*_{retry}_\n"
+                    f"-----------------------\n"
                 )
                 idx += 1
         else:
-            message += '_You have no reservations at the moment._'
+            message += "_You have no reservations at the moment._"
         return message
     except Exception as e:
-        logging.error(f'[Bot.messages:show_existing_reservations] {e}')
+        logging.error(f"[Bot.messages:show_existing_reservations] {e}")
         traceback.print_exc()
 
 
 def show_notification(status: str, record: dict, booking_code: str) -> str:
-    if status == 'success':
-        status_message = '✅ Reservation *Successful*!'
-        retry_message = 'Enjoy your stay 🤝'
-    elif status == 'fail':
-        status_message = '⚠️ Reservation *Failed*!'
-        retry_message = '*❗ Trying again ❗*'
-    elif status == 'terminated':
-        status_message = '⛔️ Reservation *Terminated*!'
-        retry_message = '*‼️ No more Retries ‼️*'
-    elif status == 'existing':
-        status_message = '✴️ Reservation *Exists* probably!'
-        retry_message = (
-            '*❗ Check your email.* There seems to be a reservation already made for this slot. The bot will not retry.'
-        )
+    if status == Status.SUCCESS:
+        status_message = "✅ Reservation *Successful*!"
+        retry_message = "Enjoy your stay 🤝"
+    elif status == Status.FAIL:
+        status_message = "⚠️ Reservation *Failed*!"
+        retry_message = "*❗ Trying again ❗*"
+    elif status == Status.TERMINATED:
+        status_message = "⛔️ Reservation *Terminated*!"
+        retry_message = "*‼️ No more Retries ‼️*"
+    elif status == Status.EXISTING:
+        status_message = "✴️ Reservation *Exists* probably!"
+        retry_message = "*❗ Check your email.* There seems to be a reservation already made for this slot. The bot will not retry."
 
-    date = record['selected_date'].strftime('%A, %Y-%m-%d')
-    start_time = record['start_time'].strftime('%H:%M')
-    end_time = record['end_time'].strftime('%H:%M')
-    duration = int(record['selected_duration'])
+    date = record["selected_date"].strftime("%A, %Y-%m-%d")
+    start_time = record["start_time"].strftime("%H:%M")
+    end_time = record["end_time"].strftime("%H:%M")
+    duration = int(record["selected_duration"])
     text = f"""
         {status_message}
         {retry_message}
@@ -222,28 +239,36 @@ async def show_slot_history(
     history: pd.DataFrame,
     date: str,
     slot: str,
-    start: str = time(*MIN_AVAILABILITY_START).strftime('%H:%M'),
+    start: str = time(*MIN_AVAILABILITY_START).strftime("%H:%M"),
     end: str | None = None,
 ) -> None | BytesIO:
-    slot_end_str = slot.split('-')[1]
-    slot_end = datetime.strptime(slot_end_str, '%H:%M').time()
-    parsed_start = datetime.strptime(start, '%H:%M').time()
-    parsed_end = datetime.strptime(end, '%H:%M').time() if end else slot_end
+    slot_end_str = slot.split("-")[1]
+    slot_end = datetime.strptime(slot_end_str, "%H:%M").time()
+    parsed_start = datetime.strptime(start, "%H:%M").time()
+    parsed_end = datetime.strptime(end, "%H:%M").time() if end else slot_end
 
     all_slots = history.copy()
-    all_slots.rename(columns={'job_timestamp': 'time'}, inplace=True)
+    all_slots.rename(columns={"job_timestamp": "time"}, inplace=True)
 
-    all_slots['time'] = all_slots['time'].apply(
-        lambda t: t.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo('Europe/Rome')).strftime('%H:%M:%S')
+    all_slots["time"] = all_slots["time"].apply(
+        lambda t: t.replace(tzinfo=ZoneInfo("UTC"))
+        .astimezone(ZoneInfo("Europe/Rome"))
+        .strftime("%H:%M:%S")
     )
 
     all_slots = all_slots[
-        all_slots['time'].apply(lambda t: parsed_start <= datetime.strptime(t, '%H:%M:%S').time() < parsed_end)
+        all_slots["time"].apply(
+            lambda t: parsed_start
+            <= datetime.strptime(t, "%H:%M:%S").time()
+            < parsed_end
+        )
     ]
 
-    selected_slot = all_slots[all_slots['slot'] == slot][['time', 'available']]
+    selected_slot = all_slots[all_slots["slot"] == slot][["time", "available"]]
     if selected_slot.empty:
         return None
 
-    history_graph = plot_slot_history(selected_slot, date, slot, start, end=parsed_end.strftime('%H:%M'))
+    history_graph = plot_slot_history(
+        selected_slot, date, slot, start, end=parsed_end.strftime("%H:%M")
+    )
     return history_graph
