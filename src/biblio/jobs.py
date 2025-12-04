@@ -11,7 +11,12 @@ from pygsheets import Worksheet
 from telegram import Bot
 
 from src.biblio.bot.messages import show_notification
-from src.biblio.config.config import ReservationConfirmationConflict, Schedule, get_wks
+from src.biblio.config.config import (
+    ReservationConfirmationConflict,
+    Schedule,
+    Status,
+    get_wks,
+)
 from src.biblio.db.fetch import claim_reservations, fetch_all_reservations
 from src.biblio.db.insert import insert_slots
 from src.biblio.db.update import sweep_stuck_reservations, update_record
@@ -44,7 +49,9 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
     process_start = time.perf_counter()
 
     if _is_stale_fail(record):
-        return await _finalize(record, "terminated", "CLOSED", retries, chat_id, bot)
+        return await _finalize(
+            record, Status.TERMINATED, "CLOSED", retries, chat_id, bot
+        )
 
     reserve_start = time.perf_counter()
     start, end, duration = await _reserve_phase(record)
@@ -53,7 +60,12 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
     )
     if start is None:
         return await _finalize(
-            record, "fail", record["booking_code"], retries + 1, chat_id, bot
+            record,
+            Status.FAIL,
+            record["booking_code"],
+            retries + 1,
+            chat_id,
+            bot,
         )
 
     set_start = time.perf_counter()
@@ -68,7 +80,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
             record,
             set_status,
             booking_code,
-            retries + (set_status == "fail"),
+            retries + (set_status == Status.FAIL),
             chat_id,
             bot,
         )
@@ -82,8 +94,8 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
 
     confirm_start = time.perf_counter()
     confirm_status = await _confirm_phase(record, entry, retries)
-    if confirm_status == "fail":
-        confirm_status = "awaiting"
+    if confirm_status == Status.FAIL:
+        confirm_status = Status.AWAITING
 
     logging.info(
         f"[JOB] 3️⃣ ⏱️ Confirm phase took {time.perf_counter() - confirm_start:.2f}s for ID {record['id']}"
@@ -92,7 +104,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
         record,
         confirm_status,
         booking_code,
-        retries + (confirm_status == "fail"),
+        retries + (confirm_status == Status.FAIL),
         chat_id,
         bot,
     )
@@ -134,19 +146,23 @@ async def _set_phase(
         )
         booking_code = resp.get("codice_prenotazione")
         entry = resp.get("entry")
-        logging.info(f"[JOB] 2️⃣✅ Reservation set for ID {record['id']}")
+        logging.info(f"[JOB] 2️⃣ ✅ Reservation set for ID {record['id']}")
         return booking_code, entry, None
     except ReservationConfirmationConflict as e:
         logging.error(
             f"[JOB] 2️⃣ ❌ Already confirmed during set for ID {record['id']}: {e}"
         )
-        return booking_code or "UNKNOWN", entry, "existing"
+        return booking_code or "UNKNOWN", entry, Status.EXISTING
     except TimeoutError as e:
-        logging.warning(f"[JOB] 2️⃣⚠️ Set timed out for ID {record['id']}: {e}")
-        return booking_code, entry, "fail"
+        logging.warning(f"[JOB] 2️⃣ ⚠️ Set timed out for ID {record['id']}: {e}")
+        return booking_code, entry, Status.FAIL
     except Exception as e:
         logging.error(f"[JOB] 2️⃣ ❌ Set failed for ID {record['id']}: {e}")
-        return booking_code, entry, ("terminated" if retries + 1 > 20 else "fail")
+        return (
+            booking_code,
+            entry,
+            (Status.TERMINATED if retries + 1 > 20 else Status.FAIL),
+        )
 
 
 async def _confirm_phase(record: dict, entry: str | None, retries: int) -> str:
@@ -154,26 +170,30 @@ async def _confirm_phase(record: dict, entry: str | None, retries: int) -> str:
         logging.error(
             f"[JOB] 3️⃣ ❌ No entry code available for confirm on ID {record['id']}"
         )
-        return "fail"
+        return Status.FAIL
     try:
         await confirm_reservation(entry)
-        logging.info(f"[JOB] 3️⃣✅ Confirmed for ID {record['id']}")
-        return "success"
+        logging.info(f"[JOB] 3️⃣ ✅ Confirmed for ID {record['id']}")
+        return Status.SUCCESS
     except ReservationConfirmationConflict:
         logging.warning(
             f"[JOB] 3️⃣ ⚠️ Confirm conflict (already confirmed) for ID {record['id']}"
         )
-        return "existing"
+        return Status.EXISTING
     except TimeoutError as e:
         logging.warning(f"[JOB] 3️⃣ ⚠️ Confirm timed out for ID {record['id']}: {e}")
-        return "fail"
+        return Status.FAIL
     except Exception as e:
         logging.error(f"[JOB] 3️⃣ ❌ Confirm failed for ID {record['id']}: {e}")
-        return "terminated" if retries + 1 > 20 else "fail"
+        return Status.TERMINATED if retries + 1 > 30 else Status.FAIL
 
 
 def _is_stale_fail(record: dict) -> bool:
-    if record["status"] not in ("fail", "awaiting", "processing"):
+    if record["status"] not in (
+        Status.FAIL,
+        Status.AWAITING,
+        Status.PROCESSING,
+    ):
         return False
     scheduled_dt = datetime.combine(
         record["selected_date"], record["start_time"]
@@ -206,9 +226,13 @@ async def _finalize(record, status, booking_code, retries, chat_id, bot: Bot) ->
 
 # TODO: drop old_status in case of no new development
 def _should_notify(old_status: str, new_status: str, retries: int) -> bool:
-    if new_status in ("success", "existing", "terminated"):
+    if new_status in (
+        Status.SUCCESS,
+        Status.EXISTING,
+        Status.TERMINATED,
+    ):
         return True
-    if new_status == "fail":
+    if new_status == Status.FAIL:
         return retries > 0 and retries % 11 == 0
     return False
 

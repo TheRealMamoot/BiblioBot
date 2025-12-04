@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 from pandas import DataFrame
 
-from src.biblio.config.config import connect_db
+from src.biblio.config.config import Status, connect_db
 
 
 async def fetch_user_reservations(
@@ -147,7 +147,7 @@ async def claim_reservations(limit: int = 10, date=None) -> list[dict]:
         FOR UPDATE SKIP LOCKED
     )
     UPDATE reservations r
-    SET status = 'processing',
+    SET status = $4,
         status_change = TRUE,
         updated_at = CURRENT_TIMESTAMP
     FROM cte
@@ -159,7 +159,17 @@ async def claim_reservations(limit: int = 10, date=None) -> list[dict]:
               cte.name,
               cte.chat_id
     """
-    rows = await conn.fetch(query, ["pending", "fail", "awaiting"], date, limit)
+    rows = await conn.fetch(
+        query,
+        [
+            Status.PENDING,
+            Status.FAIL,
+            Status.AWAITING,
+        ],
+        date,
+        limit,
+        Status.PROCESSING,
+    )
     await conn.close()
     logging.info(f"[DB] Claimed {len(rows)} reservations for processing")
     return [dict(row) for row in rows] if rows else []

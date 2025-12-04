@@ -1,20 +1,20 @@
 import logging
 from typing import Any
 
-from src.biblio.config.config import connect_db
+from src.biblio.config.config import Status, connect_db
 
 
 async def update_cancel_status(reservation_id: str) -> None:
     conn = await connect_db()
     query = """
     UPDATE reservations
-    SET status = 'terminated',
+    SET status = $1,
         notified = TRUE,
         status_change = TRUE,
         updated_at = CURRENT_TIMESTAMP
-    WHERE id = $1
+    WHERE id = $2
     """
-    await conn.execute(query, reservation_id)
+    await conn.execute(query, Status.TERMINATED, reservation_id)
     await conn.close()
     logging.info(f"[DB] Reservation {reservation_id} marked as terminated")
 
@@ -62,17 +62,25 @@ async def sweep_stuck_reservations(
     SET status = CASE
         WHEN (r.selected_date || ' ' || r.start_time)::timestamp
              AT TIME ZONE 'Europe/Rome' + make_interval(mins => $2) < now() AT TIME ZONE 'Europe/Rome'
-          THEN 'terminated'
-        ELSE 'fail'
+          THEN $3
+        ELSE $4
     END,
         retries = r.retries + 1,
         status_change = TRUE,
         updated_at = CURRENT_TIMESTAMP
-    WHERE r.status IN ('processing', 'awaiting')
+    WHERE r.status IN ($5, $6)
       AND r.updated_at < now() - make_interval(mins => $1)
     RETURNING id, status, retries
     """
-    rows = await conn.fetch(query, stale_minutes, activation_grace_minutes)
+    rows = await conn.fetch(
+        query,
+        stale_minutes,
+        activation_grace_minutes,
+        Status.TERMINATED,
+        Status.FAIL,
+        Status.PROCESSING,
+        Status.AWAITING,
+    )
     await conn.close()
     if rows:
         logging.info(f"[DB] Swept {len(rows)} stuck reservations")

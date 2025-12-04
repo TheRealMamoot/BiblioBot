@@ -9,6 +9,7 @@ import aiofiles
 from telegram import Bot
 from telegram.error import Forbidden, TelegramError
 
+from src.biblio.config.config import Status
 from src.biblio.db.fetch import fetch_all_user_chat_ids, fetch_reservations
 
 DEPLOY_NOTIF = textwrap.dedent(
@@ -111,7 +112,9 @@ async def notify_deployment(bot: Bot) -> None:
 async def notify_reminder(bot: Bot) -> None:
     tomorrow = datetime.now(ZoneInfo("Europe/Rome")) + timedelta(days=1)
 
-    reservations = await fetch_reservations(statuses=["pending"], date=tomorrow.date())
+    reservations = await fetch_reservations(
+        statuses=[Status.PENDING], date=tomorrow.date()
+    )
     all_chat_ids = await fetch_all_user_chat_ids()
     pending_chat_ids = [res["chat_id"] for res in reservations]
     to_notify_chat_ids = set(all_chat_ids) - set(pending_chat_ids)
@@ -129,7 +132,7 @@ async def notify_reminder(bot: Bot) -> None:
 
 async def notify_reservation_activation(bot: Bot) -> None:
     now = datetime.now(ZoneInfo("Europe/Rome"))
-    reservations = await fetch_reservations(statuses=["success"])
+    reservations = await fetch_reservations(statuses=[Status.SUCCESS])
 
     # Determine reminder targets for "before" and "after" cases
     if now.minute == 15:

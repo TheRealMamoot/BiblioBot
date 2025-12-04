@@ -18,72 +18,80 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     if user_input == Label.RESERVATION_TYPE_BACK:
         await update.message.reply_text(
-            'You are so determined, wow!',
+            "You are so determined, wow!",
             reply_markup=Keyboard.reservation_type(),
         )
         return States.RESERVE_TYPE
 
-    choices: dict = context.user_data['cancelation_choices']
-    cancelation_id = next((id for id, deatils in choices.items() if deatils['button'] == user_input), None)
+    choices: dict = context.user_data["cancelation_choices"]
+    cancelation_id = next(
+        (id for id, deatils in choices.items() if deatils["button"] == user_input), None
+    )
 
     if not cancelation_id:
         await update.message.reply_text(
-            'Pick from the list!',
+            "Pick from the list!",
         )
         return States.CANCELATION_SLOT_CHOICE
 
-    context.user_data['cancelation_chosen_slot_id'] = cancelation_id
-    logging.info(f'🔄 {update.effective_user} selected cancelation slot at {datetime.now(ZoneInfo("Europe/Rome"))}')
+    context.user_data["cancelation_chosen_slot_id"] = cancelation_id
+    logging.info(
+        f"🔄 {update.effective_user} selected cancelation slot at {datetime.now(ZoneInfo('Europe/Rome'))}"
+    )
 
     await update.message.reply_text(
         textwrap.dedent(
             f"""
             Are you sure you want to cancel this slot ?
-            Codice Fiscale: *{context.user_data.get('codice_fiscale')}*
-            Full Name: *{context.user_data.get('name')}*
-            Email: *{context.user_data.get('email')}*
-            On *{choices[cancelation_id]['selected_date']}*
-            From *{choices[cancelation_id]['start_time']}* - *{choices[cancelation_id]['end_time']}* (*{choices[cancelation_id]['selected_duration']}* hours)
-            Satus: *{(choices[cancelation_id]['status']).title()}*
+            Codice Fiscale: *{context.user_data.get("codice_fiscale")}*
+            Full Name: *{context.user_data.get("name")}*
+            Email: *{context.user_data.get("email")}*
+            On *{choices[cancelation_id]["selected_date"]}*
+            From *{choices[cancelation_id]["start_time"]}* - *{choices[cancelation_id]["end_time"]}* (*{choices[cancelation_id]["selected_duration"]}* hours)
+            Satus: *{(choices[cancelation_id]["status"]).title()}*
             """
         ),
-        parse_mode='Markdown',
+        parse_mode="Markdown",
         reply_markup=Keyboard.cancelation_confirm(),
     )
     return States.CANCELATION_CONFIRMING
 
 
-async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def cancelation_confirmation(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
     user_input = update.message.text.strip()
 
     if user_input == Label.CONFIRM_NO:
-        choices: dict = context.user_data['cancelation_choices']
-        reservation_buttons = [choice['button'] for choice in choices.values()]
+        choices: dict = context.user_data["cancelation_choices"]
+        reservation_buttons = [choice["button"] for choice in choices.values()]
         await update.message.reply_text(
-            'God kill me now! 😭',
+            "God kill me now! 😭",
             reply_markup=Keyboard.cancelation_options(reservation_buttons),
         )
         return States.CANCELATION_SLOT_CHOICE
 
     elif user_input == Label.CANCEL_CONFIRM_YES:
-        reservation_id: str = context.user_data['cancelation_chosen_slot_id']
+        reservation_id: str = context.user_data["cancelation_chosen_slot_id"]
         history = await fetch_reservation_by_id(reservation_id)
         failure = False
         if history:
-            booking_code = history['booking_code']
-            if booking_code not in ['TBD', 'NA']:
+            booking_code = history["booking_code"]
+            if booking_code not in ["TBD", "NA"]:
                 try:
-                    await cancel_reservation(context.user_data['codice_fiscale'], booking_code)
+                    await cancel_reservation(
+                        context.user_data["codice_fiscale"], booking_code
+                    )
                 except Exception:
                     try:
                         await cancel_reservation(
-                            context.user_data['codice_fiscale'],
+                            context.user_data["codice_fiscale"],
                             booking_code,
-                            mode='update',
+                            mode="update",
                         )
                     except Exception as e:
                         logging.error(
-                            f'[CANCEL] {update.effective_user} cancelation was not completed at {datetime.now(ZoneInfo("Europe/Rome"))} -- {e}'
+                            f"[CANCEL] {update.effective_user} cancelation was not completed at {datetime.now(ZoneInfo('Europe/Rome'))} -- {e}"
                         )
                         failure = True
                         await update.message.reply_text(
@@ -99,32 +107,34 @@ async def cancelation_confirmation(update: Update, context: ContextTypes.DEFAULT
                                 ❗ In any case, you can now *book a new slot*.
                                 """
                             ),
-                            parse_mode='Markdown',
+                            parse_mode="Markdown",
                             reply_markup=Keyboard.reservation_type(),
                         )
 
             await update_cancel_status(reservation_id)
-            logging.info(f'✔️ {update.effective_user} confirmed cancelation at {datetime.now(ZoneInfo("Europe/Rome"))}')
+            logging.info(
+                f"✔️ {update.effective_user} confirmed cancelation at {datetime.now(ZoneInfo('Europe/Rome'))}"
+            )
 
             if not failure:
                 await update.message.reply_text(
-                    '✔️ Reservation canceled successfully!',
+                    "✔️ Reservation canceled successfully!",
                     reply_markup=Keyboard.reservation_type(),
                 )
             return States.RESERVE_TYPE
 
         else:
             logging.info(
-                f'⚠️ {update.effective_user} cancelation slot NOT FOUND at {datetime.now(ZoneInfo("Europe/Rome"))}'
+                f"⚠️ {update.effective_user} cancelation slot NOT FOUND at {datetime.now(ZoneInfo('Europe/Rome'))}"
             )
             await update.message.reply_text(
-                '⚠️ Reservation cancelation usuccessfull!',
+                "⚠️ Reservation cancelation usuccessfull!",
                 reply_markup=Keyboard.reservation_type(),
             )
             return States.RESERVE_TYPE
 
     else:
         await update.message.reply_text(
-            'Just click. Please! 😭',
+            "Just click. Please! 😭",
         )
         return States.CANCELATION_CONFIRMING
