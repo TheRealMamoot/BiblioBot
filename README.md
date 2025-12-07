@@ -1,5 +1,7 @@
-![Version](https://img.shields.io/github/v/release/TheRealMamoot/BiblioBot?label=BiblioBot)
-![Users](https://img.shields.io/badge/dynamic/json?url=https://bibliobot-production.up.railway.app/stats&label=Users&query=users&color=green)
+![Version](https://img.shields.io/github/v/release/TheRealMamoot/BiblioBot?label=BiblioBot&color=blueviolet)
+![Status](https://img.shields.io/website?url=https://bibliobot-production.up.railway.app/&label=Status&up_message=ONLINE&down_message=OFFLINE)
+![Users](https://img.shields.io/badge/dynamic/json?url=https://bibliobot-production.up.railway.app/stats&label=Users&query=users&color=blue)
+![Reservations](https://img.shields.io/badge/dynamic/json?url=https://bibliobot-production.up.railway.app/stats&label=Reservations&query=reservations&color=lightblue)
 
 # 📚 BiblioBot: Your Biblioteca Slot Assistant
 

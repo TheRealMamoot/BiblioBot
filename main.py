@@ -44,8 +44,8 @@ async def start_bot():
 
 
 async def main():
-    bot_task = asyncio.create_task(start_bot())
     server_task = asyncio.create_task(start_server())
+    bot_task = asyncio.create_task(start_bot())
     await asyncio.gather(bot_task, server_task)
 
 
