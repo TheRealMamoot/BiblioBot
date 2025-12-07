@@ -66,7 +66,7 @@ class Schedule:
     def weekly():
         return Schedule(
             {
-                0: (9, 22),
+                # 0: (9, 22),
                 1: (9, 22),
                 2: (9, 22),
                 3: (9, 22),
