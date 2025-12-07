@@ -1,4 +1,5 @@
-![Version](https://img.shields.io/github/v/release/TheRealMamoot/BiblioBot?label=BiblioBot&style=flat-square)
+![Version](https://img.shields.io/github/v/release/TheRealMamoot/BiblioBot?label=BiblioBot)
+![Users](https://img.shields.io/badge/dynamic/json?url=http://bibliobot-staging.up.railway.app/stats&label=Users&query=users&color=blue)
 
 # 📚 BiblioBot: Your Biblioteca Slot Assistant
 
