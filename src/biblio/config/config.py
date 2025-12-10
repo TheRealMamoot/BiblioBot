@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from enum import IntEnum, auto
+from enum import Enum, IntEnum, auto
 from functools import cache
 from pathlib import Path
 
@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 
 CONFIG_DIR = Path(__file__).resolve().parents[2] / "biblio" / "config"
 DEFAULT_CREDENTIALS = CONFIG_DIR / "biblio.json"
+DEFAULT_PRIORITY = 5
 
 
 def _resolve_credentials_path() -> Path | None:
@@ -48,7 +49,7 @@ class States(IntEnum):
     RETRY = auto()
 
 
-class Status:
+class Status(str, Enum):
     PENDING = "pending"
     PROCESSING = "processing"
     AWAITING = "awaiting"
@@ -56,6 +57,12 @@ class Status:
     SUCCESS = "success"
     EXISTING = "existing"
     TERMINATED = "terminated"
+
+
+class BookingCodeStatus(str, Enum):
+    NA = "NA"
+    TBD = "TBD"
+    CLOSED = "CLOSED"
 
 
 @dataclass
@@ -66,7 +73,7 @@ class Schedule:
     def weekly():
         return Schedule(
             {
-                # 0: (9, 22),
+                0: (9, 22),
                 1: (9, 22),
                 2: (9, 22),
                 3: (9, 22),

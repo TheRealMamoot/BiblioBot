@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import States
+from src.biblio.config.config import BookingCodeStatus, States
 from src.biblio.db.fetch import fetch_reservation_by_id
 from src.biblio.db.update import update_cancel_status
 from src.biblio.reservation.reservation import cancel_reservation
@@ -77,7 +77,7 @@ async def cancelation_confirmation(
         failure = False
         if history:
             booking_code = history["booking_code"]
-            if booking_code not in ["TBD", "NA"]:
+            if booking_code not in [BookingCodeStatus.TBD, BookingCodeStatus.NA]:
                 try:
                     await cancel_reservation(
                         context.user_data["codice_fiscale"], booking_code

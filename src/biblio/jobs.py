@@ -13,6 +13,7 @@ from telegram import Bot
 
 from src.biblio.bot.messages import show_notification
 from src.biblio.config.config import (
+    BookingCodeStatus,
     ReservationConfirmationConflict,
     Schedule,
     Status,
@@ -51,7 +52,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
 
     if _is_stale_fail(record):
         return await _finalize(
-            record, Status.TERMINATED, "CLOSED", retries, chat_id, bot
+            record, Status.TERMINATED, BookingCodeStatus.CLOSED, retries, chat_id, bot
         )
 
     reserve_start = time.perf_counter()

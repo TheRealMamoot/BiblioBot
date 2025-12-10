@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import States, Status
+from src.biblio.config.config import BookingCodeStatus, States, Status
 from src.biblio.db.insert import writer
 from src.biblio.reservation.reservation import (
     calculate_timeout,
@@ -47,7 +47,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         )
         context.user_data["created_at"] = datetime.now(ZoneInfo("Europe/Rome"))
         context.user_data["status"] = Status.PENDING
-        context.user_data["booking_code"] = "TBD"
+        context.user_data["booking_code"] = BookingCodeStatus.TBD
         context.user_data["retries"] = "0"
 
         if context.user_data["instant"]:
@@ -79,7 +79,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 )
                 context.user_data["retries"] = "1"
                 context.user_data["status"] = Status.FAIL
-                context.user_data["booking_code"] = "NA"
+                context.user_data["booking_code"] = BookingCodeStatus.NA
                 context.user_data["updated_at"] = datetime.now(ZoneInfo("Europe/Rome"))
                 request_status_message = (
                     "⛔ Reservation *failed*! *Slot not available*."

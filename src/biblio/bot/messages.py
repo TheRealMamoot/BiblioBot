@@ -9,7 +9,7 @@ import pandas as pd
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import Schedule, Status
+from src.biblio.config.config import BookingCodeStatus, Schedule, Status
 from src.biblio.db.fetch import fetch_user_reservations
 from src.biblio.utils.utils import plot_slot_history, utc_tuple_to_rome_time
 
@@ -71,8 +71,8 @@ async def show_existing_reservations(
                     booking_code.replace(".", "").replace("+", "").replace("-", "")
                 )
                 if len(booking_code) < 6 and booking_code not in [
-                    "TBD",
-                    "NA",
+                    BookingCodeStatus.TBD,
+                    BookingCodeStatus.NA,
                     "INF",
                     "inf",
                 ]:
