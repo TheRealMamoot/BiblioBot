@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import BookingCodeStatus, States
+from src.biblio.config.config import BookingCodeStatus, States, Status
 from src.biblio.db.fetch import fetch_reservation_by_id
 from src.biblio.db.update import update_cancel_status
 from src.biblio.reservation.reservation import cancel_reservation
@@ -39,6 +39,7 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         f"🔄 {update.effective_user} selected cancelation slot at {datetime.now(ZoneInfo('Europe/Rome'))}"
     )
 
+    status: str = choices[cancelation_id]["status"].title()
     await update.message.reply_text(
         textwrap.dedent(
             f"""
@@ -48,7 +49,7 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             Email: *{context.user_data.get("email")}*
             On *{choices[cancelation_id]["selected_date"]}*
             From *{choices[cancelation_id]["start_time"]}* - *{choices[cancelation_id]["end_time"]}* (*{choices[cancelation_id]["selected_duration"]}* hours)
-            Satus: *{(choices[cancelation_id]["status"]).title()}*
+            Satus: *{(Status(status.lower())).emoji} {status}*
             """
         ),
         parse_mode="Markdown",

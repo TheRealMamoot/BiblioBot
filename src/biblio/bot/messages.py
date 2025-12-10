@@ -53,19 +53,11 @@ async def show_existing_reservations(
 
             idx = 1
             for _, row in current.iterrows():
-                status = (
-                    f"✅ {row['status']}"
-                    if row["status"] == Status.SUCCESS
-                    else f"🔄 {row['status']}"
-                    if row["status"] == Status.PENDING
-                    else f"⚠️ {row['status']}"
-                    if row["status"] == Status.FAIL
-                    else f"❌ {row['status']}"
-                    if row["status"] == Status.TERMINATED
-                    else f"✴️ {row['status']}"
-                    if row["status"] == Status.EXISTING
-                    else "undefined"
-                )
+                try:
+                    status_enum = Status(row["status"])
+                    status = f"{status_enum.emoji} {row['status']}"
+                except ValueError:
+                    status = "undefined"
                 booking_code: str = str(row["booking_code"])
                 booking_code = (
                     booking_code.replace(".", "").replace("+", "").replace("-", "")
@@ -118,6 +110,9 @@ def show_notification(status: str, record: dict, booking_code: str) -> str:
     elif status == Status.EXISTING:
         status_message = "✴️ Reservation *Exists* probably!"
         retry_message = "*❗ Check your email.* There seems to be a reservation already made for this slot. The bot will not retry."
+    else:
+        status_message = ""
+        retry_message = ""
 
     date = record["selected_date"].strftime("%A, %Y-%m-%d")
     start_time = record["start_time"].strftime("%H:%M")

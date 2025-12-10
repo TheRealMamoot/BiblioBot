@@ -14,9 +14,9 @@ async def update_cancel_status(reservation_id: str) -> None:
         updated_at = CURRENT_TIMESTAMP
     WHERE id = $2
     """
-    await conn.execute(query, Status.TERMINATED, reservation_id)
+    await conn.execute(query, Status.CANCELED, reservation_id)
     await conn.close()
-    logging.info(f"[DB] Reservation {reservation_id} marked as terminated")
+    logging.info(f"[DB] Reservation {reservation_id} marked as {Status.CANCELED}")
 
 
 async def update_record(table: str, row_id: str, updates: dict[str, Any]) -> None:

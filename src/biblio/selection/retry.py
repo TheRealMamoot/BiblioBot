@@ -94,19 +94,12 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             return States.RETRY
 
         for _, row in reservations.iterrows():
-            if row["status"] == Status.TERMINATED:
+            if row["status"] in (Status.TERMINATED, Status.CANCELED):
                 continue
-            status = (
-                "🔄"
-                if row["status"] == Status.PENDING
-                else "⚠️"
-                if row["status"] == Status.FAIL
-                else "✅"
-                if row["status"] == Status.SUCCESS
-                else "✴️"
-                if row["status"] == Status.EXISTING
-                else ""
-            )
+            try:
+                status = Status(row["status"]).emoji
+            except ValueError:
+                status = ""
             start_time_str = row["start_time"].strftime("%H:%M")
             end_time_str = row["end_time"].strftime("%H:%M")
             selected_date = row["selected_date"].strftime("%A, %Y-%m-%d")

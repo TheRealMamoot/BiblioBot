@@ -50,13 +50,20 @@ class States(IntEnum):
 
 
 class Status(str, Enum):
-    PENDING = "pending"
-    PROCESSING = "processing"
-    AWAITING = "awaiting"
-    FAIL = "fail"
-    SUCCESS = "success"
-    EXISTING = "existing"
-    TERMINATED = "terminated"
+    PENDING = ("pending", "🔄")
+    PROCESSING = ("processing", "🛠️")
+    AWAITING = ("awaiting", "⏳")
+    FAIL = ("fail", "⚠️")
+    SUCCESS = ("success", "✅")
+    EXISTING = ("existing", "✴️")
+    TERMINATED = ("terminated", "❌")
+    CANCELED = ("canceled", "🛑")
+
+    def __new__(cls, code: str, emoji: str):
+        obj = str.__new__(cls, code)
+        obj._value_ = code
+        obj.emoji = emoji
+        return obj
 
 
 class BookingCodeStatus(str, Enum):

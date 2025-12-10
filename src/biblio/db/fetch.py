@@ -93,12 +93,13 @@ async def fetch_all_reservations() -> DataFrame:
     status,
 
     CASE 
-    WHEN status = 'existing' THEN 0  
-    WHEN status = 'fail' THEN 1  
-    WHEN status = 'pending' THEN 2  
-    WHEN status = 'success' THEN 3
-    WHEN status = 'terminated' THEN 4
-    ELSE 5
+    WHEN status = $1 THEN 0  
+    WHEN status = $2 THEN 1  
+    WHEN status = $3 THEN 2  
+    WHEN status = $4 THEN 3
+    WHEN status = $5 THEN 4
+    WHEN status = $6 THEN 5
+    ELSE 6
     END AS status_label,
 
     instant,
@@ -112,7 +113,15 @@ async def fetch_all_reservations() -> DataFrame:
     WHERE selected_date >= (CURRENT_DATE - INTERVAL '1 days')
     ORDER BY selected_date DESC, status_label ASC, priority ASC, selected_duration DESC, start_time ASC
     """
-    rows = await conn.fetch(query)
+    statuses = [
+        Status.EXISTING,
+        Status.FAIL,
+        Status.PENDING,
+        Status.SUCCESS,
+        Status.TERMINATED,
+        Status.CANCELED,
+    ]
+    rows = await conn.fetch(query, *statuses)
     await conn.close()
     if not rows:
         return DataFrame()
