@@ -9,7 +9,7 @@ from src.biblio.bot.messages import (
     show_support_message,
     show_user_agreement,
 )
-from src.biblio.config.config import States, get_priorities
+from src.biblio.config.config import DEFAULT_PRIORITY, States, get_priorities
 from src.biblio.db.fetch import fetch_existing_user
 from src.biblio.utils.keyboards import Keyboard
 
@@ -45,7 +45,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         context.user_data["codice_fiscale"] = codice.upper()
         context.user_data["name"] = name
         context.user_data["email"] = email.lower()
-        context.user_data["priority"] = int(priorities.get(codice.upper(), 2))
+        context.user_data["priority"] = int(
+            priorities.get(codice.upper(), DEFAULT_PRIORITY)
+        )
 
         await update.message.reply_text(
             message,

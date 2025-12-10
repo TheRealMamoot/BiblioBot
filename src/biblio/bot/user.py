@@ -7,7 +7,7 @@ from telegram import ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from src.biblio.bot.messages import show_help, show_support_message
-from src.biblio.config.config import States, get_priorities
+from src.biblio.config.config import DEFAULT_PRIORITY, States, get_priorities
 from src.biblio.db.insert import insert_user
 from src.biblio.utils.keyboards import Keyboard, Label
 from src.biblio.utils.validation import validate_codice_fiscale, validate_email
@@ -126,8 +126,8 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     context.user_data["name"] = name
     context.user_data["email"] = email.lower()
     context.user_data["priority"] = int(
-        priorities.get(codice.upper(), 2)
-    )  # Default: 2. For everyone else
+        priorities.get(codice.upper(), DEFAULT_PRIORITY)
+    )
 
     keyboard = Keyboard.reservation_type()
     await update.message.reply_text(

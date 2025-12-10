@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 import aiocron
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from httpx import ReadTimeout
 from pygsheets import Worksheet
 from telegram import Bot
 
@@ -56,7 +57,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
     reserve_start = time.perf_counter()
     start, end, duration = await _reserve_phase(record)
     logging.info(
-        f"[JOB] 1️⃣ ⏱️ Reserve phase took {time.perf_counter() - reserve_start:.2f}s for ID {record['id']}"
+        f"[RESERVE] 1️⃣ ⏱️ Reserve phase took {time.perf_counter() - reserve_start:.2f}s for ID {record['id']}"
     )
     if start is None:
         return await _finalize(
@@ -73,7 +74,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
         record, start, end, duration, user, retries
     )
     logging.info(
-        f"[JOB] 2️⃣ ⏱️ Set phase took {time.perf_counter() - set_start:.2f}s for ID {record['id']}"
+        f"[SET] 2️⃣ ⏱️ Set phase took {time.perf_counter() - set_start:.2f}s for ID {record['id']}"
     )
     if set_status:  # existing/fail/terminated decided in set phase
         result = await _finalize(
@@ -98,7 +99,7 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
         confirm_status = Status.AWAITING
 
     logging.info(
-        f"[JOB] 3️⃣ ⏱️ Confirm phase took {time.perf_counter() - confirm_start:.2f}s for ID {record['id']}"
+        f"[CONFIRM] 3️⃣ ⏱️ Confirm phase took {time.perf_counter() - confirm_start:.2f}s for ID {record['id']}"
     )
     result = await _finalize(
         record,
@@ -123,7 +124,7 @@ async def _reserve_phase(record: dict) -> tuple[int | None, int | None, int | No
             int(record["selected_duration"]),
         )
     except Exception as e:
-        logging.error(f"[JOB] ❌ Reserve failed for ID {record['id']}: {e}")
+        logging.error(f"[JOB_SET] ❌ Reserve failed for ID {record['id']}: {e}")
         return None, None, None
 
 
@@ -146,18 +147,18 @@ async def _set_phase(
         )
         booking_code = resp.get("codice_prenotazione")
         entry = resp.get("entry")
-        logging.info(f"[JOB] 2️⃣ ✅ Reservation set for ID {record['id']}")
+        logging.info(f"[JOB_SET] 2️⃣ ✅ Reservation set for ID {record['id']}")
         return booking_code, entry, None
     except ReservationConfirmationConflict as e:
         logging.error(
-            f"[JOB] 2️⃣ ❌ Already confirmed during set for ID {record['id']}: {e}"
+            f"[JOB_SET] 2️⃣ ❌ Already confirmed during set for ID {record['id']}: {e}"
         )
         return booking_code or "UNKNOWN", entry, Status.EXISTING
     except TimeoutError as e:
-        logging.warning(f"[JOB] 2️⃣ ⚠️ Set timed out for ID {record['id']}: {e}")
+        logging.warning(f"[JOB_SET] 2️⃣ ⚠️ Set timed out for ID {record['id']}: {e}")
         return booking_code, entry, Status.FAIL
     except Exception as e:
-        logging.error(f"[JOB] 2️⃣ ❌ Set failed for ID {record['id']}: {e}")
+        logging.error(f"[JOB_SET] 2️⃣ ❌ Set failed for ID {record['id']}: {e}")
         return (
             booking_code,
             entry,
@@ -168,23 +169,23 @@ async def _set_phase(
 async def _confirm_phase(record: dict, entry: str | None, retries: int) -> str:
     if not entry:
         logging.error(
-            f"[JOB] 3️⃣ ❌ No entry code available for confirm on ID {record['id']}"
+            f"[JOB_CONFIRM] 3️⃣ ❌ No entry code available for confirm on ID {record['id']}"
         )
         return Status.FAIL
     try:
         await confirm_reservation(entry)
-        logging.info(f"[JOB] 3️⃣ ✅ Confirmed for ID {record['id']}")
+        logging.info(f"[JOB_CONFIRM] 3️⃣ ✅ Confirmed for ID {record['id']}")
         return Status.SUCCESS
     except ReservationConfirmationConflict:
         logging.warning(
-            f"[JOB] 3️⃣ ⚠️ Confirm conflict (already confirmed) for ID {record['id']}"
+            f"[JOB_CONFIRM] 3️⃣ ⚠️ Conflict (already confirmed) for ID {record['id']}"
         )
         return Status.EXISTING
-    except TimeoutError as e:
-        logging.warning(f"[JOB] 3️⃣ ⚠️ Confirm timed out for ID {record['id']}: {e}")
+    except TimeoutError or ReadTimeout as e:
+        logging.warning(f"[JOB_CONFIRM] 3️⃣ ⚠️ Timed out for ID {record['id']}: {e}")
         return Status.FAIL
     except Exception as e:
-        logging.error(f"[JOB] 3️⃣ ❌ Confirm failed for ID {record['id']}: {e}")
+        logging.error(f"[JOB_CONFIRM] 3️⃣ ❌ Failed for ID {record['id']}: {e}")
         return Status.TERMINATED if retries + 1 > 30 else Status.FAIL
 
 
