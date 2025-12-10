@@ -9,6 +9,7 @@ async def update_cancel_status(reservation_id: str) -> None:
     query = """
     UPDATE reservations
     SET status = $1,
+        canceled_at = CURRENT_TIMESTAMP,
         notified = TRUE,
         status_change = TRUE,
         updated_at = CURRENT_TIMESTAMP
@@ -67,7 +68,19 @@ async def sweep_stuck_reservations(
     END,
         retries = r.retries + 1,
         status_change = TRUE,
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = CURRENT_TIMESTAMP,
+        fail_at = CASE
+            WHEN (r.selected_date || ' ' || r.start_time)::timestamp
+                 AT TIME ZONE 'Europe/Rome' + make_interval(mins => $2) < now() AT TIME ZONE 'Europe/Rome'
+              THEN r.fail_at
+            ELSE CURRENT_TIMESTAMP
+        END,
+        terminated_at = CASE
+            WHEN (r.selected_date || ' ' || r.start_time)::timestamp
+                 AT TIME ZONE 'Europe/Rome' + make_interval(mins => $2) < now() AT TIME ZONE 'Europe/Rome'
+              THEN CURRENT_TIMESTAMP
+            ELSE r.terminated_at
+        END
     WHERE r.status IN ($5, $6)
       AND r.updated_at < now() - make_interval(mins => $1)
     RETURNING id, status, retries

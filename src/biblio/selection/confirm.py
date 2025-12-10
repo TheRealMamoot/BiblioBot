@@ -69,6 +69,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 context.user_data["booking_code"] = (
                     f"{reservation_response['codice_prenotazione']}"
                 )
+                context.user_data["success_at"] = datetime.now(ZoneInfo("Europe/Rome"))
                 context.user_data["updated_at"] = datetime.now(ZoneInfo("Europe/Rome"))
                 request_status_message = "✅ Reservation *successful*!"
                 retry_status_message = ""
@@ -80,6 +81,7 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 context.user_data["retries"] = "1"
                 context.user_data["status"] = Status.FAIL
                 context.user_data["booking_code"] = BookingCodeStatus.NA
+                context.user_data["fail_at"] = datetime.now(ZoneInfo("Europe/Rome"))
                 context.user_data["updated_at"] = datetime.now(ZoneInfo("Europe/Rome"))
                 request_status_message = (
                     "⛔ Reservation *failed*! *Slot not available*."

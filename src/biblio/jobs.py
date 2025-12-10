@@ -49,10 +49,17 @@ async def process_reservation(record: dict, bot: Bot) -> dict:
     }
     retries = int(record["retries"])
     process_start = time.perf_counter()
+    now_ts = datetime.now(ZoneInfo("Europe/Rome"))
 
     if _is_stale_fail(record):
         return await _finalize(
-            record, Status.TERMINATED, BookingCodeStatus.CLOSED, retries, chat_id, bot
+            record,
+            Status.TERMINATED,
+            BookingCodeStatus.CLOSED,
+            retries,
+            chat_id,
+            bot,
+            terminated_at=now_ts,
         )
 
     reserve_start = time.perf_counter()
@@ -203,17 +210,42 @@ def _is_stale_fail(record: dict) -> bool:
     return scheduled_dt + timedelta(minutes=30) < datetime.now(ZoneInfo("Europe/Rome"))
 
 
-async def _finalize(record, status, booking_code, retries, chat_id, bot: Bot) -> dict:
+async def _finalize(
+    record,
+    status,
+    booking_code,
+    retries,
+    chat_id,
+    bot: Bot,
+    processed_at: datetime | None = None,
+    success_at: datetime | None = None,
+    fail_at: datetime | None = None,
+    terminated_at: datetime | None = None,
+    canceled_at: datetime | None = None,
+) -> dict:
     old_status = record["status"]
     status_changed = status != old_status
+    now_ts = datetime.now(ZoneInfo("Europe/Rome"))
     result = {
         "id": record["id"],
         "status": status,
         "booking_code": booking_code,
         "retries": retries,
         "status_change": status_changed,
-        "updated_at": datetime.now(ZoneInfo("Europe/Rome")),
+        "updated_at": now_ts,
     }
+    if processed_at is not None:
+        result["processed_at"] = processed_at
+
+    match status:
+        case Status.SUCCESS:
+            result["success_at"] = success_at or now_ts
+        case Status.FAIL:
+            result["fail_at"] = fail_at or now_ts
+        case Status.TERMINATED:
+            result["terminated_at"] = terminated_at or now_ts
+        case Status.CANCELED:
+            result["canceled_at"] = canceled_at or now_ts
 
     if chat_id and _should_notify(old_status, status, retries):
         notif = show_notification(status, record, booking_code)
@@ -290,7 +322,7 @@ def schedule_reserve_job(bot: Bot) -> None:
     start, end = JOB_SCHEDULE.get_hours("weekday")  # UTC hours
     trigger = CronTrigger(
         second="*/10",
-        minute="0,1,2,3,30,31,32,33",
+        # minute="0,1,2,3,30,31,32,33",
         hour=f"{start}-{end}",
         day_of_week="mon-fri",
     )

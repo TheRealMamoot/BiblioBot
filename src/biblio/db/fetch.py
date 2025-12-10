@@ -105,6 +105,11 @@ async def fetch_all_reservations() -> DataFrame:
     instant,
     status_change as change,
     notified,
+    processed_at,
+    success_at,
+    fail_at,
+    terminated_at,
+    canceled_at,
     inserted_at AT TIME ZONE 'Europe/Rome' as inserted_at,
     updated_at AT TIME ZONE 'Europe/Rome' as updated_at,
     r.created_at AT TIME ZONE 'Europe/Rome' as created_at
@@ -158,7 +163,8 @@ async def claim_reservations(limit: int = 10, date=None) -> list[dict]:
     UPDATE reservations r
     SET status = $4,
         status_change = TRUE,
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = CURRENT_TIMESTAMP,
+        processed_at = CURRENT_TIMESTAMP
     FROM cte
     WHERE r.id = cte.id
     RETURNING r.*,

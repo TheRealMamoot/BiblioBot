@@ -29,6 +29,10 @@ async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         'status_change': bool(context.user_data.get('status_change', False)),
         'inserted_at': datetime.now(ZoneInfo('Europe/Rome')),
     }
+    if data['instant'] and data['status'] == 'success':
+        data['success_at'] = context.user_data.get('success_at')
+    elif data['instant'] and data['status'] == 'fail':
+        data['fail_at'] = context.user_data.get('fail_at')
 
     await insert_reservation(data)
     logging.info(f'[DB] Reservation inserted for {update.effective_user}')

@@ -29,6 +29,11 @@ CREATE TABLE IF NOT EXISTS reservations (
     status VARCHAR(20) DEFAULT 'pending',
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMPTZ,
+    success_at TIMESTAMPTZ,
+    fail_at TIMESTAMPTZ,
+    terminated_at TIMESTAMPTZ,
+    canceled_at TIMESTAMPTZ,
     instant BOOLEAN DEFAULT FALSE,
     status_change BOOLEAN DEFAULT FALSE,
     notified BOOLEAN DEFAULT FALSE
