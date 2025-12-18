@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import States
+from src.biblio.config.config import State, UserDataKey
 from src.biblio.reservation.reservation import get_available_slots
 from src.biblio.utils.keyboards import Keyboard, Label
 from src.biblio.utils.validation import duration_overlap
@@ -17,14 +17,15 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if user_input == Label.BACK:
         keyboard = Keyboard.time(
-            context.user_data.get("selected_date"), instant=context.user_data["instant"]
+            context.user_data.get(UserDataKey.SELECTED_DATE),
+            instant=context.user_data[UserDataKey.INSTANT],
         )
         await update.message.reply_text(
             "Make up your mind! choose a time ALREADY 🙄", reply_markup=keyboard
         )
-        return States.CHOOSING_TIME
+        return State.CHOOSING_TIME
 
-    selected_time = context.user_data.get("selected_time")
+    selected_time = context.user_data.get(UserDataKey.SELECTED_TIME)
     duration_selection = Keyboard.duration(selected_time, context)[
         1
     ]  # [0] for the reply, [1] for the values
@@ -34,13 +35,13 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(
             "Now you're just messing with me. Just pick the duration!"
         )
-        return States.CHOOSING_DUR
+        return State.CHOOSING_DUR
 
     if int(user_input) > max_dur:
         await update.message.reply_text(
             "Well they are not going to let you sleep there! Try again. 🤷‍♂️"
         )
-        return States.CHOOSING_DUR
+        return State.CHOOSING_DUR
 
     if await duration_overlap(update, context):
         await update.message.reply_text(
@@ -51,17 +52,17 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
             """
             )
         )
-        return States.CHOOSING_DUR
+        return State.CHOOSING_DUR
 
-    context.user_data["selected_duration"] = user_input
-    res_type = "INSTANT" if context.user_data["instant"] else "REGULAR"
+    context.user_data[UserDataKey.SELECTED_DURATION] = user_input
+    res_type = "INSTANT" if context.user_data[UserDataKey.INSTANT] else "REGULAR"
     logging.info(
         f"🔄 {update.effective_user} selected {res_type} duration at {datetime.now(ZoneInfo('Europe/Rome'))}"
     )
 
-    start_time = context.user_data.get("selected_time")
+    start_time = context.user_data.get(UserDataKey.SELECTED_TIME)
     end_time = datetime.strptime(start_time, "%H:%M") + timedelta(
-        hours=int(context.user_data.get("selected_duration"))
+        hours=int(context.user_data.get(UserDataKey.SELECTED_DURATION))
     )
     end_time = end_time.strftime("%H:%M")
 
@@ -70,17 +71,17 @@ async def duration_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
         textwrap.dedent(
             f"""
             All looks good?
-            Codice Fiscale: *{context.user_data.get("codice_fiscale")}*
-            Full Name: *{context.user_data.get("name")}*
-            Email: *{context.user_data.get("email")}*
-            On *{context.user_data.get("selected_date")}*
-            From *{start_time}* - *{end_time}* (*{context.user_data.get("selected_duration")} Hours*)
+            Codice Fiscale: *{context.user_data.get(UserDataKey.CODICE_FISCALE)}*
+            Full Name: *{context.user_data.get(UserDataKey.NAME)}*
+            Email: *{context.user_data.get(UserDataKey.EMAIL)}*
+            On *{context.user_data.get(UserDataKey.SELECTED_DATE)}*
+            From *{start_time}* - *{end_time}* (*{context.user_data.get(UserDataKey.SELECTED_DURATION)} Hours*)
             """
         ),
         parse_mode="Markdown",
         reply_markup=keyboard,
     )
-    return States.CONFIRMING
+    return State.CONFIRMING
 
 
 async def duration_availability(
@@ -89,18 +90,18 @@ async def duration_availability(
     user_input = update.message.text.strip()
 
     if user_input == Label.BACK:
-        state = context.user_data.get("state")
-        instant = True if context.user_data.get("instant") else False
-        date = context.user_data.get("selected_date")
+        state = context.user_data.get(UserDataKey.STATE)
+        instant = True if context.user_data.get(UserDataKey.INSTANT) else False
+        date = context.user_data.get(UserDataKey.SELECTED_DATE)
         keyboard = (
-            Keyboard.reservation_type(context.user_data["is_admin"])
-            if state == States.RESERVE_TYPE
+            Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN])
+            if state == State.RESERVE_TYPE
             else Keyboard.date()
-            if state == States.CHOOSING_DATE
+            if state == State.CHOOSING_DATE
             else Keyboard.time(selected_date=date, instant=instant)
-            if state == States.CHOOSING_TIME
+            if state == State.CHOOSING_TIME
             else Keyboard.retry()
-            if state == States.RETRY
+            if state == State.RETRY
             else None
         )
         await update.message.reply_text("Whatever 🙄", reply_markup=keyboard)
@@ -110,9 +111,9 @@ async def duration_availability(
         await update.message.reply_text(
             "Now you're just messing with me. Just pick the duration!"
         )
-        return States.CHOOSING_AVAILABLE
+        return State.CHOOSING_AVAILABLE
 
-    selected_time = context.user_data.get("selected_time")
+    selected_time = context.user_data.get(UserDataKey.SELECTED_TIME)
     duration_selection = Keyboard.duration(selected_time, context, show_available=True)[
         1
     ]
@@ -122,7 +123,7 @@ async def duration_availability(
         await update.message.reply_text(
             "Well they are not going to let you sleep there! Try again. 🤷‍♂️"
         )
-        return States.CHOOSING_AVAILABLE
+        return State.CHOOSING_AVAILABLE
 
     hour = int(int(user_input) * 60 * 60)
     await update.message.reply_text(
@@ -137,7 +138,7 @@ async def duration_availability(
         await update.message.reply_text(
             "😵‍💫 Something went wrong while checking availability.\nPlease try again in a moment."
         )
-        return States.CHOOSING_AVAILABLE
+        return State.CHOOSING_AVAILABLE
 
     if not slots:
         formatted = "_There are no free slots at the moment_"
@@ -162,4 +163,4 @@ async def duration_availability(
         parse_mode="Markdown",
     )
 
-    return States.CHOOSING_AVAILABLE
+    return State.CHOOSING_AVAILABLE

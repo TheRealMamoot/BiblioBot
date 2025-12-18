@@ -9,7 +9,7 @@ import pandas as pd
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import BookingCodeStatus, Schedule, Status
+from src.biblio.config.config import BookingCodeStatus, Schedule, Status, UserDataKey
 from src.biblio.db.fetch import fetch_user_reservations
 from src.biblio.utils.utils import plot_slot_history, utc_tuple_to_rome_time
 
@@ -23,8 +23,8 @@ async def show_existing_reservations(
     context: ContextTypes.DEFAULT_TYPE,
     cancel_stage: bool = False,
 ) -> str:
-    coidce = context.user_data["codice_fiscale"]
-    email = context.user_data["email"]
+    coidce = context.user_data[UserDataKey.CODICE_FISCALE]
+    email = context.user_data[UserDataKey.EMAIL]
     try:
         history: pd.DataFrame = await fetch_user_reservations(
             coidce, email, include_date=False

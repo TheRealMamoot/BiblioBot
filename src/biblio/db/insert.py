@@ -5,34 +5,38 @@ from zoneinfo import ZoneInfo
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import connect_db
+from src.biblio.config.config import UserDataKey, connect_db
 
 
 async def writer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    start_time = datetime.strptime(context.user_data['selected_time'], '%H:%M').time()
+    start_time = datetime.strptime(
+        context.user_data[UserDataKey.SELECTED_TIME], '%H:%M'
+    ).time()
     start_dt = datetime.combine(date.today(), start_time).replace(tzinfo=ZoneInfo('Europe/Rome'))
-    end_dt = start_dt + timedelta(hours=int(context.user_data['selected_duration']))
+    end_dt = start_dt + timedelta(
+        hours=int(context.user_data[UserDataKey.SELECTED_DURATION])
+    )
 
     data = {
-        'user_id': context.user_data['user_id'],
-        'selected_date': datetime.strptime(context.user_data['selected_date'], '%A, %Y-%m-%d').date(),
-        'display_date': context.user_data['selected_date'],
+        'user_id': context.user_data[UserDataKey.ID],
+        'selected_date': datetime.strptime(context.user_data[UserDataKey.SELECTED_DATE], '%A, %Y-%m-%d').date(),
+        'display_date': context.user_data[UserDataKey.SELECTED_DATE],
         'start_time': start_dt.time(),
         'end_time': end_dt.time(),
-        'selected_duration': int(context.user_data['selected_duration']),
-        'booking_code': context.user_data['booking_code'],
-        'retries': int(context.user_data['retries']),
-        'status': context.user_data['status'],
-        'updated_at': context.user_data.get('updated_at', datetime.now(ZoneInfo('Europe/Rome'))),
-        'created_at': context.user_data.get('created_at', datetime.now(ZoneInfo('Europe/Rome'))),
-        'instant': bool(context.user_data.get('instant', False)),
-        'status_change': bool(context.user_data.get('status_change', False)),
+        'selected_duration': int(context.user_data[UserDataKey.SELECTED_DURATION]),
+        'booking_code': context.user_data[UserDataKey.BOOKING_CODE],
+        'retries': int(context.user_data[UserDataKey.RETRIES]),
+        'status': context.user_data[UserDataKey.STATUS],
+        'updated_at': context.user_data.get(UserDataKey.UPDATED_AT, datetime.now(ZoneInfo('Europe/Rome'))),
+        'created_at': context.user_data.get(UserDataKey.CREATED_AT, datetime.now(ZoneInfo('Europe/Rome'))),
+        'instant': bool(context.user_data.get(UserDataKey.INSTANT, False)),
+        'status_change': bool(context.user_data.get(UserDataKey.STATUS_CHANGE, False)),
         'inserted_at': datetime.now(ZoneInfo('Europe/Rome')),
     }
     if data['instant'] and data['status'] == 'success':
-        data['success_at'] = context.user_data.get('success_at')
+        data['success_at'] = context.user_data.get(UserDataKey.SUCCESS_AT)
     elif data['instant'] and data['status'] == 'fail':
-        data['fail_at'] = context.user_data.get('fail_at')
+        data['fail_at'] = context.user_data.get(UserDataKey.FAIL_AT)
 
     await insert_reservation(data)
     logging.info(f'[DB] Reservation inserted for {update.effective_user}')

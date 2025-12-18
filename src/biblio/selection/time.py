@@ -7,7 +7,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.biblio.bot.messages import show_existing_reservations, show_slot_history
-from src.biblio.config.config import Schedule, States
+from src.biblio.config.config import Schedule, State, UserDataKey
 from src.biblio.utils.keyboards import Keyboard, Label
 from src.biblio.utils.utils import utc_tuple_to_rome_time
 from src.biblio.utils.validation import normalize_slot_input, time_not_overlap
@@ -24,29 +24,29 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_input = update.message.text.strip()
 
     if user_input == Label.BACK:
-        if context.user_data["instant"]:
+        if context.user_data[UserDataKey.INSTANT]:
             await update.message.reply_text(
                 textwrap.dedent("Just decide already!"),
                 parse_mode="Markdown",
-                reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
+                reply_markup=Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN]),
             )
-            return States.RESERVE_TYPE
+            return State.RESERVE_TYPE
 
         keyboard = Keyboard.date()
         await update.message.reply_text(
             "Choose a date, AGAIN! 😒", reply_markup=keyboard
         )
-        return States.CHOOSING_DATE
+        return State.CHOOSING_DATE
 
     elif user_input == Label.CURRENT_RESERVATIONS:
         await update.message.reply_text(
             await show_existing_reservations(update, context),
             parse_mode="Markdown",
         )
-        return States.CHOOSING_TIME
+        return State.CHOOSING_TIME
 
     elif user_input == Label.AVAILABLE_SLOTS:
-        context.user_data["state"] = States.CHOOSING_TIME
+        context.user_data[UserDataKey.STATE] = State.CHOOSING_TIME
         now = datetime.now(ZoneInfo("Europe/Rome"))
 
         open_time, close_time = LIB_SCHEDULE.get_hours(now.weekday())
@@ -55,24 +55,24 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await update.message.reply_text(
                 "It's over for today! Go home. 😌",
                 reply_markup=Keyboard.time(
-                    selected_date=context.user_data.get("selected_date"),
-                    instant=context.user_data.get("instant"),
+                    selected_date=context.user_data.get(UserDataKey.SELECTED_DATE),
+                    instant=context.user_data.get(UserDataKey.INSTANT),
                 ),
             )
-            return States.CHOOSING_TIME
+            return State.CHOOSING_TIME
 
         time = now.replace(
             minute=(0 if now.minute < 30 else 30), second=0, microsecond=0
         )
         time = time.strftime("%H:%M")
-        context.user_data["selected_time"] = time
+        context.user_data[UserDataKey.SELECTED_TIME] = time
 
         await update.message.reply_text(
             "How many hours are we looking at? 🕦",
             parse_mode="Markdown",
             reply_markup=Keyboard.duration(time, context, show_available=True)[0],
         )
-        return States.CHOOSING_AVAILABLE
+        return State.CHOOSING_AVAILABLE
 
     try:
         datetime.strptime(user_input, "%H:%M")
@@ -88,13 +88,13 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 """
                 )
             )
-            return States.CHOOSING_TIME
+            return State.CHOOSING_TIME
 
     except ValueError:
         await update.message.reply_text(
             "Not that difficult to pick an option form the list! Just saying. 🤷‍♂️"
         )
-        return States.CHOOSING_TIME
+        return State.CHOOSING_TIME
 
     if not await time_not_overlap(update, context):
         await update.message.reply_text(
@@ -105,8 +105,8 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             """
             )
         )
-        return States.CHOOSING_TIME
-    context.user_data["selected_time"] = user_input
+        return State.CHOOSING_TIME
+    context.user_data[UserDataKey.SELECTED_TIME] = user_input
     keyboard = Keyboard.duration(user_input, context)[
         0
     ]  # [0] for the reply, [1] for the values
@@ -116,11 +116,11 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         reply_markup=keyboard,
     )
 
-    res_type = "INSTANT" if context.user_data["instant"] else "REGULAR"
+    res_type = "INSTANT" if context.user_data[UserDataKey.INSTANT] else "REGULAR"
     logging.info(
         f"🔄 {update.effective_user} selected {res_type} time at {datetime.now(ZoneInfo('Europe/Rome'))}"
     )
-    return States.CHOOSING_DUR
+    return State.CHOOSING_DUR
 
 
 async def slot_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -131,23 +131,23 @@ async def slot_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             "Choose a date, AGAIN! 😒", reply_markup=keyboard
         )
-        return States.CHOOSING_DATE_HISTORY
+        return State.CHOOSING_DATE_HISTORY
 
-    keyboard = Keyboard.slot(context.user_data["slot_history"])
+    keyboard = Keyboard.slot(context.user_data[UserDataKey.SLOT_HISTORY])
     buttons = [button.text for row in keyboard.keyboard for button in row][
         :-1
     ]  # excluding the back button
 
     if user_input not in buttons:
         await update.message.reply_text("Just pick an option form the list! 😒")
-        return States.CHOOSING_SLOT
+        return State.CHOOSING_SLOT
 
-    context.user_data["slot"] = user_input
+    context.user_data[UserDataKey.SLOT] = user_input
 
     await update.message.reply_text(
         textwrap.dedent(
             f"""
-            *Slot {context.user_data["slot"]}*
+            *Slot {context.user_data[UserDataKey.SLOT]}*
 
             📈 You can view how the availability of seats changed over time.
 
@@ -163,9 +163,9 @@ async def slot_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
 
     logging.info(
-        f"🔄 {update.effective_user} selected {context.user_data['slot']} at {datetime.now(ZoneInfo('Europe/Rome'))}"
+        f"🔄 {update.effective_user} selected {context.user_data[UserDataKey.SLOT]} at {datetime.now(ZoneInfo('Europe/Rome'))}"
     )
-    return States.CHOOSING_FILTER_START
+    return State.CHOOSING_FILTER_START
 
 
 async def filter_start_selection(
@@ -174,16 +174,16 @@ async def filter_start_selection(
     user_input = update.message.text.strip()
 
     if user_input == Label.BACK:
-        keyboard = Keyboard.slot(context.user_data["slot_history"])
+        keyboard = Keyboard.slot(context.user_data[UserDataKey.SLOT_HISTORY])
         await update.message.reply_text("Just choose a slot. 😒", reply_markup=keyboard)
-        return States.CHOOSING_SLOT
+        return State.CHOOSING_SLOT
 
     elif user_input == Label.HOME:
-        keyboard = Keyboard.reservation_type(context.user_data["is_admin"])
+        keyboard = Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN])
         await update.message.reply_text(
             "Let's try again, shall we? 😪", reply_markup=keyboard
         )
-        return States.RESERVE_TYPE
+        return State.RESERVE_TYPE
 
     filter_start = normalize_slot_input(hour=user_input)
     if filter_start is None:
@@ -196,7 +196,7 @@ async def filter_start_selection(
             ),
             parse_mode="Markdown",
         )
-        return States.CHOOSING_FILTER_START
+        return State.CHOOSING_FILTER_START
 
     filter_time = datetime.strptime(filter_start, "%H:%M").time()
     if not (
@@ -210,9 +210,9 @@ async def filter_start_selection(
             ),
             parse_mode="Markdown",
         )
-        return States.CHOOSING_FILTER_START
+        return State.CHOOSING_FILTER_START
 
-    context.user_data["filter_start"] = filter_start
+    context.user_data[UserDataKey.FILTER_START] = filter_start
 
     await update.message.reply_text(
         textwrap.dedent(
@@ -231,7 +231,7 @@ async def filter_start_selection(
     logging.info(
         f"🔄 {update.effective_user} selected filter start: {filter_start} at {datetime.now(ZoneInfo('Europe/Rome'))}"
     )
-    return States.CHOOSING_FILTER_END
+    return State.CHOOSING_FILTER_END
 
 
 async def filter_end_selection(
@@ -242,14 +242,14 @@ async def filter_end_selection(
     if user_input == Label.BACK:
         keyboard = Keyboard.filter(start_state=True)
         await update.message.reply_text("Starting time please!", reply_markup=keyboard)
-        return States.CHOOSING_FILTER_START
+        return State.CHOOSING_FILTER_START
 
     elif user_input == Label.HOME:
-        keyboard = Keyboard.reservation_type(context.user_data["is_admin"])
+        keyboard = Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN])
         await update.message.reply_text(
             "Let's try again, shall we? 😪", reply_markup=keyboard
         )
-        return States.RESERVE_TYPE
+        return State.RESERVE_TYPE
 
     filter_end = normalize_slot_input(hour=user_input)
     if filter_end is None:
@@ -262,10 +262,10 @@ async def filter_end_selection(
             ),
             parse_mode="Markdown",
         )
-        return States.CHOOSING_FILTER_END
+        return State.CHOOSING_FILTER_END
 
     end_time = datetime.strptime(filter_end, "%H:%M").time()
-    start_time = datetime.strptime(context.user_data["filter_start"], "%H:%M").time()
+    start_time = datetime.strptime(context.user_data[UserDataKey.FILTER_START], "%H:%M").time()
 
     if not (start_time <= end_time <= time(*MAX_AVAILABILITY_END)):
         await update.message.reply_text(
@@ -279,21 +279,21 @@ async def filter_end_selection(
             ),
             parse_mode="Markdown",
         )
-        return States.CHOOSING_FILTER_END
+        return State.CHOOSING_FILTER_END
 
-    context.user_data["filter_end"] = filter_end
+    context.user_data[UserDataKey.FILTER_END] = filter_end
     await update.message.reply_text(
-        f"🔄 Preparing history: *{context.user_data['filter_start']} - {context.user_data['filter_end']}*",
+        f"🔄 Preparing history: *{context.user_data[UserDataKey.FILTER_START]} - {context.user_data[UserDataKey.FILTER_END]}*",
         parse_mode="Markdown",
     )
 
     history_graph = await show_slot_history(
         update=update,
-        history=context.user_data["slot_history"],
-        date=context.user_data["selected_date_history"],
-        slot=context.user_data["slot"],
-        start=context.user_data["filter_start"],
-        end=context.user_data["filter_end"],
+        history=context.user_data[UserDataKey.SLOT_HISTORY],
+        date=context.user_data[UserDataKey.SELECTED_DATE_HISTORY],
+        slot=context.user_data[UserDataKey.SLOT],
+        start=context.user_data[UserDataKey.FILTER_START],
+        end=context.user_data[UserDataKey.FILTER_END],
     )
     if history_graph is None:
         keyboard = Keyboard.filter(start_state=False)
@@ -301,10 +301,10 @@ async def filter_end_selection(
             text="ℹ️ No data available for this time range. Try again.",
             reply_markup=keyboard,
         )
-        return States.CHOOSING_FILTER_END
+        return State.CHOOSING_FILTER_END
 
     await update.message.reply_photo(
         photo=history_graph, reply_markup=Keyboard.filter(start_state=True)
     )
     await update.message.reply_text("🆕 Pick the starting time again.")
-    return States.CHOOSING_FILTER_START
+    return State.CHOOSING_FILTER_START

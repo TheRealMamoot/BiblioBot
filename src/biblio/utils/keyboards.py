@@ -7,7 +7,7 @@ from pandas import DataFrame
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import Schedule
+from src.biblio.config.config import Schedule, UserDataKey
 from src.biblio.utils.utils import generate_days
 
 LIB_SCHEDULE = Schedule.weekly()
@@ -27,7 +27,7 @@ class Label(str, Enum):
     CREDENTIALS_EDIT = "🪪 Edit credentials"
     CREDENTIALS_NEW = "🆕 No, I want to change."
     CREDENTIALS_RETURN = "⬅️ Changed my mind."
-    CURRENT_RESERVATIONS = "🗓️ Current reservations"
+    CURRENT_RESERVATIONS = "🗓️ Reservations"
     ADMIN_PANEL = "🛡️ Admin panel"
     ADMIN_SEND_NOTIF = "🔔 Send notification"
     DONATE = "🫶 Donate"
@@ -248,7 +248,7 @@ class Keyboard:
         if show_available:
             selected_date = datetime.now()
         else:
-            selected_date: str = context.user_data.get("selected_date")
+            selected_date: str = context.user_data.get(UserDataKey.SELECTED_DATE)
             selected_date = datetime.strptime(selected_date.split(" ")[-1], "%Y-%m-%d")
 
         time_obj = datetime.strptime(selected_time, "%H:%M")

@@ -7,7 +7,7 @@ import httpx
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import States
+from src.biblio.config.config import State, UserDataKey
 from src.biblio.db.fetch import fetch_all_user_chat_ids
 from src.biblio.utils.keyboards import Keyboard, Label
 
@@ -44,29 +44,29 @@ async def prepare_notification(
         await update.message.reply_text(
             "Sure thing!", reply_markup=Keyboard.admin_panel()
         )
-        return States.ADMIN_PANEL
+        return State.ADMIN_PANEL
 
     notif = textwrap.dedent(update.message.text)
-    context.user_data["notification"] = notif
+    context.user_data[UserDataKey.NOTIFICATION] = notif
 
     await update.message.reply_text(
         f"*Preview:*\n\n{notif}",
         reply_markup=Keyboard.admin_notif(confirm_stage=True),
         parse_mode="Markdown",
     )
-    return States.ADMIN_NOTIF_CONFIRM
+    return State.ADMIN_NOTIF_CONFIRM
 
 
 async def push_notification(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
-    notif = context.user_data["notification"]
+    notif = context.user_data[UserDataKey.NOTIFICATION]
 
     if user_input == Label.CONFIRM_NO:
         await update.message.reply_text(
             "Sure thing!", reply_markup=Keyboard.admin_notif()
         )
-        return States.ADMIN_NOTIF
+        return State.ADMIN_NOTIF
 
     elif user_input == Label.CONFIRM_YES:
         ids = await fetch_all_user_chat_ids()
@@ -80,7 +80,7 @@ async def push_notification(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             await update.message.reply_text(
                 "No recipients found.", reply_markup=Keyboard.admin_panel()
             )
-            return States.ADMIN_PANEL
+            return State.ADMIN_PANEL
 
         sem = asyncio.Semaphore(MAX_CONCURRENCY)
         async with httpx.AsyncClient() as client:
@@ -104,11 +104,11 @@ async def push_notification(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             reply_markup=Keyboard.admin_panel(),
             parse_mode="Markdown",
         )
-        return States.ADMIN_PANEL
+        return State.ADMIN_PANEL
 
     else:
         await update.message.reply_text(
             "Unknown command!",
             reply_markup=Keyboard.admin_notif(confirm_stage=True),
         )
-        return States.ADMIN_NOTIF_CONFIRM
+        return State.ADMIN_NOTIF_CONFIRM

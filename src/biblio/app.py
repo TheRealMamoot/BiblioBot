@@ -13,7 +13,7 @@ from src.biblio.admin.notif import prepare_notification, push_notification
 from src.biblio.bot.commands import agreement, donate, feedback, help, start
 from src.biblio.bot.fallbacks import error, fallback, restart
 from src.biblio.bot.user import user_agreement, user_returning, user_validation
-from src.biblio.config.config import States
+from src.biblio.config.config import State
 from src.biblio.jobs import start_jobs
 from src.biblio.selection.cancel import cancelation, cancelation_confirmation
 from src.biblio.selection.confirm import confirmation
@@ -34,63 +34,63 @@ def build_app():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            States.AGREEMENT: [
+            State.AGREEMENT: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, user_agreement)
             ],
-            States.CREDENTIALS: [
+            State.CREDENTIALS: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, user_validation)
             ],
-            States.WELCOME_BACK: [
+            State.WELCOME_BACK: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, user_returning)
             ],
-            States.ADMIN_PANEL: [
+            State.ADMIN_PANEL: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, select_admin_action)
             ],
-            States.ADMIN_NOTIF: [
+            State.ADMIN_NOTIF: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, prepare_notification)
             ],
-            States.ADMIN_NOTIF_CONFIRM: [
+            State.ADMIN_NOTIF_CONFIRM: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, push_notification)
             ],
-            States.RESERVE_TYPE: [
+            State.RESERVE_TYPE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, type_selection)
             ],
-            States.CHOOSING_DATE: [
+            State.CHOOSING_DATE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, date_selection)
             ],
-            States.CHOOSING_DATE_HISTORY: [
+            State.CHOOSING_DATE_HISTORY: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, date_history)
             ],
-            States.CHOOSING_TIME: [
+            State.CHOOSING_TIME: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, time_selection)
             ],
-            States.CHOOSING_SLOT: [
+            State.CHOOSING_SLOT: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, slot_selection)
             ],
-            States.CHOOSING_FILTER_START: [
+            State.CHOOSING_FILTER_START: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, filter_start_selection)
             ],
-            States.CHOOSING_FILTER_END: [
+            State.CHOOSING_FILTER_END: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, filter_end_selection)
             ],
-            States.CHOOSING_DUR: [
+            State.CHOOSING_DUR: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, duration_selection)
             ],
-            States.CHOOSING_AVAILABLE: [
+            State.CHOOSING_AVAILABLE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, duration_availability)
             ],
-            States.CONFIRMING: [
+            State.CONFIRMING: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, confirmation)
             ],
-            States.CANCELATION_SLOT_CHOICE: [
+            State.CANCELATION_SLOT_CHOICE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, cancelation)
             ],
-            States.CANCELATION_CONFIRMING: [
+            State.CANCELATION_CONFIRMING: [
                 MessageHandler(
                     filters.TEXT & ~filters.COMMAND, cancelation_confirmation
                 )
             ],
-            States.RETRY: [MessageHandler(filters.TEXT & ~filters.COMMAND, retry)],
+            State.RETRY: [MessageHandler(filters.TEXT & ~filters.COMMAND, retry)],
         },
         fallbacks=[
             CommandHandler("start", start),  # Allows /start to reset everything

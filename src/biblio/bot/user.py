@@ -7,7 +7,12 @@ from telegram import ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from src.biblio.bot.messages import show_help, show_support_message
-from src.biblio.config.config import DEFAULT_PRIORITY, States, get_priorities
+from src.biblio.config.config import (
+    DEFAULT_PRIORITY,
+    State,
+    UserDataKey,
+    get_priorities,
+)
 from src.biblio.db.insert import insert_user
 from src.biblio.utils.keyboards import Keyboard, Label
 from src.biblio.utils.validation import validate_codice_fiscale, validate_email
@@ -57,11 +62,11 @@ async def user_agreement(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             parse_mode="Markdown",
             reply_markup=Keyboard.start(),
         )
-        return States.CREDENTIALS
+        return State.CREDENTIALS
 
     else:
         await update.message.reply_text("Please agree to the terms.")
-        return States.AGREEMENT
+        return State.AGREEMENT
 
 
 async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -69,7 +74,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text(
             "Sure, waste your time why not? I can do this all day. 🥱"
         )
-        return States.CREDENTIALS
+        return State.CREDENTIALS
 
     user_input = update.message.text.strip()
     user = update.effective_user
@@ -81,7 +86,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             parse_mode="Markdown",
             reply_markup=Keyboard.start(),
         )
-        return States.CREDENTIALS
+        return State.CREDENTIALS
 
     if user_input == Label.HELP:
         await update.message.reply_text(
@@ -89,15 +94,17 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             parse_mode="Markdown",
             reply_markup=Keyboard.start(),
         )
-        return States.CREDENTIALS
+        return State.CREDENTIALS
 
     if user_input == Label.CREDENTIALS_RETURN:
         await update.message.reply_text(
             "Gotta be kidding me! 😑",
             parse_mode="Markdown",
-            reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
+            reply_markup=Keyboard.reservation_type(
+                context.user_data[UserDataKey.IS_ADMIN]
+            ),
         )
-        return States.RESERVE_TYPE
+        return State.RESERVE_TYPE
 
     try:
         codice, name, email = [part.strip() for part in user_input.split(",")]
@@ -106,30 +113,30 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "Wow so it WAS too hard for you. 🙃\nTry again: `Codice, Full Name, Email`",
             parse_mode="Markdown",
         )
-        return States.CREDENTIALS
+        return State.CREDENTIALS
 
     if not validate_codice_fiscale(codice):
         await update.message.reply_text(
             "🚫 Nice try with a fake codice fiscale. Try again!"
         )
-        return States.CREDENTIALS
+        return State.CREDENTIALS
 
     if not validate_email(email):
         await update.message.reply_text("🚫 Nice try with a fake email. Try again!")
-        return States.CREDENTIALS
+        return State.CREDENTIALS
 
     priorities = get_priorities()
-    context.user_data["username"] = user.username
-    context.user_data["user_firstname"] = user.first_name
-    context.user_data["user_lastname"] = user.last_name
-    context.user_data["codice_fiscale"] = codice.upper()
-    context.user_data["name"] = name
-    context.user_data["email"] = email.lower()
-    context.user_data["priority"] = int(
+    context.user_data[UserDataKey.USERNAME] = user.username
+    context.user_data[UserDataKey.FIRST_NAME] = user.first_name
+    context.user_data[UserDataKey.LAST_NAME] = user.last_name
+    context.user_data[UserDataKey.CODICE_FISCALE] = codice.upper()
+    context.user_data[UserDataKey.NAME] = name
+    context.user_data[UserDataKey.EMAIL] = email.lower()
+    context.user_data[UserDataKey.PRIORITY] = int(
         priorities.get(codice.upper(), DEFAULT_PRIORITY)
     )
 
-    keyboard = Keyboard.reservation_type(context.user_data["is_admin"])
+    keyboard = Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN])
     await update.message.reply_text(
         textwrap.dedent(
             """
@@ -144,41 +151,43 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     user_record = {
         "chat_id": update.effective_chat.id,
-        "username": context.user_data["username"],
-        "first_name": context.user_data["user_firstname"],
-        "last_name": context.user_data["user_lastname"],
-        "codice_fiscale": context.user_data["codice_fiscale"],
-        "priority": context.user_data["priority"],
-        "name": context.user_data["name"],
-        "email": context.user_data["email"],
+        "username": context.user_data[UserDataKey.USERNAME],
+        "first_name": context.user_data[UserDataKey.FIRST_NAME],
+        "last_name": context.user_data[UserDataKey.LAST_NAME],
+        "codice_fiscale": context.user_data[UserDataKey.CODICE_FISCALE],
+        "priority": context.user_data[UserDataKey.PRIORITY],
+        "name": context.user_data[UserDataKey.NAME],
+        "email": context.user_data[UserDataKey.EMAIL],
     }
 
     id = await insert_user(user_record)
-    context.user_data["user_id"] = id
+    context.user_data[UserDataKey.ID] = id
 
     logging.info(
         f"🔄 {update.effective_user} info validated at {datetime.now(ZoneInfo('Europe/Rome'))}"
     )
-    return States.RESERVE_TYPE
+    return State.RESERVE_TYPE
 
 
 async def user_returning(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text.strip()
 
-    if user_input == Label.ADMIN_PANEL and context.user_data["is_admin"]:
+    if user_input == Label.ADMIN_PANEL and context.user_data[UserDataKey.IS_ADMIN]:
         await update.message.reply_text(
             "Welcome master!",
             reply_markup=Keyboard.admin_panel(),
         )
-        return States.ADMIN_PANEL
+        return State.ADMIN_PANEL
 
     elif user_input == Label.CONTINUE:
         await update.message.reply_text(
             "Glad to have you back!",
             parse_mode="Markdown",
-            reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
+            reply_markup=Keyboard.reservation_type(
+                context.user_data[UserDataKey.IS_ADMIN]
+            ),
         )
-        return States.RESERVE_TYPE
+        return State.RESERVE_TYPE
 
     elif user_input == Label.CREDENTIALS_NEW:
         await update.message.reply_text(
@@ -196,9 +205,9 @@ async def user_returning(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown",
             reply_markup=Keyboard.start(edit_credential_stage=True),
         )
-        return States.CREDENTIALS
+        return State.CREDENTIALS
     else:
         await update.message.reply_text(
             textwrap.dedent("Come on now! Just choose."),
         )
-        return States.WELCOME_BACK
+        return State.WELCOME_BACK

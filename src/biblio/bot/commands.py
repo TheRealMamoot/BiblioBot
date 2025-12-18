@@ -11,7 +11,8 @@ from src.biblio.bot.messages import (
 )
 from src.biblio.config.config import (
     DEFAULT_PRIORITY,
-    States,
+    State,
+    UserDataKey,
     check_is_admin,
     get_priorities,
 )
@@ -25,7 +26,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     username = user.username
 
     is_admin = check_is_admin(chat_id=chat_id)
-    context.user_data["is_admin"] = is_admin
+    context.user_data[UserDataKey.IS_ADMIN] = is_admin
 
     existing_user = await fetch_existing_user(chat_id)
 
@@ -46,14 +47,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             """
         )
         priorities = get_priorities()
-        context.user_data["user_firstname"] = user.first_name
-        context.user_data["user_lastname"] = user.last_name
-        context.user_data["user_id"] = user_id
-        context.user_data["username"] = username
-        context.user_data["codice_fiscale"] = codice.upper()
-        context.user_data["name"] = name
-        context.user_data["email"] = email.lower()
-        context.user_data["priority"] = int(
+        context.user_data[UserDataKey.FIRST_NAME] = user.first_name
+        context.user_data[UserDataKey.LAST_NAME] = user.last_name
+        context.user_data[UserDataKey.ID] = user_id
+        context.user_data[UserDataKey.USERNAME] = username
+        context.user_data[UserDataKey.CODICE_FISCALE] = codice.upper()
+        context.user_data[UserDataKey.NAME] = name
+        context.user_data[UserDataKey.EMAIL] = email.lower()
+        context.user_data[UserDataKey.PRIORITY] = int(
             priorities.get(codice.upper(), DEFAULT_PRIORITY)
         )
 
@@ -62,7 +63,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             parse_mode="Markdown",
             reply_markup=Keyboard.welcome_back(is_admin=is_admin),
         )
-        return States.WELCOME_BACK
+        return State.WELCOME_BACK
 
     context.user_data.clear()
     await update.message.reply_text(
@@ -70,7 +71,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         parse_mode="Markdown",
         reply_markup=Keyboard.agreement(),
     )
-    return States.AGREEMENT
+    return State.AGREEMENT
 
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):

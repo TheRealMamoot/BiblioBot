@@ -7,7 +7,7 @@ from pandas import DataFrame
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import Status
+from src.biblio.config.config import Status, UserDataKey
 from src.biblio.db.fetch import fetch_user_reservations
 
 
@@ -67,16 +67,18 @@ def normalize_slot_input(hour: str) -> str | None:
 
 
 async def duration_overlap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    codice = context.user_data["codice_fiscale"]
-    email = context.user_data["email"]
-    selected_date = context.user_data["selected_date"]
+    codice = context.user_data[UserDataKey.CODICE_FISCALE]
+    email = context.user_data[UserDataKey.EMAIL]
+    selected_date = context.user_data[UserDataKey.SELECTED_DATE]
     history: DataFrame = await fetch_user_reservations(
         codice, email, selected_date, include_date=True
     )
     if len(history) == 0:
         return False
 
-    reserving_start = datetime.strptime(context.user_data["selected_time"], "%H:%M")
+    reserving_start = datetime.strptime(
+        context.user_data[UserDataKey.SELECTED_TIME], "%H:%M"
+    )
     reserving_end = reserving_start + timedelta(hours=int(update.message.text.strip()))
     for _, row in history.iterrows():
         existing_start = datetime.strptime(row["start_time"].strftime("%H:%M"), "%H:%M")
@@ -89,9 +91,9 @@ async def duration_overlap(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 async def time_not_overlap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    codice = context.user_data["codice_fiscale"]
-    email = context.user_data["email"]
-    selected_date = context.user_data["selected_date"]
+    codice = context.user_data[UserDataKey.CODICE_FISCALE]
+    email = context.user_data[UserDataKey.EMAIL]
+    selected_date = context.user_data[UserDataKey.SELECTED_DATE]
     history: DataFrame = await fetch_user_reservations(
         codice, email, selected_date, include_date=True
     )

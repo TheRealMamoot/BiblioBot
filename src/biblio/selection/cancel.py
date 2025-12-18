@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import BookingCodeStatus, States, Status
+from src.biblio.config.config import BookingCodeStatus, State, Status, UserDataKey
 from src.biblio.db.fetch import fetch_reservation_by_id
 from src.biblio.db.update import update_cancel_status
 from src.biblio.reservation.reservation import cancel_reservation
@@ -19,11 +19,11 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     if user_input == Label.RESERVATION_TYPE_BACK:
         await update.message.reply_text(
             "You are so determined, wow!",
-            reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
+            reply_markup=Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN]),
         )
-        return States.RESERVE_TYPE
+        return State.RESERVE_TYPE
 
-    choices: dict = context.user_data["cancelation_choices"]
+    choices: dict = context.user_data[UserDataKey.CANCELATION_CHOICES]
     cancelation_id = next(
         (id for id, deatils in choices.items() if deatils["button"] == user_input), None
     )
@@ -32,9 +32,9 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         await update.message.reply_text(
             "Pick from the list!",
         )
-        return States.CANCELATION_SLOT_CHOICE
+        return State.CANCELATION_SLOT_CHOICE
 
-    context.user_data["cancelation_chosen_slot_id"] = cancelation_id
+    context.user_data[UserDataKey.CANCELATION_CHOSEN_SLOT_ID] = cancelation_id
     logging.info(
         f"🔄 {update.effective_user} selected cancelation slot at {datetime.now(ZoneInfo('Europe/Rome'))}"
     )
@@ -44,9 +44,9 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         textwrap.dedent(
             f"""
             Are you sure you want to cancel this slot ?
-            Codice Fiscale: *{context.user_data.get("codice_fiscale")}*
-            Full Name: *{context.user_data.get("name")}*
-            Email: *{context.user_data.get("email")}*
+            Codice Fiscale: *{context.user_data.get(UserDataKey.CODICE_FISCALE)}*
+            Full Name: *{context.user_data.get(UserDataKey.NAME)}*
+            Email: *{context.user_data.get(UserDataKey.EMAIL)}*
             On *{choices[cancelation_id]["selected_date"]}*
             From *{choices[cancelation_id]["start_time"]}* - *{choices[cancelation_id]["end_time"]}* (*{choices[cancelation_id]["selected_duration"]}* hours)
             Satus: *{(Status(status.lower())).emoji} {status}*
@@ -55,7 +55,7 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         parse_mode="Markdown",
         reply_markup=Keyboard.cancelation_confirm(),
     )
-    return States.CANCELATION_CONFIRMING
+    return State.CANCELATION_CONFIRMING
 
 
 async def cancelation_confirmation(
@@ -64,29 +64,27 @@ async def cancelation_confirmation(
     user_input = update.message.text.strip()
 
     if user_input == Label.CONFIRM_NO:
-        choices: dict = context.user_data["cancelation_choices"]
+        choices: dict = context.user_data[UserDataKey.CANCELATION_CHOICES]
         reservation_buttons = [choice["button"] for choice in choices.values()]
         await update.message.reply_text(
             "God kill me now! 😭",
             reply_markup=Keyboard.cancelation_options(reservation_buttons),
         )
-        return States.CANCELATION_SLOT_CHOICE
+        return State.CANCELATION_SLOT_CHOICE
 
     elif user_input == Label.CANCEL_CONFIRM_YES:
-        reservation_id: str = context.user_data["cancelation_chosen_slot_id"]
+        reservation_id: str = context.user_data[UserDataKey.CANCELATION_CHOSEN_SLOT_ID]
         history = await fetch_reservation_by_id(reservation_id)
         failure = False
         if history:
             booking_code = history["booking_code"]
             if booking_code not in [BookingCodeStatus.TBD, BookingCodeStatus.NA]:
                 try:
-                    await cancel_reservation(
-                        context.user_data["codice_fiscale"], booking_code
-                    )
+                    await cancel_reservation(context.user_data[UserDataKey.CODICE_FISCALE], booking_code)
                 except Exception:
                     try:
                         await cancel_reservation(
-                            context.user_data["codice_fiscale"],
+                            context.user_data[UserDataKey.CODICE_FISCALE],
                             booking_code,
                             mode="update",
                         )
@@ -110,7 +108,7 @@ async def cancelation_confirmation(
                             ),
                             parse_mode="Markdown",
                             reply_markup=Keyboard.reservation_type(
-                                context.user_data["is_admin"]
+                                context.user_data[UserDataKey.IS_ADMIN]
                             ),
                         )
 
@@ -123,10 +121,10 @@ async def cancelation_confirmation(
                 await update.message.reply_text(
                     "✔️ Reservation canceled successfully!",
                     reply_markup=Keyboard.reservation_type(
-                        context.user_data["is_admin"]
+                        context.user_data[UserDataKey.IS_ADMIN]
                     ),
                 )
-            return States.RESERVE_TYPE
+            return State.RESERVE_TYPE
 
         else:
             logging.info(
@@ -134,12 +132,12 @@ async def cancelation_confirmation(
             )
             await update.message.reply_text(
                 "⚠️ Reservation cancelation usuccessfull!",
-                reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
+                reply_markup=Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN]),
             )
-            return States.RESERVE_TYPE
+            return State.RESERVE_TYPE
 
     else:
         await update.message.reply_text(
             "Just click. Please! 😭",
         )
-        return States.CANCELATION_CONFIRMING
+        return State.CANCELATION_CONFIRMING

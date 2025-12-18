@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from enum import Enum, IntEnum, auto
+from enum import IntEnum, StrEnum, auto
 from functools import cache
 from pathlib import Path
 
@@ -30,7 +30,7 @@ def _resolve_credentials_path() -> Path | None:
 CREDENTIALS_PATH = _resolve_credentials_path()
 
 
-class States(IntEnum):
+class State(IntEnum):
     AGREEMENT = auto()
     CREDENTIALS = auto()
     WELCOME_BACK = auto()
@@ -52,7 +52,7 @@ class States(IntEnum):
     RETRY = auto()
 
 
-class Status(str, Enum):
+class Status(StrEnum):
     PENDING = ("pending", "🔄")
     PROCESSING = ("processing", "🛠️")
     AWAITING = ("awaiting", "⏳")
@@ -69,10 +69,43 @@ class Status(str, Enum):
         return obj
 
 
-class BookingCodeStatus(str, Enum):
+class BookingCodeStatus(StrEnum):
     NA = "NA"
     TBD = "TBD"
     CLOSED = "CLOSED"
+
+
+class UserDataKey(StrEnum):  # applies .lower() to next values
+    IS_ADMIN = auto()
+    INSTANT = auto()
+    STATE = auto()
+    SELECTED_DATE = auto()
+    SELECTED_DATE_HISTORY = auto()
+    SELECTED_TIME = auto()
+    SELECTED_DURATION = auto()
+    SLOT = auto()
+    SLOT_HISTORY = auto()
+    FILTER_START = auto()
+    FILTER_END = auto()
+    CANCELATION_CHOICES = auto()
+    CANCELATION_CHOSEN_SLOT_ID = auto()
+    CODICE_FISCALE = auto()
+    NAME = auto()
+    EMAIL = auto()
+    USERNAME = auto()
+    FIRST_NAME = auto()
+    LAST_NAME = auto()
+    ID = auto()
+    PRIORITY = auto()
+    NOTIFICATION = auto()
+    STATUS = auto()
+    BOOKING_CODE = auto()
+    RETRIES = auto()
+    STATUS_CHANGE = auto()
+    CREATED_AT = auto()
+    UPDATED_AT = auto()
+    SUCCESS_AT = auto()
+    FAIL_AT = auto()
 
 
 @dataclass

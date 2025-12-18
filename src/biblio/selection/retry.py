@@ -12,7 +12,7 @@ from src.biblio.bot.messages import (
     show_existing_reservations,
     show_support_message,
 )
-from src.biblio.config.config import Schedule, States, Status
+from src.biblio.config.config import Schedule, State, Status, UserDataKey
 from src.biblio.utils.keyboards import Keyboard, Label
 
 LIB_SCHEDULE = Schedule.weekly()
@@ -22,7 +22,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
     if user_input == Label.RETRY:
-        keyboard = Keyboard.reservation_type(context.user_data["is_admin"])
+        keyboard = Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN])
 
         await update.message.reply_text(
             "Ah ****, here we go again! 😪", reply_markup=keyboard
@@ -30,14 +30,14 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         logging.info(
             f"⏳ {update.effective_user} reinitiated the process at {datetime.now(ZoneInfo('Europe/Rome'))}"
         )
-        return States.RESERVE_TYPE
+        return State.RESERVE_TYPE
 
     elif user_input == Label.FEEDBACK:
         await update.message.reply_text(
             show_support_message(),
             parse_mode="Markdown",
         )
-        return States.RETRY
+        return State.RETRY
 
     elif user_input == Label.HISTORY:
         keyboard = Keyboard.date(days_past=5, days_future=0, history_state=True)
@@ -46,17 +46,17 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             reply_markup=keyboard,
             parse_mode="Markdown",
         )
-        return States.CHOOSING_DATE_HISTORY
+        return State.CHOOSING_DATE_HISTORY
 
     elif user_input == Label.CURRENT_RESERVATIONS:
         await update.message.reply_text(
             await show_existing_reservations(update, context),
             parse_mode="Markdown",
         )
-        return States.RETRY
+        return State.RETRY
 
     elif user_input == Label.AVAILABLE_SLOTS:
-        context.user_data["state"] = States.RETRY
+        context.user_data[UserDataKey.STATE] = State.RETRY
         now = datetime.now(ZoneInfo("Europe/Rome"))
 
         open_time, close_time = LIB_SCHEDULE.get_hours(now.weekday())
@@ -65,20 +65,20 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             await update.message.reply_text(
                 "It's over for today! Go home. 😌", reply_markup=Keyboard.retry()
             )
-            return States.RETRY
+            return State.RETRY
 
         time = now.replace(
             minute=(0 if now.minute < 30 else 30), second=0, microsecond=0
         )
         time = time.strftime("%H:%M")
-        context.user_data["selected_time"] = time
+        context.user_data[UserDataKey.SELECTED_TIME] = time
 
         await update.message.reply_text(
             "How many hours are we looking at? 🕦",
             parse_mode="Markdown",
             reply_markup=Keyboard.duration(time, context, show_available=True)[0],
         )
-        return States.CHOOSING_AVAILABLE
+        return State.CHOOSING_AVAILABLE
 
     elif user_input == Label.CANCEL_RESERVATION:
         reservations = await show_existing_reservations(
@@ -91,7 +91,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             await update.message.reply_text(
                 "_You have no reservations at the moment._", parse_mode="Markdown"
             )
-            return States.RETRY
+            return State.RETRY
 
         for _, row in reservations.iterrows():
             if row["status"] in (Status.TERMINATED, Status.CANCELED):
@@ -120,9 +120,9 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             await update.message.reply_text(
                 "_You have no reservations at the moment._", parse_mode="Markdown"
             )
-            return States.RETRY
+            return State.RETRY
 
-        context.user_data["cancelation_choices"] = choices
+        context.user_data[UserDataKey.CANCELATION_CHOICES] = choices
         keyboard = Keyboard.cancelation_options(buttons)
 
         logging.info(
@@ -143,14 +143,14 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             parse_mode="Markdown",
             reply_markup=keyboard,
         )
-        return States.CANCELATION_SLOT_CHOICE
+        return State.CANCELATION_SLOT_CHOICE
 
     elif user_input == Label.DONATE:
         await update.message.reply_text(
             show_donate_message(),
             parse_mode="Markdown",
         )
-        return States.RETRY
+        return State.RETRY
 
     else:
         await update.message.reply_text(
@@ -162,4 +162,4 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             ),
             parse_mode="Markdown",
         )
-        return States.RETRY
+        return State.RETRY
