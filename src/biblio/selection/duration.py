@@ -93,7 +93,7 @@ async def duration_availability(
         instant = True if context.user_data.get("instant") else False
         date = context.user_data.get("selected_date")
         keyboard = (
-            Keyboard.reservation_type()
+            Keyboard.reservation_type(context.user_data["is_admin"])
             if state == States.RESERVE_TYPE
             else Keyboard.date()
             if state == States.CHOOSING_DATE

@@ -19,7 +19,7 @@ async def cancelation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     if user_input == Label.RESERVATION_TYPE_BACK:
         await update.message.reply_text(
             "You are so determined, wow!",
-            reply_markup=Keyboard.reservation_type(),
+            reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
         )
         return States.RESERVE_TYPE
 
@@ -109,7 +109,9 @@ async def cancelation_confirmation(
                                 """
                             ),
                             parse_mode="Markdown",
-                            reply_markup=Keyboard.reservation_type(),
+                            reply_markup=Keyboard.reservation_type(
+                                context.user_data["is_admin"]
+                            ),
                         )
 
             await update_cancel_status(reservation_id)
@@ -120,7 +122,9 @@ async def cancelation_confirmation(
             if not failure:
                 await update.message.reply_text(
                     "✔️ Reservation canceled successfully!",
-                    reply_markup=Keyboard.reservation_type(),
+                    reply_markup=Keyboard.reservation_type(
+                        context.user_data["is_admin"]
+                    ),
                 )
             return States.RESERVE_TYPE
 
@@ -130,7 +134,7 @@ async def cancelation_confirmation(
             )
             await update.message.reply_text(
                 "⚠️ Reservation cancelation usuccessfull!",
-                reply_markup=Keyboard.reservation_type(),
+                reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
             )
             return States.RESERVE_TYPE
 

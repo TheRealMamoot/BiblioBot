@@ -221,12 +221,10 @@ async def notify_reservation_activation(bot: Bot) -> None:
 
 # TODO: Refactor w/ asyncio.gather
 async def notify_donation(bot: Bot) -> None:
-    BOTLORD_CHAT_ID = 115700766
-
     chat_ids = await fetch_all_user_chat_ids()
     sent = 0
     for chat_id in chat_ids:
-        if chat_id == BOTLORD_CHAT_ID:
+        if chat_id == os.getenv("BOTLORD_CHAT_ID"):
             continue
         try:
             await bot.send_message(

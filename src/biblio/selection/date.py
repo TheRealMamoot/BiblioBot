@@ -21,7 +21,7 @@ async def date_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             "Fine, just be quick. 🙄",
             parse_mode="Markdown",
-            reply_markup=Keyboard.reservation_type(),
+            reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
         )
         return States.RESERVE_TYPE
 
@@ -102,7 +102,7 @@ async def date_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         await update.message.reply_text(
             "Fine, just be quick. 🙄",
             parse_mode="Markdown",
-            reply_markup=Keyboard.reservation_type(),
+            reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
         )
         return States.RESERVE_TYPE
     try:

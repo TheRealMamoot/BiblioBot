@@ -22,7 +22,7 @@ async def retry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
 
     if user_input == Label.RETRY:
-        keyboard = Keyboard.reservation_type()
+        keyboard = Keyboard.reservation_type(context.user_data["is_admin"])
 
         await update.message.reply_text(
             "Ah ****, here we go again! 😪", reply_markup=keyboard

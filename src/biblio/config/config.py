@@ -35,6 +35,9 @@ class States(IntEnum):
     CREDENTIALS = auto()
     WELCOME_BACK = auto()
     RESERVE_TYPE = auto()
+    ADMIN_PANEL = auto()
+    ADMIN_NOTIF = auto()
+    ADMIN_NOTIF_CONFIRM = auto()
     CHOOSING_DATE = auto()
     CHOOSING_TIME = auto()
     CHOOSING_DUR = auto()
@@ -140,6 +143,11 @@ def get_parser():
         help="Environment to run",
     )
     return parser
+
+
+def check_is_admin(chat_id: str) -> bool:
+    is_admin = True if chat_id == int(os.getenv("BOTLORD_CHAT_ID")) else False
+    return is_admin
 
 
 @cache

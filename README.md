@@ -65,8 +65,9 @@ Paste this inside `.env` (replacing the placeholder values):
 TELEGRAM_TOKEN=<YOUR_BOT_TOKEN>
 PRIORITIES_CODES=<YOUR_PRIORITES_JSON>
 DATABASE_URL=postgresql://biblio:biblio@postgres:5432/biblio_db
-GSHEET_NAME=Biblio-logs
-GSHEET_TAB=backup
+GSHEETS_NAME=Biblio-logs
+GSHEETS_TAB=backup
+BOTLORD_CHAT_ID=<YOUR_TELEGRAM_CHAT_ID> # optional: for admin panel
 ```
 
 Priorities are based on _Codice Fiscale_ and should look like this:
@@ -83,8 +84,8 @@ Lower values = higher priority (0 = highest).
 TELEGRAM_TOKEN=<YOUR_BOT_TOKEN>
 PRIORITIES_CODES=<YOUR_PRIORITES_JSON>
 DATABASE_URL=<YOUR_DATABASE_URL> # change this accordingly
-GSHEET_NAME=Biblio-logs
-GSHEET_TAB=backup
+GSHEETS_NAME=Biblio-logs
+GSHEETS_TAB=backup
 GSHEETS=<YOUR_SERVICE_ACOUNT_JSON_CONTENT> # new variable
 ```
 

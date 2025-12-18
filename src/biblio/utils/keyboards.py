@@ -24,14 +24,16 @@ class Label(str, Enum):
     CONFIRM_NO = "⬅️ No, take me back."
     CONFIRM_YES = "✅ Yes, all looks good."
     CONTINUE = "👍 Yes, go right on."
-    CREDENTIALS_EDIT = "⬅️ Edit credentials"
+    CREDENTIALS_EDIT = "🪪 Edit credentials"
     CREDENTIALS_NEW = "🆕 No, I want to change."
-    CREDENTIALS_RETURN = "➡️ Changed my mind."
-    CURRENT_RESERVATIONS = "🗓️ Reservations"
+    CREDENTIALS_RETURN = "⬅️ Changed my mind."
+    CURRENT_RESERVATIONS = "🗓️ Current reservations"
+    ADMIN_PANEL = "🛡️ Admin panel"
+    ADMIN_SEND_NOTIF = "🔔 Send notification"
     DONATE = "🫶 Donate"
     FEEDBACK = "💡 Feedback"
     HELP = "❓ Help"
-    HISTORY = "📊 Available slots history"
+    HISTORY = "📊 Slots history"
     HOME = "🏠 Home"
     RESERVATION_TYPE_BACK = "⬅️ Back to reservation type"
     RESERVATION_TYPE_EDIT = "⬅️ Edit reservation type"
@@ -64,27 +66,51 @@ class Keyboard:
         )
 
     @staticmethod
-    def welcome_back():
-        return ReplyKeyboardMarkup(
-            [[KeyboardButton(Label.CONTINUE)], [KeyboardButton(Label.CREDENTIALS_NEW)]],
-            resize_keyboard=True,
-        )
+    def welcome_back(is_admin=False):
+        keyboard_buttons = [
+            [KeyboardButton(Label.CONTINUE)],
+            [KeyboardButton(Label.CREDENTIALS_NEW)],
+        ]
+        if is_admin:
+            keyboard_buttons.insert(0, [KeyboardButton(Label.ADMIN_PANEL)])
+        return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod
-    def reservation_type():
+    def admin_panel():
+        keyboard_buttons = [
+            [KeyboardButton(Label.ADMIN_SEND_NOTIF)],
+            [KeyboardButton(Label.BACK)],
+        ]
+        return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+    @staticmethod
+    def admin_notif(confirm_stage=False):
+        keyboard_buttons = [[KeyboardButton(Label.BACK)]]
+
+        if confirm_stage:
+            keyboard_buttons = [
+                [KeyboardButton(Label.CONFIRM_YES)],
+                [KeyboardButton(Label.CONFIRM_NO)],
+            ]
+        return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+    @staticmethod
+    def reservation_type(is_admin=False):
         keyboard_buttons = [
             [KeyboardButton(Label.DONATE), KeyboardButton(Label.FEEDBACK)],
             [
-                KeyboardButton(Label.CURRENT_RESERVATIONS),
+                KeyboardButton(Label.HISTORY),
                 KeyboardButton(Label.AVAILABLE_SLOTS),
             ],
-            [KeyboardButton(Label.HISTORY)],
+            [KeyboardButton(Label.CURRENT_RESERVATIONS)],
             [KeyboardButton(Label.SLOT_LATER)],
             [KeyboardButton(Label.SLOT_INSTANT)],
             [KeyboardButton(Label.CANCEL_RESERVATION)],
             [KeyboardButton(Label.CREDENTIALS_EDIT)],
             [KeyboardButton(Label.AGREEMENT), KeyboardButton(Label.HELP)],
         ]
+        if is_admin:
+            keyboard_buttons.insert(0, [KeyboardButton(Label.ADMIN_PANEL)])
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod

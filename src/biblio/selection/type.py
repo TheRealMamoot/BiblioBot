@@ -22,9 +22,15 @@ LIB_SCHEDULE = Schedule.weekly()
 
 async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
-    keyboard = Keyboard.reservation_type()
 
-    if user_input == Label.CREDENTIALS_EDIT:
+    if user_input == Label.ADMIN_PANEL and context.user_data["is_admin"]:
+        await update.message.reply_text(
+            "Welcome master!",
+            reply_markup=Keyboard.admin_panel(),
+        )
+        return States.ADMIN_PANEL
+
+    elif user_input == Label.CREDENTIALS_EDIT:
         await update.message.reply_text(
             textwrap.dedent(
                 """
@@ -44,9 +50,8 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return States.CREDENTIALS
 
     elif user_input == Label.SLOT_LATER:
-        keyboard = Keyboard.date()
         await update.message.reply_text(
-            "So, when will it be? 📅", reply_markup=keyboard
+            "So, when will it be? 📅", reply_markup=Keyboard.date()
         )
         context.user_data["instant"] = False
         logging.info(
@@ -64,7 +69,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if now.hour < (open_time - 2) or now.hour >= close_time:
             await update.message.reply_text(
                 "It's over for today! Go home. 😌",
-                reply_markup=Keyboard.reservation_type(),
+                reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
             )
             return States.RESERVE_TYPE
 
@@ -72,7 +77,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # if week_day == 6:  # Sunday
         #     await update.message.reply_text(
         #         "It's Sunday! Come on, chill. 😌",
-        #         reply_markup=Keyboard.reservation_type(),
+        #         reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
         #     )
         #     return States.RESERVE_TYPE
 
@@ -138,7 +143,6 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             return States.RESERVE_TYPE
 
         context.user_data["cancelation_choices"] = choices
-        keyboard = Keyboard.cancelation_options(buttons)
 
         logging.info(
             f"🔄 {update.effective_user} started cancelation at {datetime.now(ZoneInfo('Europe/Rome'))}"
@@ -156,7 +160,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     """
             ),
             parse_mode="Markdown",
-            reply_markup=keyboard,
+            reply_markup=Keyboard.cancelation_options(buttons),
         )
         return States.CANCELATION_SLOT_CHOICE
 
@@ -169,7 +173,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if now.hour < (open_time - 2) or now.hour >= close_time:
             await update.message.reply_text(
                 "It's over for today! Go home. 😌",
-                reply_markup=Keyboard.reservation_type(),
+                reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
             )
             return States.RESERVE_TYPE
 
@@ -202,7 +206,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             show_help(),
             parse_mode="Markdown",
-            reply_markup=Keyboard.reservation_type(),
+            reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
         )
         return States.RESERVE_TYPE
 
@@ -210,7 +214,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             show_donate_message(),
             parse_mode="Markdown",
-            reply_markup=Keyboard.reservation_type(),
+            reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
         )
         return States.RESERVE_TYPE
 
@@ -218,7 +222,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             show_user_agreement(),
             parse_mode="Markdown",
-            reply_markup=Keyboard.reservation_type(),
+            reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
         )
         return States.RESERVE_TYPE
 
@@ -226,7 +230,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             show_support_message(),
             parse_mode="Markdown",
-            reply_markup=Keyboard.reservation_type(),
+            reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
         )
         return States.RESERVE_TYPE
 

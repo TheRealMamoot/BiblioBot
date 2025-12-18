@@ -28,7 +28,7 @@ async def time_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await update.message.reply_text(
                 textwrap.dedent("Just decide already!"),
                 parse_mode="Markdown",
-                reply_markup=Keyboard.reservation_type(),
+                reply_markup=Keyboard.reservation_type(context.user_data["is_admin"]),
             )
             return States.RESERVE_TYPE
 
@@ -179,7 +179,7 @@ async def filter_start_selection(
         return States.CHOOSING_SLOT
 
     elif user_input == Label.HOME:
-        keyboard = Keyboard.reservation_type()
+        keyboard = Keyboard.reservation_type(context.user_data["is_admin"])
         await update.message.reply_text(
             "Let's try again, shall we? 😪", reply_markup=keyboard
         )
@@ -245,7 +245,7 @@ async def filter_end_selection(
         return States.CHOOSING_FILTER_START
 
     elif user_input == Label.HOME:
-        keyboard = Keyboard.reservation_type()
+        keyboard = Keyboard.reservation_type(context.user_data["is_admin"])
         await update.message.reply_text(
             "Let's try again, shall we? 😪", reply_markup=keyboard
         )

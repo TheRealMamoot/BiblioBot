@@ -9,7 +9,12 @@ from src.biblio.bot.messages import (
     show_support_message,
     show_user_agreement,
 )
-from src.biblio.config.config import DEFAULT_PRIORITY, States, get_priorities
+from src.biblio.config.config import (
+    DEFAULT_PRIORITY,
+    States,
+    check_is_admin,
+    get_priorities,
+)
 from src.biblio.db.fetch import fetch_existing_user
 from src.biblio.utils.keyboards import Keyboard
 
@@ -18,6 +23,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     chat_id = update.effective_chat.id
     username = user.username
+
+    is_admin = check_is_admin(chat_id=chat_id)
+    context.user_data["is_admin"] = is_admin
 
     existing_user = await fetch_existing_user(chat_id)
 
@@ -52,7 +60,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text(
             message,
             parse_mode="Markdown",
-            reply_markup=Keyboard.welcome_back(),
+            reply_markup=Keyboard.welcome_back(is_admin=is_admin),
         )
         return States.WELCOME_BACK
 

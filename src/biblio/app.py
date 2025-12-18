@@ -8,6 +8,8 @@ from telegram.ext import (
     filters,
 )
 
+from src.biblio.admin.action import select_admin_action
+from src.biblio.admin.notif import prepare_notification, push_notification
 from src.biblio.bot.commands import agreement, donate, feedback, help, start
 from src.biblio.bot.fallbacks import error, fallback, restart
 from src.biblio.bot.user import user_agreement, user_returning, user_validation
@@ -40,6 +42,15 @@ def build_app():
             ],
             States.WELCOME_BACK: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, user_returning)
+            ],
+            States.ADMIN_PANEL: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, select_admin_action)
+            ],
+            States.ADMIN_NOTIF: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, prepare_notification)
+            ],
+            States.ADMIN_NOTIF_CONFIRM: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, push_notification)
             ],
             States.RESERVE_TYPE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, type_selection)
