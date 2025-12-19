@@ -101,7 +101,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "Gotta be kidding me! 😑",
             parse_mode="Markdown",
             reply_markup=Keyboard.reservation_type(
-                context.user_data[UserDataKey.IS_ADMIN]
+                context.user_data.get(UserDataKey.IS_ADMIN, False)
             ),
         )
         return State.RESERVE_TYPE
@@ -136,7 +136,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         priorities.get(codice.upper(), DEFAULT_PRIORITY)
     )
 
-    keyboard = Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN])
+    keyboard = Keyboard.reservation_type(context.user_data.get(UserDataKey.IS_ADMIN, False))
     await update.message.reply_text(
         textwrap.dedent(
             """
@@ -172,7 +172,7 @@ async def user_validation(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def user_returning(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text.strip()
 
-    if user_input == Label.ADMIN_PANEL and context.user_data[UserDataKey.IS_ADMIN]:
+    if user_input == Label.ADMIN_PANEL and context.user_data.get(UserDataKey.IS_ADMIN, False):
         await update.message.reply_text(
             "Welcome master!",
             reply_markup=Keyboard.admin_panel(),
@@ -184,7 +184,7 @@ async def user_returning(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Glad to have you back!",
             parse_mode="Markdown",
             reply_markup=Keyboard.reservation_type(
-                context.user_data[UserDataKey.IS_ADMIN]
+                context.user_data.get(UserDataKey.IS_ADMIN, False)
             ),
         )
         return State.RESERVE_TYPE

@@ -50,6 +50,7 @@ class State(IntEnum):
     CANCELATION_SLOT_CHOICE = auto()
     CANCELATION_CONFIRMING = auto()
     RETRY = auto()
+    MAINTENANCE = auto()
 
 
 class Status(StrEnum):

@@ -3,6 +3,10 @@ import textwrap
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from src.biblio.admin.maintenance import (
+    block_user_activity,
+    should_block,
+)
 from src.biblio.bot.messages import (
     show_donate_message,
     show_help,
@@ -27,6 +31,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     is_admin = check_is_admin(chat_id=chat_id)
     context.user_data[UserDataKey.IS_ADMIN] = is_admin
+
+    if should_block(chat_id=chat_id):
+        await block_user_activity(update, context)
+        return State.MAINTENANCE
 
     existing_user = await fetch_existing_user(chat_id)
 

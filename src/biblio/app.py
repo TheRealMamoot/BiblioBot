@@ -9,6 +9,7 @@ from telegram.ext import (
 )
 
 from src.biblio.admin.action import select_admin_action
+from src.biblio.admin.maintenance import block_user_activity, maintenance_gate
 from src.biblio.admin.notif import prepare_notification, push_notification
 from src.biblio.bot.commands import agreement, donate, feedback, help, start
 from src.biblio.bot.fallbacks import error, fallback, restart
@@ -31,6 +32,7 @@ from src.biblio.selection.type import type_selection
 
 def build_app():
     app = Application.builder().token(os.getenv("TELEGRAM_TOKEN")).build()
+
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -91,6 +93,9 @@ def build_app():
                 )
             ],
             State.RETRY: [MessageHandler(filters.TEXT & ~filters.COMMAND, retry)],
+            State.MAINTENANCE: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, block_user_activity)
+            ],
         },
         fallbacks=[
             CommandHandler("start", start),  # Allows /start to reset everything
@@ -99,6 +104,7 @@ def build_app():
             CommandHandler("agreement", agreement),
             CommandHandler("donate", donate),
             MessageHandler(filters.ALL, fallback),
+            MessageHandler(filters.ALL, maintenance_gate),
         ],
         allow_reentry=True,
     )
