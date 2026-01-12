@@ -69,7 +69,9 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if now.hour < (open_time - 2) or now.hour >= close_time:
             await update.message.reply_text(
                 "It's over for today! Go home. 😌",
-                reply_markup=Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN]),
+                reply_markup=Keyboard.reservation_type(
+                    context.user_data[UserDataKey.IS_ADMIN]
+                ),
             )
             return State.RESERVE_TYPE
 
@@ -173,7 +175,9 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if now.hour < (open_time - 2) or now.hour >= close_time:
             await update.message.reply_text(
                 "It's over for today! Go home. 😌",
-                reply_markup=Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN]),
+                reply_markup=Keyboard.reservation_type(
+                    context.user_data[UserDataKey.IS_ADMIN]
+                ),
             )
             return State.RESERVE_TYPE
 
@@ -206,7 +210,9 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             show_help(),
             parse_mode="Markdown",
-            reply_markup=Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN]),
+            reply_markup=Keyboard.reservation_type(
+                context.user_data[UserDataKey.IS_ADMIN]
+            ),
         )
         return State.RESERVE_TYPE
 
@@ -214,7 +220,9 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             show_donate_message(),
             parse_mode="Markdown",
-            reply_markup=Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN]),
+            reply_markup=Keyboard.reservation_type(
+                context.user_data[UserDataKey.IS_ADMIN]
+            ),
         )
         return State.RESERVE_TYPE
 
@@ -222,7 +230,9 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             show_user_agreement(),
             parse_mode="Markdown",
-            reply_markup=Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN]),
+            reply_markup=Keyboard.reservation_type(
+                context.user_data[UserDataKey.IS_ADMIN]
+            ),
         )
         return State.RESERVE_TYPE
 
@@ -230,13 +240,17 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             show_support_message(),
             parse_mode="Markdown",
-            reply_markup=Keyboard.reservation_type(context.user_data[UserDataKey.IS_ADMIN]),
+            reply_markup=Keyboard.reservation_type(
+                context.user_data[UserDataKey.IS_ADMIN]
+            ),
         )
         return State.RESERVE_TYPE
 
     else:
         await update.message.reply_text(
             "The options are right there you know. Pick one, that's it.",
-            reply_markup=keyboard,
+            reply_markup=Keyboard.reservation_type(
+                is_admin=context.user_data[UserDataKey.IS_ADMIN]
+            ),
         )
         return State.RESERVE_TYPE

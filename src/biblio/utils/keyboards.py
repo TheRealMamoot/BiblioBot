@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from math import ceil
 from zoneinfo import ZoneInfo
 
@@ -13,7 +13,7 @@ from src.biblio.utils.utils import generate_days
 LIB_SCHEDULE = Schedule.weekly()
 
 
-class Label(str, Enum):
+class Label(StrEnum):
     AGREEMENT = "📝 Agreement"
     AGREEMENT_AGREE = "👍 Yes, I agree."
     AGREEMENT_DISAGREE = "👎 No, I don't agree."
@@ -30,6 +30,7 @@ class Label(str, Enum):
     CURRENT_RESERVATIONS = "🗓️ Reservations"
     ADMIN_PANEL = "🛡️ Admin panel"
     ADMIN_SEND_NOTIF = "🔔 Send notification"
+    ADMIN_SET_MAINTANANCE = "🚧 Toggle maintanance mode"
     DONATE = "🫶 Donate"
     FEEDBACK = "💡 Feedback"
     HELP = "❓ Help"
@@ -79,6 +80,7 @@ class Keyboard:
     def admin_panel():
         keyboard_buttons = [
             [KeyboardButton(Label.ADMIN_SEND_NOTIF)],
+            [KeyboardButton(Label.ADMIN_SET_MAINTANANCE)],
             [KeyboardButton(Label.BACK)],
         ]
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)

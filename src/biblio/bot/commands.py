@@ -32,7 +32,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     is_admin = check_is_admin(chat_id=chat_id)
     context.user_data[UserDataKey.IS_ADMIN] = is_admin
 
-    if should_block(chat_id=chat_id):
+    if await should_block(chat_id=chat_id):
         await block_user_activity(update, context)
         return State.MAINTENANCE
 

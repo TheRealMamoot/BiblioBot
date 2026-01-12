@@ -38,6 +38,7 @@ class State(IntEnum):
     ADMIN_PANEL = auto()
     ADMIN_NOTIF = auto()
     ADMIN_NOTIF_CONFIRM = auto()
+    ADMIN_MAINTANANCE_CONFIRM = auto()
     CHOOSING_DATE = auto()
     CHOOSING_TIME = auto()
     CHOOSING_DUR = auto()
@@ -74,6 +75,12 @@ class BookingCodeStatus(StrEnum):
     NA = "NA"
     TBD = "TBD"
     CLOSED = "CLOSED"
+
+
+class RailwayService(StrEnum):
+    BOT = "BOT"
+    DB = "DB"
+    JOB = "JOB"
 
 
 class UserDataKey(StrEnum):  # applies .lower() to next values

@@ -99,7 +99,7 @@ async def notify_deployment(bot: Bot) -> None:
     async with aiofiles.open(cache_file, "w") as f:
         await f.write(current_id)
 
-    logging.info("[DEPLY] New Railway deployment detected — notifying users.")
+    logging.info("[DEPLOY] New Railway deployment detected — notifying users.")
 
     chat_ids = await fetch_all_user_chat_ids()
     tasks = [

@@ -4,6 +4,22 @@ from typing import Any
 from src.biblio.config.config import Status, connect_db
 
 
+async def upsert_setting(key: str, value: str) -> None:
+    conn = await connect_db()
+    try:
+        await conn.execute(
+            """
+            INSERT INTO settings (key, value)
+            VALUES ($1, $2)
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP;
+            """,
+            key,
+            value,
+        )
+    finally:
+        await conn.close()
+
+
 async def update_cancel_status(reservation_id: str) -> None:
     conn = await connect_db()
     query = """

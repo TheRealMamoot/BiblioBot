@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from src.biblio.admin.maintenance import is_maintenance_enabled
 from src.biblio.config.config import State, UserDataKey
 from src.biblio.utils.keyboards import Keyboard, Label
 
@@ -25,6 +26,16 @@ async def select_admin_action(
             reply_markup=Keyboard.admin_notif(confirm_stage=False),
         )
         return State.ADMIN_NOTIF
+
+    elif user_input == Label.ADMIN_SET_MAINTANANCE:
+        old_mode = await is_maintenance_enabled()
+        old_status = "ON" if old_mode else "OFF"
+        await update.message.reply_text(
+            f"Maintenance is currently turned *{old_status}*. Proceed?",
+            reply_markup=Keyboard.confirmation(),
+            parse_mode="Markdown",
+        )
+        return State.ADMIN_MAINTANANCE_CONFIRM
 
     else:
         await update.message.reply_text(

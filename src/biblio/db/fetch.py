@@ -7,6 +7,17 @@ from pandas import DataFrame
 from src.biblio.config.config import Status, connect_db
 
 
+async def fetch_setting(key: str) -> str | None:
+    conn = await connect_db()
+    try:
+        row = await conn.fetchrow(
+            "SELECT value FROM settings WHERE key = $1 LIMIT 1", key
+        )
+        return row["value"] if row else None
+    finally:
+        await conn.close()
+
+
 async def fetch_user_reservations(
     *user_details, include_date: bool = True
 ) -> DataFrame:

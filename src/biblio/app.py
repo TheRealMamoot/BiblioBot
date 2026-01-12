@@ -9,7 +9,11 @@ from telegram.ext import (
 )
 
 from src.biblio.admin.action import select_admin_action
-from src.biblio.admin.maintenance import block_user_activity, maintenance_gate
+from src.biblio.admin.maintenance import (
+    block_user_activity,
+    maintenance_gate,
+    toggle_maintenance_mode,
+)
 from src.biblio.admin.notif import prepare_notification, push_notification
 from src.biblio.bot.commands import agreement, donate, feedback, help, start
 from src.biblio.bot.fallbacks import error, fallback, restart
@@ -95,6 +99,9 @@ def build_app():
             State.RETRY: [MessageHandler(filters.TEXT & ~filters.COMMAND, retry)],
             State.MAINTENANCE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, block_user_activity)
+            ],
+            State.ADMIN_MAINTANANCE_CONFIRM: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, toggle_maintenance_mode)
             ],
         },
         fallbacks=[
