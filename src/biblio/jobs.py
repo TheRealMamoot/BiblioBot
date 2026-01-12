@@ -322,7 +322,7 @@ def schedule_reserve_job(bot: Bot) -> None:
     start, end = JOB_SCHEDULE.get_hours("weekday")  # UTC hours
     trigger = CronTrigger(
         second="*/10",
-        # minute="0,1,2,3,30,31,32,33",
+        minute="0,1,2,3,30,31,32,33",
         hour=f"{start}-{end}",
         day_of_week="mon-fri",
     )
