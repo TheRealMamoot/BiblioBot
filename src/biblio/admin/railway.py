@@ -1,15 +1,15 @@
+import asyncio
 import os
 from typing import Any
 
 import httpx
 
-from src.biblio.config.config import RailwayService
+from src.biblio.config.config import RailwayService, get_parser, load_env
+from src.biblio.config.logger import setup_logger
 
-RAILWAY_GRAPHQL_ENDPOINT = "https://backboard.railway.app/graphql"
+RAILWAY_GRAPHQL_ENDPOINT = "https://backboard.railway.app/graphql/v2"
 _DEFAULT_TIMEOUT = 20.0
 SERVICE_LIST = [s.value for s in RailwayService]
-ENV_ID = os.getenv("RAILWAY_ENV_ID")
-AUTH = os.getenv("RAILWAY_ACCESS_TOKEN")
 
 
 class RailwayError(RuntimeError):
@@ -18,7 +18,7 @@ class RailwayError(RuntimeError):
 
 async def _post(query: str, variables: dict[str, Any]) -> dict[str, Any]:
     headers = {
-        "Project-Access-Token": f"{AUTH}",
+        "Project-Access-Token": f"{os.getenv('RAILWAY_TOKEN')}",
         "Content-Type": "application/json",
     }
     async with httpx.AsyncClient(timeout=_DEFAULT_TIMEOUT) as client:
@@ -43,7 +43,7 @@ async def list_deployments(
     service_id = os.getenv(f"RAILWAY_{service.upper()}_SERVICE_ID")
     if not service_id:
         raise ValueError("Service ID not configured!")
-    if not ENV_ID:
+    if not os.getenv("RAILWAY_ENV_ID"):
         raise ValueError("Environment ID not configured!")
 
     query = """
@@ -55,7 +55,7 @@ async def list_deployments(
     """
     data = await _post(
         query,
-        {"serviceId": service_id, "environmentId": ENV_ID},
+        {"serviceId": service_id, "environmentId": os.getenv("RAILWAY_ENV_ID")},
     )
     edges = data.get("deployments", {}).get("edges", [])
     return [edge["node"] for edge in edges if "node" in edge]
@@ -100,7 +100,7 @@ async def deploy_service(
     service_id = os.getenv(f"RAILWAY_{service.upper()}_SERVICE_ID")
     if not service_id:
         raise ValueError("Service ID not configured!")
-    if not ENV_ID:
+    if not os.getenv("RAILWAY_ENV_ID"):
         raise ValueError("Environment ID not configured!")
 
     query = """
@@ -114,6 +114,23 @@ async def deploy_service(
     """
     data = await _post(
         query,
-        {"serviceId": service_id, "environmentId": ENV_ID, "commitSha": commit_sha},
+        {
+            "serviceId": service_id,
+            "environmentId": os.getenv("RAILWAY_ENV_ID"),
+            "commitSha": commit_sha,
+        },
     )
     return data.get("serviceInstanceDeployV2")
+
+
+async def main():
+    setup_logger()
+    parser = get_parser()
+    args = parser.parse_args()
+    load_env(args.env)
+    results = await list_deployments()
+    print(results)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
