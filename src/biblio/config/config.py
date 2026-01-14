@@ -14,6 +14,12 @@ from dotenv import load_dotenv
 CONFIG_DIR = Path(__file__).resolve().parents[2] / "biblio" / "config"
 DEFAULT_CREDENTIALS = CONFIG_DIR / "biblio.json"
 DEFAULT_PRIORITY = 5
+RAILWAY_SERVICES = {
+    "BiblioBot": "🤖",
+    "Postgres": "🗃️",
+    "Reservation": "⏰",
+    "Reservation Job": "⏰",
+}
 
 
 def _resolve_credentials_path() -> Path | None:
@@ -39,6 +45,7 @@ class State(IntEnum):
     ADMIN_NOTIF = auto()
     ADMIN_NOTIF_CONFIRM = auto()
     ADMIN_MAINTANANCE_CONFIRM = auto()
+    ADMIN_MANAGE_SERVICES = auto()
     CHOOSING_DATE = auto()
     CHOOSING_TIME = auto()
     CHOOSING_DUR = auto()
@@ -54,7 +61,15 @@ class State(IntEnum):
     MAINTENANCE = auto()
 
 
-class Status(StrEnum):
+class EmojiStrEnum(StrEnum):
+    def __new__(cls, code: str, emoji: str):
+        obj = str.__new__(cls, code)
+        obj._value_ = code
+        obj.emoji = emoji
+        return obj
+
+
+class Status(EmojiStrEnum):
     PENDING = ("pending", "🔄")
     PROCESSING = ("processing", "🛠️")
     AWAITING = ("awaiting", "⏳")
@@ -64,23 +79,11 @@ class Status(StrEnum):
     TERMINATED = ("terminated", "❌")
     CANCELED = ("canceled", "🛑")
 
-    def __new__(cls, code: str, emoji: str):
-        obj = str.__new__(cls, code)
-        obj._value_ = code
-        obj.emoji = emoji
-        return obj
-
 
 class BookingCodeStatus(StrEnum):
     NA = "NA"
     TBD = "TBD"
     CLOSED = "CLOSED"
-
-
-class RailwayService(StrEnum):
-    BOT = "BOT"
-    DB = "DB"
-    JOB = "JOB"
 
 
 class UserDataKey(StrEnum):  # applies .lower() to next values

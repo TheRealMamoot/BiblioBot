@@ -7,7 +7,7 @@ from pandas import DataFrame
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 
-from src.biblio.config.config import Schedule, UserDataKey
+from src.biblio.config.config import RAILWAY_SERVICES, Schedule, UserDataKey
 from src.biblio.utils.utils import generate_days
 
 LIB_SCHEDULE = Schedule.weekly()
@@ -17,24 +17,25 @@ class Label(StrEnum):
     AGREEMENT = "📝 Agreement"
     AGREEMENT_AGREE = "👍 Yes, I agree."
     AGREEMENT_DISAGREE = "👎 No, I don't agree."
-    AVAILABLE_SLOTS = "🗒️ Available slots"
+    AVAILABLE_SLOTS = "🗒️ Available Slots"
     BACK = "⬅️"
     CANCEL_CONFIRM_YES = "📅❌ Yes, I'm sure."
-    CANCEL_RESERVATION = "🚫 Cancel reservation"
+    CANCEL_RESERVATION = "🚫 Cancel Reservation"
     CONFIRM_NO = "⬅️ No, take me back."
     CONFIRM_YES = "✅ Yes, all looks good."
     CONTINUE = "👍 Yes, go right on."
-    CREDENTIALS_EDIT = "🪪 Edit credentials"
+    CREDENTIALS_EDIT = "🪪 Edit Credentials"
     CREDENTIALS_NEW = "🆕 No, I want to change."
     CREDENTIALS_RETURN = "⬅️ Changed my mind."
     CURRENT_RESERVATIONS = "🗓️ Reservations"
-    ADMIN_PANEL = "🛡️ Admin panel"
-    ADMIN_SEND_NOTIF = "🔔 Send notification"
-    ADMIN_SET_MAINTANANCE = "🚧 Toggle maintanance mode"
+    ADMIN_MANAGE_SERVICES = "🧰 Manage Services"
+    ADMIN_PANEL = "🛡️ Admin Panel"
+    ADMIN_SEND_NOTIF = "🔔 Send Notification"
+    ADMIN_SET_MAINTANANCE = "🚧 Toggle Maintanance"
     DONATE = "🫶 Donate"
     FEEDBACK = "💡 Feedback"
     HELP = "❓ Help"
-    HISTORY = "📊 Slots history"
+    HISTORY = "📊 Slots History"
     HOME = "🏠 Home"
     RESERVATION_TYPE_BACK = "⬅️ Back to reservation type"
     RESERVATION_TYPE_EDIT = "⬅️ Edit reservation type"
@@ -80,6 +81,7 @@ class Keyboard:
     def admin_panel():
         keyboard_buttons = [
             [KeyboardButton(Label.ADMIN_SEND_NOTIF)],
+            [KeyboardButton(Label.ADMIN_MANAGE_SERVICES)],
             [KeyboardButton(Label.ADMIN_SET_MAINTANANCE)],
             [KeyboardButton(Label.BACK)],
         ]
@@ -94,6 +96,20 @@ class Keyboard:
                 [KeyboardButton(Label.CONFIRM_YES)],
                 [KeyboardButton(Label.CONFIRM_NO)],
             ]
+        return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+    @staticmethod
+    def admin_services(services: list[dict[str]], env="staging"):
+        keyboard_buttons = []
+        excluded = {"Reservation"} if env == "staging" else {"Reservation Job"}
+        for service in services:
+            service_name = service.get("name")
+            if service_name in excluded:
+                continue
+            emoji = RAILWAY_SERVICES.get(service_name)
+            keyboard_buttons.append([KeyboardButton(f"{emoji} {service_name}")])
+        keyboard_buttons.append([KeyboardButton(Label.BACK)])
+
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod

@@ -4,12 +4,11 @@ from typing import Any
 
 import httpx
 
-from src.biblio.config.config import RailwayService, get_parser, load_env
+from src.biblio.config.config import get_parser, load_env
 from src.biblio.config.logger import setup_logger
 
 RAILWAY_GRAPHQL_ENDPOINT = "https://backboard.railway.app/graphql/v2"
 _DEFAULT_TIMEOUT = 20.0
-SERVICE_LIST = [s.value for s in RailwayService]
 
 
 class RailwayError(RuntimeError):
@@ -34,18 +33,50 @@ async def _post(query: str, variables: dict[str, Any]) -> dict[str, Any]:
     return data["data"]
 
 
+async def list_environments() -> list[dict[str, str]]:
+    project_id = os.getenv("RAILWAY_PROJECT_ID")
+    if not project_id:
+        raise ValueError("Project ID not configured!")
+    query = """
+    query Envs($projectId: String!) {
+      environments(projectId: $projectId) {
+        edges { node { id name } }
+      }
+    }
+    """
+    data = await _post(query, {"projectId": project_id})
+    edges = data.get("environments", {}).get("edges", [])
+    return [
+        {"id": edge["node"]["id"], "name": edge["node"]["name"]}
+        for edge in edges
+        if "node" in edge and "id" in edge["node"]
+    ]
+
+
+async def list_services() -> list[dict[str, str]]:
+    project_id = os.getenv("RAILWAY_PROJECT_ID")
+    if not project_id:
+        raise ValueError("Project ID not configured!")
+    query = """
+    query ProjectServices($projectId: String!) {
+      project(id: $projectId) {
+        services { edges { node { id name icon } } }
+      }
+    }
+    """
+    data = await _post(query, {"projectId": project_id})
+    edges = data.get("project", {}).get("services", {}).get("edges", [])
+    return [
+        {"id": edge["node"]["id"], "name": edge["node"]["name"]}
+        for edge in edges
+        if "node" in edge and "id" in edge["node"]
+    ]
+
+
 async def list_deployments(
-    service: str = "BOT",
+    service_id: str,
+    environment_id: str,
 ) -> list[dict[str, Any]]:
-    if service.upper() not in SERVICE_LIST:
-        raise ValueError("Service not found!")
-
-    service_id = os.getenv(f"RAILWAY_{service.upper()}_SERVICE_ID")
-    if not service_id:
-        raise ValueError("Service ID not configured!")
-    if not os.getenv("RAILWAY_ENV_ID"):
-        raise ValueError("Environment ID not configured!")
-
     query = """
     query Deployments($serviceId: String!, $environmentId: String!) {
       deployments(input: { serviceId: $serviceId, environmentId: $environmentId }) {
@@ -55,10 +86,24 @@ async def list_deployments(
     """
     data = await _post(
         query,
-        {"serviceId": service_id, "environmentId": os.getenv("RAILWAY_ENV_ID")},
+        {
+            "serviceId": service_id,
+            "environmentId": environment_id,
+        },
     )
     edges = data.get("deployments", {}).get("edges", [])
     return [edge["node"] for edge in edges if "node" in edge]
+
+
+async def get_last_deployment_id(
+    service_id: str,
+    environment_id: str,
+) -> dict[str, str] | None:
+    deployments = await list_deployments(service_id, environment_id)
+    if not deployments:
+        return None
+    latest = max(deployments, key=lambda d: d.get("createdAt", ""))
+    return {"id": latest.get("id"), "created_at": latest.get("createdAt")}
 
 
 async def remove_deployment(deployment_id: str) -> str | None:
@@ -92,17 +137,10 @@ async def restart_deployment(deployment_id: str) -> dict[str, Any]:
 
 
 async def deploy_service(
-    service: str = "BOT",
+    service_id: str,
+    environment_id: str,
     commit_sha: str | None = None,
 ) -> str:
-    if service.upper() not in SERVICE_LIST:
-        raise ValueError("Service not found!")
-    service_id = os.getenv(f"RAILWAY_{service.upper()}_SERVICE_ID")
-    if not service_id:
-        raise ValueError("Service ID not configured!")
-    if not os.getenv("RAILWAY_ENV_ID"):
-        raise ValueError("Environment ID not configured!")
-
     query = """
     mutation Deploy($serviceId: String!, $environmentId: String!, $commitSha: String) {
       serviceInstanceDeployV2(
@@ -116,7 +154,7 @@ async def deploy_service(
         query,
         {
             "serviceId": service_id,
-            "environmentId": os.getenv("RAILWAY_ENV_ID"),
+            "environmentId": environment_id,
             "commitSha": commit_sha,
         },
     )
@@ -128,7 +166,11 @@ async def main():
     parser = get_parser()
     args = parser.parse_args()
     load_env(args.env)
-    results = await list_deployments()
+    # results = await remove_deployment("b1822a76-5678-432c-984f-6397d1156316")
+    # results = await list_deployments("bot")
+    # results = await get_last_deployment_id("bot")
+    # results = await deploy_service("bot")
+    results = await list_services()
     print(results)
 
 
