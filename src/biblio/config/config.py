@@ -44,8 +44,11 @@ class State(IntEnum):
     ADMIN_PANEL = auto()
     ADMIN_NOTIF = auto()
     ADMIN_NOTIF_CONFIRM = auto()
+    MAINTENANCE = auto()
     ADMIN_MAINTANANCE_CONFIRM = auto()
     ADMIN_MANAGE_SERVICES = auto()
+    ADMIN_SERVICE_OPTIONS = auto()
+    ADMIN_OPTIONS_CONFIRM = auto()
     CHOOSING_DATE = auto()
     CHOOSING_TIME = auto()
     CHOOSING_DUR = auto()
@@ -58,7 +61,6 @@ class State(IntEnum):
     CANCELATION_SLOT_CHOICE = auto()
     CANCELATION_CONFIRMING = auto()
     RETRY = auto()
-    MAINTENANCE = auto()
 
 
 class EmojiStrEnum(StrEnum):
@@ -88,6 +90,11 @@ class BookingCodeStatus(StrEnum):
 
 class UserDataKey(StrEnum):  # applies .lower() to next values
     IS_ADMIN = auto()
+    AMDMIN_SERVICES = auto()
+    ENV_ID = auto()
+    CHOSEN_SERVICE_ID = auto()
+    SERVICE_DEPLOYMENT_ID = auto()
+    CHOSEN_SERVICE_OPTION = auto()
     INSTANT = auto()
     STATE = auto()
     SELECTED_DATE = auto()

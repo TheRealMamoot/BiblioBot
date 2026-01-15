@@ -1,7 +1,10 @@
+import os
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.biblio.admin.maintenance import is_maintenance_enabled
+from src.biblio.admin.railway import list_services
 from src.biblio.config.config import State, UserDataKey
 from src.biblio.utils.keyboards import Keyboard, Label
 
@@ -26,6 +29,15 @@ async def select_admin_action(
             reply_markup=Keyboard.admin_notif(confirm_stage=False),
         )
         return State.ADMIN_NOTIF
+
+    elif user_input == Label.ADMIN_MANAGE_SERVICES:
+        services = await list_services()
+        context.user_data[UserDataKey.AMDMIN_SERVICES] = services
+        await update.message.reply_text(
+            "please choose a service.",
+            reply_markup=Keyboard.admin_services(services, os.getenv("ENV")),
+        )
+        return State.ADMIN_MANAGE_SERVICES
 
     elif user_input == Label.ADMIN_SET_MAINTANANCE:
         old_mode = await is_maintenance_enabled()

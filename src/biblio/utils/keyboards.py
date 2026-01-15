@@ -14,6 +14,13 @@ LIB_SCHEDULE = Schedule.weekly()
 
 
 class Label(StrEnum):
+    ADMIN_DEPLOYMENT_REDEPLOY = "🚀 Redeploy"
+    ADMIN_DEPLOYMENT_REMOVE = "🚫 Remove"
+    ADMIN_DEPLOYMENT_RESTART = "🔁 Restart"
+    ADMIN_MANAGE_SERVICES = "🧰 Manage Services"
+    ADMIN_PANEL = "🛡️ Admin Panel"
+    ADMIN_SEND_NOTIF = "🔔 Send Notification"
+    ADMIN_SET_MAINTANANCE = "🚧 Toggle Maintanance"
     AGREEMENT = "📝 Agreement"
     AGREEMENT_AGREE = "👍 Yes, I agree."
     AGREEMENT_DISAGREE = "👎 No, I don't agree."
@@ -28,10 +35,6 @@ class Label(StrEnum):
     CREDENTIALS_NEW = "🆕 No, I want to change."
     CREDENTIALS_RETURN = "⬅️ Changed my mind."
     CURRENT_RESERVATIONS = "🗓️ Reservations"
-    ADMIN_MANAGE_SERVICES = "🧰 Manage Services"
-    ADMIN_PANEL = "🛡️ Admin Panel"
-    ADMIN_SEND_NOTIF = "🔔 Send Notification"
-    ADMIN_SET_MAINTANANCE = "🚧 Toggle Maintanance"
     DONATE = "🫶 Donate"
     FEEDBACK = "💡 Feedback"
     HELP = "❓ Help"
@@ -99,7 +102,7 @@ class Keyboard:
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod
-    def admin_services(services: list[dict[str]], env="staging"):
+    def admin_services(services: list[dict[str, str]], env="staging"):
         keyboard_buttons = []
         excluded = {"Reservation"} if env == "staging" else {"Reservation Job"}
         for service in services:
@@ -110,6 +113,16 @@ class Keyboard:
             keyboard_buttons.append([KeyboardButton(f"{emoji} {service_name}")])
         keyboard_buttons.append([KeyboardButton(Label.BACK)])
 
+        return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
+
+    @staticmethod
+    def admin_service_options():
+        keyboard_buttons = [
+            [KeyboardButton(Label.ADMIN_DEPLOYMENT_REDEPLOY)],
+            [KeyboardButton(Label.ADMIN_DEPLOYMENT_RESTART)],
+            [KeyboardButton(Label.ADMIN_DEPLOYMENT_REMOVE)],
+            [KeyboardButton(Label.BACK)],
+        ]
         return ReplyKeyboardMarkup(keyboard_buttons, resize_keyboard=True)
 
     @staticmethod

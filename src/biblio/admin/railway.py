@@ -53,6 +53,27 @@ async def list_environments() -> list[dict[str, str]]:
     ]
 
 
+async def get_env_id() -> str | None:
+    env_name = os.getenv("ENV") or "staging"
+    railway_env_list = await list_environments()
+    env_id = next(
+        (
+            e["id"]
+            for e in railway_env_list
+            if e.get("name").lower() == env_name.lower()
+        ),
+        None,
+    )
+    return env_id
+
+async def get_service_id(service_name: str) -> str | None:
+    services = await list_services()
+    return next(
+        (s["id"] for s in services if s["name"].lower() == service_name.lower()),
+        None,
+    )
+
+
 async def list_services() -> list[dict[str, str]]:
     project_id = os.getenv("RAILWAY_PROJECT_ID")
     if not project_id:
