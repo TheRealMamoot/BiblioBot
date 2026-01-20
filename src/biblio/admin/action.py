@@ -42,8 +42,9 @@ async def select_admin_action(
     elif user_input == Label.ADMIN_SET_MAINTANANCE:
         old_mode = await is_maintenance_enabled()
         old_status = "ON" if old_mode else "OFF"
+        new_status = "OFF" if old_mode else "ON"
         await update.message.reply_text(
-            f"Maintenance is currently turned *{old_status}*. Proceed?",
+            f"Maintenance is currently turned *{old_status}*. Proceed to turn it *{new_status}*?",
             reply_markup=Keyboard.confirmation(),
             parse_mode="Markdown",
         )

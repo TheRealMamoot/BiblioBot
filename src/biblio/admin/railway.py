@@ -66,6 +66,7 @@ async def get_env_id() -> str | None:
     )
     return env_id
 
+
 async def get_service_id(service_name: str) -> str | None:
     services = await list_services()
     return next(
@@ -139,7 +140,7 @@ async def remove_deployment(deployment_id: str) -> str | None:
 
 async def redeploy_deployment(deployment_id: str) -> dict[str, Any]:
     query = """
-    mutation Redeploy($id: String!) {
+    mutation deploymentRedeploy($id: String!) {
       deploymentRedeploy(id: $id) { id status }
     }
     """
@@ -150,7 +151,7 @@ async def redeploy_deployment(deployment_id: str) -> dict[str, Any]:
 async def restart_deployment(deployment_id: str) -> dict[str, Any]:
     query = """
     mutation Restart($id: String!) {
-      deploymentRestart(id: $id) { id status }
+      deploymentRestart(id: $id)
     }
     """
     data = await _post(query, {"id": deployment_id})

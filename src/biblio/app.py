@@ -15,6 +15,7 @@ from src.biblio.admin.maintenance import (
     toggle_maintenance_mode,
 )
 from src.biblio.admin.notif import prepare_notification, push_notification
+from src.biblio.admin.services import confirm_option, select_option, select_service
 from src.biblio.bot.commands import agreement, donate, feedback, help, start
 from src.biblio.bot.fallbacks import error, fallback, restart
 from src.biblio.bot.user import user_agreement, user_returning, user_validation
@@ -58,6 +59,21 @@ def build_app():
             State.ADMIN_NOTIF_CONFIRM: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, push_notification)
             ],
+            State.ADMIN_MANAGE_SERVICES: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, select_service)
+            ],
+            State.ADMIN_SERVICE_OPTIONS: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, select_option)
+            ],
+            State.ADMIN_OPTION_CONFIRM: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_option)
+            ],
+            State.MAINTENANCE: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, block_user_activity)
+            ],
+            State.ADMIN_MAINTANANCE_CONFIRM: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, toggle_maintenance_mode)
+            ],
             State.RESERVE_TYPE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, type_selection)
             ],
@@ -97,12 +113,6 @@ def build_app():
                 )
             ],
             State.RETRY: [MessageHandler(filters.TEXT & ~filters.COMMAND, retry)],
-            State.MAINTENANCE: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, block_user_activity)
-            ],
-            State.ADMIN_MAINTANANCE_CONFIRM: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, toggle_maintenance_mode)
-            ],
         },
         fallbacks=[
             CommandHandler("start", start),  # Allows /start to reset everything
