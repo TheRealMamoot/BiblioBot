@@ -1,7 +1,12 @@
 import logging
 from typing import Any
 
-from src.biblio.config.config import Status, connect_db
+from src.biblio.config.config import (
+    DEFAULT_PRIORITY,
+    Status,
+    connect_db,
+    get_priorities,
+)
 
 
 async def upsert_setting(key: str, value: str) -> None:
@@ -63,6 +68,29 @@ async def update_record(table: str, row_id: str, updates: dict[str, Any]) -> Non
     logging.info(
         f"[DB] Updated row in {table}, id={row_id}, columns={list(updates.keys())}"
     )
+
+
+async def sync_user_priorities() -> int:
+    priorities = get_priorities()
+    conn = await connect_db()
+    try:
+        rows = await conn.fetch("SELECT id, codice_fiscale FROM users")
+        updates = []
+        for row in rows:
+            codice = row["codice_fiscale"].upper()
+            priority = int(priorities.get(codice, DEFAULT_PRIORITY))
+            updates.append((priority, row["id"]))
+        if not updates:
+            return 0
+        async with conn.transaction():
+            await conn.executemany(
+                "UPDATE users SET priority = $1 WHERE id = $2",
+                updates,
+            )
+        logging.info(f"[DB] Synced priorities for {len(updates)} users")
+        return len(updates)
+    finally:
+        await conn.close()
 
 
 async def sweep_stuck_reservations(

@@ -223,6 +223,11 @@ async def connect_db():
 
 
 def get_priorities():
-    priority_codes: dict = os.getenv("PRIORITY_CODES")
-    priority_codes = json.loads(priority_codes)
-    return priority_codes
+    priority_codes = os.getenv("PRIORITY_CODES")
+    if not priority_codes:
+        return {}
+    try:
+        return json.loads(priority_codes)
+    except json.JSONDecodeError:
+        logging.warning("[PRIORITY] Invalid PRIORITY_CODES JSON; using defaults.")
+        return {}
