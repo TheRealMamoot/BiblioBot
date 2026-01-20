@@ -8,6 +8,7 @@ from src.biblio.app import build_app
 from src.biblio.config.config import get_parser, load_env
 from src.biblio.config.logger import setup_logger
 from src.biblio.db.build import build_db
+from src.biblio.db.update import sync_user_priorities
 from src.biblio.server import users_server
 from src.biblio.utils.notif import notify_deployment
 
@@ -31,6 +32,7 @@ async def start_bot():
     load_env(args.env)
     app: Application = build_app()
     await build_db()
+    await sync_user_priorities()
     await app.initialize()
     await notify_deployment(app.bot)
     await app.start()
