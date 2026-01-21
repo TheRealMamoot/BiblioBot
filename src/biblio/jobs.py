@@ -181,7 +181,7 @@ async def _confirm_phase(record: dict, entry: str | None, retries: int) -> str:
         )
         return Status.FAIL
     try:
-        await confirm_reservation(entry)
+        await confirm_reservation(entry=entry, record=record)
         logging.info(f"[JOB_CONFIRM] 3️⃣ ✅ Confirmed for ID {record['id']}")
         return Status.SUCCESS
     except ReservationConfirmationConflict:
