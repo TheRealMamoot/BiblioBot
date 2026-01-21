@@ -90,13 +90,11 @@ async def confirm_reservation(
     entry: str, max_retries: int = 3, record: dict | None = None
 ) -> dict:
     url = f"https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/confirm/{entry}"
+    message = f" for ID {record['id']}" if record else ""
 
     async with httpx.AsyncClient(verify=False) as client:
         for attempt in range(max_retries):
-            timeout = calculate_timeout(retries=attempt, base=10, step=10, max_read=60)
-            message = ""
-            if record:
-                message = f" for ID {record['id']}"
+            timeout = calculate_timeout(retries=attempt, base=5, step=5, max_read=60)
             try:
                 response = await client.post(url, timeout=timeout)
                 response.raise_for_status()
