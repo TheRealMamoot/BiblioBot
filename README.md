@@ -22,15 +22,17 @@ Start the conversation with `/start` to begin reserving your library slots.
 - Intelligent retry logic with adaptive timeouts for long-running reservation attempts.
 - Adaptive delays for load distribution and better API reliability.
 
-#### Database & Backend
+#### Backend & Database
 
 - Fully asynchronous PostgreSQL backend (Railway-hosted) with connection pooling.
 - Concurrency safeguarded via async semaphores to prevent server overload.
+- Automatic reCAPTCHA bypass
 
 #### Real-Time Monitoring
 
 - Live and historical seat availability lookup with continuous state tracking and custom time-range filtering.
-- Periodic Google Sheets backups using service accounts.
+- Periodic Google Sheets export of data using service accounts.
+- Support for admin Panel
 
 #### Deployment
 
@@ -42,6 +44,7 @@ Before running the bot, you’ll need:
 
 - **Telegram Bot Token** → [How to get one](https://core.telegram.org/api/bots)
 - **Google Service Account Credentials** → [How to get one](https://docs.cloud.google.com/iam/docs/service-account-creds)
+- **2Captcha Account and API key** → [How to get one](https://2captcha.com/enterpage)
 
 ### Setup Instructions
 
@@ -67,6 +70,9 @@ PRIORITIES_CODES=<YOUR_PRIORITES_JSON>
 DATABASE_URL=postgresql://biblio:biblio@postgres:5432/biblio_db
 GSHEETS_NAME=Biblio-logs
 GSHEETS_TAB=backup
+CAPTCHA_API_KEY=<YOUR_2CAPTCHA_API_TOKEN>
+CAPTCHA_SITE_KEY=<LIBRARY_SITE_KEY>
+CAPTCHA_PAGE_URL=https://prenotabiblio.sba.unimi.it/portalePlanning/biblio/prenota/Riepilogo
 ```
 
 Priorities are based on _Codice Fiscale_ and should look like this:
