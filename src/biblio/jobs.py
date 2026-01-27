@@ -151,7 +151,7 @@ async def _set_phase(
     entry = None
     try:
         resp = await set_reservation(
-            start, end, duration, user, calculate_timeout(retries)
+            start, end, duration, user, calculate_timeout(retries), record=record
         )
         booking_code = resp.get("codice_prenotazione")
         entry = resp.get("entry")

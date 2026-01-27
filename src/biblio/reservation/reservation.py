@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -23,7 +24,8 @@ async def set_reservation(
     end_time: int,
     duration: int,
     user_data: dict,
-    timeout: httpx.Timeout = None,
+    timeout: httpx.Timeout | None = None,
+    record: dict | None = None,
 ) -> dict:
     url = "https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/store"
 
@@ -33,6 +35,7 @@ async def set_reservation(
         logging.error(f"[SET] User data validation failed: {e}")
         raise
 
+    recaptcha_token = await _solve_recaptcha(record)
     payload = {
         "cliente": "biblio",
         "start_time": start_time,
@@ -48,7 +51,7 @@ async def set_reservation(
         },
         "servizio": {},
         "risorsa": None,
-        "recaptchaToken": None,
+        "recaptchaToken": recaptcha_token,
         "timezone": "Europe/Rome",
     }
 
@@ -146,6 +149,80 @@ async def confirm_reservation(
         raise RuntimeError(
             f"[CONFIRM] Gave up after max retries{message} — booking code not found."
         )
+
+
+async def _solve_recaptcha(record: dict | None = None) -> str:
+    api_key = os.getenv("CAPTCHA_API_KEY")
+    site_key = os.getenv("CAPTCHA_SITE_KEY")
+    page_url = os.getenv("CAPTCHA_PAGE_URL")
+    message = f" for ID {record['id']}" if record and record.get("id") else ""
+    if not api_key or not site_key or not page_url:
+        logging.error(
+            f"[CAPTCHA] ❌ Missing configuration (API key/site key/page URL){message}."
+        )
+        raise ValueError("Captcha configuration missing!")
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        start = time.perf_counter()
+        logging.info(f"[CAPTCHA] 🧩 Submitting solve task{message}.")
+        submit_resp = await client.post(
+            "https://api.2captcha.com/createTask",
+            json={
+                "clientKey": api_key,
+                "task": {
+                    "type": "RecaptchaV2TaskProxyless",
+                    "websiteURL": page_url,
+                    "websiteKey": site_key,
+                    "isInvisible": True,
+                },
+            },
+        )
+        submit_resp.raise_for_status()
+        submit_data = submit_resp.json()
+        if submit_data.get("errorId") != 0:
+            logging.error(
+                f"[CAPTCHA] ❌ Task submit failed{message}: {submit_data.get('errorDescription')}"
+            )
+            raise RuntimeError(
+                f"Captcha submit failed: {submit_data.get('errorDescription')}"
+            )
+        captcha_id = submit_data.get("taskId")
+        logging.info(f"[CAPTCHA] 🧩 Task created{message}: {captcha_id}")
+
+        for _ in range(5):
+            await asyncio.sleep(4)
+            result_resp = await client.post(
+                "https://api.2captcha.com/getTaskResult",
+                json={
+                    "clientKey": api_key,
+                    "taskId": captcha_id,
+                },
+            )
+            result_resp.raise_for_status()
+            result_data = result_resp.json()
+            if result_data.get("status") == "ready":
+                solution = result_data.get("solution", {})
+                token = solution.get("gRecaptchaResponse")
+                if token:
+                    duration = time.perf_counter() - start
+                    logging.info(
+                        f"[CAPTCHA] ✅ Solve ready{message} in {duration:.2f}s."
+                    )
+                    return token
+                logging.error(f"[CAPTCHA] ⚠️ Solve ready but token missing{message}.")
+                raise RuntimeError("Captcha solve returned no token")
+            if result_data.get("status") != "processing":
+                logging.error(
+                    f"[CAPTCHA] ❌ Solve failed{message}: {result_data.get('errorDescription')}"
+                )
+                raise RuntimeError(
+                    f"Captcha solve failed: {result_data.get('errorDescription')}"
+                )
+            logging.info(f"[CAPTCHA] ⏳ Still processing{message}; retrying.")
+
+    duration = time.perf_counter() - start
+    logging.error(f"[CAPTCHA] ⏱️ Solve timed out{message} after {duration:.2f}s.")
+    raise TimeoutError("Captcha solve timed out")
 
 
 async def cancel_reservation(
