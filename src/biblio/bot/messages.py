@@ -102,7 +102,7 @@ def show_notification(status: str, record: dict, booking_code: str) -> str:
         status_message = "✅ Reservation *Successful*!"
         retry_message = "Enjoy your stay 🤝"
     elif status == Status.FAIL:
-        status_message = "⚠️ Reservation *Failed*!"
+        status_message = "⚠️ Reservation *Retrying*!"
         retry_message = "*❗ Trying again ❗*"
     elif status == Status.TERMINATED:
         status_message = "⛔️ Reservation *Terminated*!"
@@ -126,6 +126,21 @@ def show_notification(status: str, record: dict, booking_code: str) -> str:
         Booking Code: *{booking_code.upper()}*
     """
     return textwrap.dedent(text)
+
+
+def show_cancel_message() -> str:
+    text = textwrap.dedent(
+        """
+        ❗ *Please make sure your reservation time has not ended*❗
+        ✅ *Success*: Reservation was _succesful_. Booking code _available_.
+        🔄 *Pending*: Reservation in progress and will be processed when slots open.
+        ⚠️ *Retrying*: Reservation was _unsucessful_ but the request will be retried at :00 and :30 again.
+        ✴️ *Existing*: Reservation was _partly succesful_. Booking code _unavailable_. *Check your email.*
+
+        That being said, which one will it be?
+        """
+    )
+    return text
 
 
 def show_user_agreement() -> str:
@@ -189,9 +204,9 @@ def show_help() -> str:
         --------------------------
         You can reserve your slot at *BICF* either for *later* or *instantly*:
 
-        ⏳ If you choose *"I need a slot for later"*, your requested slot will be queued and the bot will attempt to make your reservation at the next reset time, which occurs at *:00* and *:30* minute marks.
+        ⏳ If you choose *"Regular Slot"*, your requested slot will be queued and the bot will attempt to make your reservation at the next reset time, which occurs at *:00* and *:30* minute marks.
 
-        ⚡️ If you choose *"I need a slot for now"*, the bot will try to reserve your slot *immediately*. If the slot is not available, it will automatically be queued for the next reset time — just like the "later" option. This option is only for the current day.
+        ⚡️ If you choose *"Instant Slot"*, the bot will try to reserve your slot *immediately*. If the slot is not available, it will automatically be queued for the next reset time — just like the "later" option. This option is only for the current day.
         
         ❗ You do not need to book multiple times. If your original reservation time hasn't passed, the bot will retry automatically. The maximum number of retries for a request is *18*. Afterwards the request will be *terminated*.
 

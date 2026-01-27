@@ -8,6 +8,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from src.biblio.bot.messages import (
+    show_cancel_message,
     show_donate_message,
     show_existing_reservations,
     show_help,
@@ -150,17 +151,7 @@ async def type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             f"🔄 {update.effective_user} started cancelation at {datetime.now(ZoneInfo('Europe/Rome'))}"
         )
         await update.message.reply_text(
-            textwrap.dedent(
-                """
-                    ❗ *Please make sure your reservation time has not ended*❗
-                    ✅ *Success*: Reservation was _succesful_. Booking code _available_.
-                    🔄 *Pending*: Reservation in progress and will be processed when slots open.
-                    ⚠️ *Failed*: Reservation was _unsucessful_ but the request will be retried at :00 and :30 again.
-                    ✴️ *Existing*: Reservation was _partly succesful_. Booking code _unavailable_. *Check your email.*
-
-                    That being said, which one will it be?
-                    """
-            ),
+            show_cancel_message(),
             parse_mode="Markdown",
             reply_markup=Keyboard.cancelation_options(buttons),
         )

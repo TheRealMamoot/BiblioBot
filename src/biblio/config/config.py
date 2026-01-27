@@ -75,7 +75,7 @@ class Status(EmojiStrEnum):
     PENDING = ("pending", "🔄")
     PROCESSING = ("processing", "🛠️")
     AWAITING = ("awaiting", "⏳")
-    FAIL = ("fail", "⚠️")
+    FAIL = ("retrying", "⚠️")
     SUCCESS = ("success", "✅")
     EXISTING = ("existing", "✴️")
     TERMINATED = ("terminated", "❌")

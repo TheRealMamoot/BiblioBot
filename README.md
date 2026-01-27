@@ -67,7 +67,6 @@ PRIORITIES_CODES=<YOUR_PRIORITES_JSON>
 DATABASE_URL=postgresql://biblio:biblio@postgres:5432/biblio_db
 GSHEETS_NAME=Biblio-logs
 GSHEETS_TAB=backup
-BOTLORD_CHAT_ID=<YOUR_TELEGRAM_CHAT_ID> # optional: for admin panel
 ```
 
 Priorities are based on _Codice Fiscale_ and should look like this:
@@ -84,9 +83,14 @@ Lower values = higher priority (0 = highest).
 TELEGRAM_TOKEN=<YOUR_BOT_TOKEN>
 PRIORITIES_CODES=<YOUR_PRIORITES_JSON>
 DATABASE_URL=<YOUR_DATABASE_URL> # change this accordingly
+GSHEETS=<YOUR_SERVICE_ACOUNT_JSON_CONTENT> # new variable
 GSHEETS_NAME=Biblio-logs
 GSHEETS_TAB=backup
-GSHEETS=<YOUR_SERVICE_ACOUNT_JSON_CONTENT> # new variable
+ENV=<YOUR_ENV_NAME> # optional: staging or prod
+BOTLORD_CHAT_ID=<YOUR_TELEGRAM_CHAT_ID> # optional: for admin panel
+RAILWAY_ENV_ID=<YOUR_RAILWAY_ENV_ID> # optional: for admin panel if you use railway
+RAILWAY_PROJECT_ID=<YOUR_RAILWAY_PROJECT_ID> # optional
+RAILWAY_TOKEN=<YOUR_RAILWAY_TOKEN> # optional
 ```
 
 #### Google Sheets

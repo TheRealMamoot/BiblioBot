@@ -43,8 +43,8 @@ class Label(StrEnum):
     RESERVATION_TYPE_BACK = "⬅️ Back to reservation type"
     RESERVATION_TYPE_EDIT = "⬅️ Edit reservation type"
     RETRY = "🆕 Let's go again!"
-    SLOT_INSTANT = "⚡️ I need a slot for now."
-    SLOT_LATER = "⏳ I need a slot for later."
+    SLOT_INSTANT = "⚡️ Instant Slot"
+    SLOT_LATER = "⏳ Regular Slot"
     SUPPORT = "🤝 Reach out!"
 
 
@@ -133,9 +133,8 @@ class Keyboard:
                 KeyboardButton(Label.HISTORY),
                 KeyboardButton(Label.AVAILABLE_SLOTS),
             ],
+            [KeyboardButton(Label.SLOT_LATER), KeyboardButton(Label.SLOT_INSTANT)],
             [KeyboardButton(Label.CURRENT_RESERVATIONS)],
-            [KeyboardButton(Label.SLOT_LATER)],
-            [KeyboardButton(Label.SLOT_INSTANT)],
             [KeyboardButton(Label.CANCEL_RESERVATION)],
             [KeyboardButton(Label.CREDENTIALS_EDIT)],
             [KeyboardButton(Label.AGREEMENT), KeyboardButton(Label.HELP)],
