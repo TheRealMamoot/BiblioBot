@@ -1,11 +1,7 @@
-import asyncio
 import os
 from typing import Any
 
 import httpx
-
-from src.biblio.config.config import get_parser, load_env
-from src.biblio.config.logger import setup_logger
 
 RAILWAY_GRAPHQL_ENDPOINT = "https://backboard.railway.app/graphql/v2"
 _DEFAULT_TIMEOUT = 20.0
@@ -148,7 +144,7 @@ async def redeploy_deployment(deployment_id: str) -> dict[str, Any]:
     return data.get("deploymentRedeploy")
 
 
-async def restart_deployment(deployment_id: str) -> dict[str, Any]:
+async def restart_deployment(deployment_id: str) -> bool:
     query = """
     mutation Restart($id: String!) {
       deploymentRestart(id: $id)
@@ -183,18 +179,14 @@ async def deploy_service(
     return data.get("serviceInstanceDeployV2")
 
 
-async def main():
-    setup_logger()
-    parser = get_parser()
-    args = parser.parse_args()
-    load_env(args.env)
-    # results = await remove_deployment("b1822a76-5678-432c-984f-6397d1156316")
-    # results = await list_deployments("bot")
-    # results = await get_last_deployment_id("bot")
-    # results = await deploy_service("bot")
-    results = await list_services()
-    print(results)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+async def redeploy_service(service_name: str) -> bool:
+    environment_id = await get_env_id()
+    service_id = await get_service_id(service_name)
+    if not service_id or not environment_id:
+        return False
+    last_deployment = await get_last_deployment_id(service_id, environment_id)
+    deployment_id = last_deployment.get("id") if last_deployment else None
+    if deployment_id:
+        await redeploy_deployment(deployment_id)
+        return True
+    return False

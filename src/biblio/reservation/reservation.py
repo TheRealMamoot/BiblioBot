@@ -11,7 +11,7 @@ from src.biblio.config.config import ReservationConfirmationConflict
 from src.biblio.reservation.slot_datetime import extract_available_seats
 from src.biblio.utils.validation import validate_user_data
 
-CAPTCHA_ITERATION = 20
+CAPTCHA_ITERATION = 24
 CAPTCHA_SLEEP = 5
 
 

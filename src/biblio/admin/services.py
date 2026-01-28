@@ -1,6 +1,6 @@
 import os
 
-from telegram import Update
+from telegram import ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes
 
 from src.biblio.admin.railway import (
@@ -100,6 +100,10 @@ async def confirm_option(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             resp = await redeploy_deployment(deployment_id)
 
         elif chosen_service_option == Label.ADMIN_DEPLOYMENT_REMOVE:
+            await update.message.reply_text(
+                "Done...?",
+                reply_markup=ReplyKeyboardRemove(),
+            )
             resp = await remove_deployment(deployment_id)
 
         elif chosen_service_option == Label.ADMIN_DEPLOYMENT_RESTART:

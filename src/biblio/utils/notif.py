@@ -10,13 +10,35 @@ from telegram import Bot
 from telegram.error import Forbidden, TelegramError
 
 from src.biblio.config.config import Status
-from src.biblio.db.fetch import fetch_all_user_chat_ids, fetch_reservations
+from src.biblio.db.fetch import (
+    fetch_all_user_chat_ids,
+    fetch_reservations,
+    fetch_setting,
+)
 
 DEPLOY_NOTIF = textwrap.dedent(
     """
     📦🛠️ *Bot Updated!*
     
     👉 *Please use /start again to refresh your session.*
+    """
+)
+
+MAINTENANCE_ON_NOTIF = textwrap.dedent(
+    """
+    🚧 *Maintenance Enabled*
+
+    The bot is temporarily on hold while maintenance is in progress.
+    Please check back later.
+    """
+)
+
+MAINTENANCE_OFF_NOTIF = textwrap.dedent(
+    """
+    ✅ *Maintenance Disabled*
+
+    The bot is back *online*.
+    👉 *Please use /start to continue.*
     """
 )
 
@@ -78,6 +100,11 @@ async def _safe_notify(bot: Bot, chat_id: int, text: str, context: str) -> None:
 
 
 async def notify_deployment(bot: Bot) -> None:
+    maintenance = await fetch_setting("maintenance")
+    if maintenance is not None and str(maintenance).lower() in {"1", "true", "yes", "on"}:
+        logging.info("[DEPLOY] Maintenance enabled — skipping deployment notification.")
+        return
+
     current_id = os.environ.get("RAILWAY_DEPLOYMENT_ID")
     cache_file = ".last_deploy_id"
 
@@ -104,6 +131,19 @@ async def notify_deployment(bot: Bot) -> None:
     chat_ids = await fetch_all_user_chat_ids()
     tasks = [
         _safe_notify(bot=bot, chat_id=chat_id, text=DEPLOY_NOTIF, context="deploy")
+        for chat_id in chat_ids
+    ]
+    await asyncio.gather(*tasks)
+
+
+async def notify_maintenance(bot: Bot, enabled: bool) -> None:
+    text = MAINTENANCE_ON_NOTIF if enabled else MAINTENANCE_OFF_NOTIF
+    state = "enabled" if enabled else "disabled"
+    logging.info(f"[MAINTENANCE] Notifying users: maintenance {state}.")
+
+    chat_ids = await fetch_all_user_chat_ids()
+    tasks = [
+        _safe_notify(bot=bot, chat_id=chat_id, text=text, context="maintenance")
         for chat_id in chat_ids
     ]
     await asyncio.gather(*tasks)

@@ -1,10 +1,15 @@
+import logging
+import os
+
 from telegram import ReplyKeyboardRemove, Update
 from telegram.ext import ApplicationHandlerStop, ContextTypes
 
+from src.biblio.admin.railway import redeploy_service
 from src.biblio.config.config import State, UserDataKey, check_is_admin
 from src.biblio.db.fetch import fetch_setting
 from src.biblio.db.update import upsert_setting
 from src.biblio.utils.keyboards import Keyboard, Label
+from src.biblio.utils.notif import notify_maintenance
 
 MAINTENANCE_MESSAGE = (
     "*🚧 Bot is not available at the moment. Please try again later. 🚧*"
@@ -61,7 +66,7 @@ async def set_maintenance(value: str) -> None:
 
 async def toggle_maintenance_mode(
     update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+) -> None | int:
     if not context.user_data.get(UserDataKey.IS_ADMIN, False):
         return
 
@@ -84,4 +89,32 @@ async def toggle_maintenance_mode(
             reply_markup=Keyboard.admin_panel(),
             parse_mode="Markdown",
         )
-        return State.ADMIN_PANEL
+        try:
+            env = (os.getenv("ENV") or "staging").lower()
+            bot_ok = await redeploy_service("BiblioBot")
+            other_service = "Reservation Job" if env == "staging" else "Reservation"
+            await redeploy_service(other_service)
+            if bot_ok:
+                try:
+                    await notify_maintenance(context.bot, enabled=new_mode)
+                except Exception as e:
+                    logging.error(f"[MAINTENANCE] Notify failed: {e}")
+                await update.message.reply_text(
+                    "Maintenance notification sent (redeploy OK).",
+                    reply_markup=Keyboard.admin_panel(),
+                )
+            else:
+                logging.error(
+                    "[MAINTENANCE] BiblioBot redeploy failed — skipping notify."
+                )
+                await update.message.reply_text(
+                    "Maintenance redeploy failed — notification skipped.",
+                    reply_markup=Keyboard.admin_panel(),
+                )
+            return State.ADMIN_PANEL
+        except Exception as e:
+            logging.error(f"[MAINTENANCE] Redeploy failed: {e}")
+            await update.message.reply_text(
+                "Maintenance redeploy failed — notification skipped.",
+                reply_markup=Keyboard.admin_panel(),
+            )
