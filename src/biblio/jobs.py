@@ -13,6 +13,7 @@ from telegram import Bot
 
 from src.biblio.bot.messages import show_notification
 from src.biblio.config.config import (
+    DEFAULT_PRIORITY,
     BookingCodeStatus,
     ReservationConfirmationConflict,
     Schedule,
@@ -37,7 +38,23 @@ from src.biblio.utils.notif import (
 
 JOB_SCHEDULE = Schedule.jobs(daylight_saving=True)
 SEMAPHORE_LIMIT = 5
+RETRY_LIMIT = 5
+PRIORITY_RETRY_LIMIT = 20
+RETRY_NOTIF_INTERVAL = int(PRIORITY_RETRY_LIMIT / 2 + 1)
 semaphore = asyncio.Semaphore(SEMAPHORE_LIMIT)
+
+
+def _is_priority_user(record: dict) -> bool:
+    try:
+        return int(record.get("priority", DEFAULT_PRIORITY)) < DEFAULT_PRIORITY
+    except (TypeError, ValueError):
+        return False
+
+
+def _set_retry_limit(record: dict) -> int:
+    is_priority_user = _is_priority_user(record)
+    retry_limit = PRIORITY_RETRY_LIMIT if is_priority_user else RETRY_LIMIT
+    return retry_limit
 
 
 async def process_reservation(record: dict, bot: Bot) -> dict:
@@ -148,6 +165,7 @@ async def _set_phase(
       like "existing", "fail", or "terminated" to short-circuit the flow.
     """
     booking_code = record.get("booking_code")  # may be None
+    retry_limit = _set_retry_limit(record)
     entry = None
     try:
         resp = await set_reservation(
@@ -170,7 +188,7 @@ async def _set_phase(
         return (
             booking_code,
             entry,
-            (Status.TERMINATED if retries + 1 > 20 else Status.FAIL),
+            (Status.TERMINATED if retries + 1 > retry_limit else Status.FAIL),
         )
 
 
@@ -180,6 +198,8 @@ async def _confirm_phase(record: dict, entry: str | None, retries: int) -> str:
             f"[JOB_CONFIRM] 3️⃣ ❌ No entry code available for confirm on ID {record['id']}"
         )
         return Status.FAIL
+
+    retry_limit = _set_retry_limit(record)
     try:
         await confirm_reservation(entry=entry, record=record)
         logging.info(f"[JOB_CONFIRM] 3️⃣ ✅ Confirmed for ID {record['id']}")
@@ -194,7 +214,7 @@ async def _confirm_phase(record: dict, entry: str | None, retries: int) -> str:
         return Status.FAIL
     except Exception as e:
         logging.error(f"[JOB_CONFIRM] 3️⃣ ❌ Failed for ID {record['id']}: {e}")
-        return Status.TERMINATED if retries + 1 > 30 else Status.FAIL
+        return Status.TERMINATED if retries + 1 > retry_limit else Status.FAIL
 
 
 def _is_stale_fail(record: dict) -> bool:
@@ -267,7 +287,7 @@ def _should_notify(old_status: str, new_status: str, retries: int) -> bool:
     ):
         return True
     if new_status == Status.FAIL:
-        return retries > 0 and retries % 11 == 0
+        return retries > 0 and retries % RETRY_NOTIF_INTERVAL == 0
     return False
 
 
