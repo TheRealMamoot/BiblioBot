@@ -30,9 +30,11 @@ Start the conversation with `/start` to begin reserving your library slots.
 
 #### Real-Time Monitoring
 
+- Notifications for shceduling reservations and their activations.
 - Live and historical seat availability lookup with continuous state tracking and custom time-range filtering.
 - Periodic Google Sheets export of data using service accounts.
-- Support for admin Panel
+- Daily database sync across prod and staging envs w/ Github actions.
+- Support for admin Panel.
 
 #### Deployment
 

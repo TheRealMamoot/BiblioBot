@@ -1,0 +1,33 @@
+name: Sync staging DB (users + reservations)
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump prod users + reservations
+        env:
+          PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+        run: |
+          pg_dump \
+            --data-only \
+            --column-inserts \
+            --table=public.users \
+            --table=public.reservations \
+            "$PROD_DATABASE_URL" > /tmp/prod_data.sql
+
+      - name: Truncate staging tables
+        env:
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          psql "$STAGING_DATABASE_URL" -c "TRUNCATE reservations, users RESTART IDENTITY CASCADE;"
+
+      - name: Load prod data into staging
+        env:
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          psql "$STAGING_DATABASE_URL" -f /tmp/prod_data.sql
