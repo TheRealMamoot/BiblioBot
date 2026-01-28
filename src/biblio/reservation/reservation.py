@@ -162,7 +162,7 @@ async def _solve_recaptcha(record: dict | None = None) -> str:
         )
         raise ValueError("Captcha configuration missing!")
 
-    async with httpx.AsyncClient(timeout=20.0) as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         start = time.perf_counter()
         logging.info(f"[CAPTCHA] 🧩 Submitting solve task{message}.")
         submit_resp = await client.post(
