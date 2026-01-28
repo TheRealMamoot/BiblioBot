@@ -15,6 +15,7 @@ from src.biblio.db.fetch import (
     fetch_reservations,
     fetch_setting,
 )
+from src.biblio.db.update import upsert_setting
 
 DEPLOY_NOTIF = textwrap.dedent(
     """
@@ -100,8 +101,21 @@ async def _safe_notify(bot: Bot, chat_id: int, text: str, context: str) -> None:
 
 
 async def notify_deployment(bot: Bot) -> None:
+    suppress = await fetch_setting("suppress_deploy_notif")
+    if suppress is not None and str(suppress).lower() in {"1", "true", "yes", "on"}:
+        logging.info(
+            "[DEPLOY] Suppressing deploy notification due to maintenance-triggered redeploy."
+        )
+        await upsert_setting("suppress_deploy_notif", "False")
+        return
+
     maintenance = await fetch_setting("maintenance")
-    if maintenance is not None and str(maintenance).lower() in {"1", "true", "yes", "on"}:
+    if maintenance is not None and str(maintenance).lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
         logging.info("[DEPLOY] Maintenance enabled — skipping deployment notification.")
         return
 

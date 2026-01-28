@@ -1,5 +1,5 @@
+import asyncio
 import logging
-import os
 
 from telegram import ReplyKeyboardRemove, Update
 from telegram.ext import ApplicationHandlerStop, ContextTypes
@@ -90,19 +90,14 @@ async def toggle_maintenance_mode(
             parse_mode="Markdown",
         )
         try:
-            env = (os.getenv("ENV") or "staging").lower()
+            await upsert_setting("suppress_deploy_notif", "True")
             bot_ok = await redeploy_service("BiblioBot")
-            other_service = "Reservation Job" if env == "staging" else "Reservation"
-            await redeploy_service(other_service)
             if bot_ok:
+                await asyncio.sleep(60)  # TODO: check deploy status w/ railway
                 try:
                     await notify_maintenance(context.bot, enabled=new_mode)
                 except Exception as e:
                     logging.error(f"[MAINTENANCE] Notify failed: {e}")
-                await update.message.reply_text(
-                    "Maintenance notification sent (redeploy OK).",
-                    reply_markup=Keyboard.admin_panel(),
-                )
             else:
                 logging.error(
                     "[MAINTENANCE] BiblioBot redeploy failed — skipping notify."
