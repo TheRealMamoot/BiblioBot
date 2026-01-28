@@ -154,11 +154,13 @@ def show_user_agreement() -> str:
         📌 Your *Telegram username*, *first name*, and *last name* (if available)
         📌 Your provided *Codice Fiscale*, *full name*, and *email address*
         📌 Your selected *reservation date*, *time*, and *duration* at Università degli Studi di Milano's Library of Biology, Computer Science, Chemistry and Physics (*BICF*)
-        📌 The *status* of your reservation (*active* or *cancelled*) 
+        📌 Reservation metadata such as *booking code*
         📌 *General activity data*, including your *interactions* with the bot during the reservation process
 
         ❕ This data is used *exclusively* for making and managing *BICF reservations* more easily on your behalf.
         ❕ Your data is *never shared* with third parties and is used solely to assist with *reservation automation* and *troubleshooting*.
+        ❕ When maintenance mode is enabled, the bot may temporarily pause functionality.
+        ❕ The bot does not guarantee that a reservation will be secured.
 
         🤝🏻 By continuing to use this bot, you *agree to these terms*.
         """
@@ -174,9 +176,6 @@ def show_support_message() -> str:
         Contacts:
         [GitHub](https://github.com/TheRealMamoot)
         [Linkedin](https://www.linkedin.com/in/alireza-mahmoudian-5b0276246/)
-        
-        Bug report, suggestions & feedback: 
-        [@BiblioSupport](https://t.me/BiblioSupport)
 
         Cool guy, check him out! 😏
     """
@@ -208,11 +207,13 @@ def show_help() -> str:
 
         ⚡️ If you choose *"Instant Slot"*, the bot will try to reserve your slot *immediately*. If the slot is not available, it will automatically be queued for the next reset time — just like the "later" option. This option is only for the current day.
         
-        ❗ You do not need to book multiple times. If your original reservation time hasn't passed, the bot will retry automatically. The maximum number of retries for a request is *18*. Afterwards the request will be *terminated*.
+        ❗ You do not need to book multiple times. If your original reservation time hasn't passed, the bot will retry automatically for a number of times. Afterwards the request will be *terminated*.
 
         🔔 You will be notified when your reservation is made or if it eventually fails.
 
-        📅 You can see all your reservations and their states by choosing *"Current reservations"*.
+        📅 You can see all your reservations and their states by choosing *"Reservations"*.
+
+        📊 Additionally, you can see the current free slots or their history with *"Available Slots"* and *"Slots History"*.
 
         🚫 You can also *cancel* your request. Doing this *without* the bot might cause issues with your next slot request.
         
@@ -222,9 +223,11 @@ def show_help() -> str:
 
         ✅ *Success*: Your reservation was successful. You can now go to the library — you can check your email to be sure.
 
-        ⚠️ *Fail*: The reservation was unsuccessful but will be retried several times. You don't need to request again yet.
+        ⚠️ *Retrying*: The reservation was unsuccessful but will be retried several times. You don't need to request again yet.
 
         ❌ *Terminated*: Your request has either expired, exceeded the retry limit or canceled by you. You'll need to make a new reservation.
+
+        🛠️ *Processing*: The bot is in the middle of processing the request.
 
         ✴️ *Existing*: The bot has detected that you already have a reservation for this slot. It will not retry.
 
@@ -232,9 +235,7 @@ def show_help() -> str:
         
         💡 *Recommendation*
         --------------------------
-        ❕ To increase your chances, it's highly recommended to use the *"I need a slot for later"* option and book in advance, before the day of your visit.
-
-        ❕ Please avoid sharing the bot with a wide audience. Too many users may cause the system to slow down or fail, and it could reduce everyone's chances of getting a reservation.
+        ❕ To increase your chances, it's highly recommended to use the *"I need a slot for later"* option and book in advance, before the day of your visit..
 
         ❕ In case of any unforseen behaviour, please use /start to reset the bot. You can also use /help, /feedback and /agreemnt at any time.
 
