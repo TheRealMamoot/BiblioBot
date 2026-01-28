@@ -60,10 +60,6 @@ async def maintenance_gate(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     raise ApplicationHandlerStop
 
 
-async def set_maintenance(value: str) -> None:
-    await upsert_setting("maintenance", value)
-
-
 async def toggle_maintenance_mode(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None | int:
@@ -93,7 +89,7 @@ async def toggle_maintenance_mode(
             await upsert_setting("suppress_deploy_notif", "True")
             bot_ok = await redeploy_service("BiblioBot")
             if bot_ok:
-                await asyncio.sleep(60)  # TODO: check deploy status w/ railway
+                await asyncio.sleep(10)  # TODO: check deploy status w/ railway
                 try:
                     await notify_maintenance(context.bot, enabled=new_mode)
                 except Exception as e:
