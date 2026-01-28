@@ -11,6 +11,9 @@ from src.biblio.config.config import ReservationConfirmationConflict
 from src.biblio.reservation.slot_datetime import extract_available_seats
 from src.biblio.utils.validation import validate_user_data
 
+CAPTCHA_ITERATION = 20
+CAPTCHA_SLEEP = 5
+
 
 def calculate_timeout(
     retries: int, base: int = 10, step: int = 15, max_read: int = 150
@@ -178,7 +181,7 @@ async def _solve_recaptcha(record: dict | None = None) -> str:
             },
         )
         submit_resp.raise_for_status()
-        submit_data = submit_resp.json()
+        submit_data: dict = submit_resp.json()
         if submit_data.get("errorId") != 0:
             logging.error(
                 f"[CAPTCHA] ❌ Task submit failed{message}: {submit_data.get('errorDescription')}"
@@ -189,8 +192,8 @@ async def _solve_recaptcha(record: dict | None = None) -> str:
         captcha_id = submit_data.get("taskId")
         logging.info(f"[CAPTCHA] 🧩 Task created{message}: {captcha_id}")
 
-        for _ in range(5):
-            await asyncio.sleep(7)
+        for _ in range(CAPTCHA_ITERATION):
+            await asyncio.sleep(CAPTCHA_SLEEP)
             result_resp = await client.post(
                 "https://api.2captcha.com/getTaskResult",
                 json={
@@ -199,9 +202,9 @@ async def _solve_recaptcha(record: dict | None = None) -> str:
                 },
             )
             result_resp.raise_for_status()
-            result_data = result_resp.json()
+            result_data: dict = result_resp.json()
             if result_data.get("status") == "ready":
-                solution = result_data.get("solution", {})
+                solution: dict = result_data.get("solution", {})
                 token = solution.get("gRecaptchaResponse")
                 if token:
                     duration = time.perf_counter() - start
