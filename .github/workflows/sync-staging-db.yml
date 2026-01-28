@@ -15,7 +15,6 @@ jobs:
         run: |
           pg_dump \
             --data-only \
-            --column-inserts \
             --table=public.users \
             --table=public.reservations \
             "$PROD_DATABASE_URL" > /tmp/prod_data.sql
@@ -30,4 +29,4 @@ jobs:
         env:
           STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
-          psql "$STAGING_DATABASE_URL" -f /tmp/prod_data.sql
+          psql -q "$STAGING_DATABASE_URL" -f /tmp/prod_data.sql
