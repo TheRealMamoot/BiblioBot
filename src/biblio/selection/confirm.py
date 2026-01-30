@@ -18,6 +18,29 @@ from src.biblio.reservation.slot_datetime import reserve_datetime
 from src.biblio.utils.keyboards import Keyboard, Label
 
 
+def _set_user_data_status(
+    context: ContextTypes.DEFAULT_TYPE,
+    status: str,
+    booking_code: str,
+    retries: str | None = None,
+    created_at: bool = False,
+    success_at: bool = False,
+    fail_at: bool = False,
+) -> None:
+    now = datetime.now(ZoneInfo("Europe/Rome"))
+    if created_at:
+        context.user_data[UserDataKey.CREATED_AT] = now
+    if success_at:
+        context.user_data[UserDataKey.SUCCESS_AT] = now
+    if fail_at:
+        context.user_data[UserDataKey.FAIL_AT] = now
+    if retries is not None:
+        context.user_data[UserDataKey.RETRIES] = retries
+    context.user_data[UserDataKey.STATUS] = status
+    context.user_data[UserDataKey.BOOKING_CODE] = booking_code
+    context.user_data[UserDataKey.UPDATED_AT] = now
+
+
 async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = update.message.text.strip()
     start_time = context.user_data.get(UserDataKey.SELECTED_TIME)
@@ -46,12 +69,13 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         logging.info(
             f"{update.effective_user} request confirmed at {datetime.now(ZoneInfo('Europe/Rome'))}"
         )
-        context.user_data[UserDataKey.CREATED_AT] = datetime.now(
-            ZoneInfo("Europe/Rome")
+        _set_user_data_status(
+            context,
+            status=Status.PENDING,
+            booking_code=BookingCodeStatus.TBD,
+            retries="0",
+            created_at=True,
         )
-        context.user_data[UserDataKey.STATUS] = Status.PENDING
-        context.user_data[UserDataKey.BOOKING_CODE] = BookingCodeStatus.TBD
-        context.user_data[UserDataKey.RETRIES] = "0"
 
         if context.user_data[UserDataKey.INSTANT]:
             try:
@@ -76,15 +100,11 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 logging.info(
                     f"[CONFIRM] 3️⃣ ⏱️ ⚡ {res_type} Reservation confirmed for {user_data['cognome_nome']}"
                 )
-                context.user_data[UserDataKey.STATUS] = Status.SUCCESS
-                context.user_data[UserDataKey.BOOKING_CODE] = (
-                    f"{reservation_response['codice_prenotazione']}"
-                )
-                context.user_data[UserDataKey.SUCCESS_AT] = datetime.now(
-                    ZoneInfo("Europe/Rome")
-                )
-                context.user_data[UserDataKey.UPDATED_AT] = datetime.now(
-                    ZoneInfo("Europe/Rome")
+                _set_user_data_status(
+                    context,
+                    status=Status.SUCCESS,
+                    booking_code=f"{reservation_response['codice_prenotazione']}",
+                    success_at=True,
                 )
                 request_status_message = "✅ Reservation *successful*!"
                 retry_status_message = ""
@@ -93,14 +113,12 @@ async def confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                 logging.error(
                     f"❌ {res_type} Reservation failed for {user_data['cognome_nome']} — {e}"
                 )
-                context.user_data[UserDataKey.RETRIES] = "1"
-                context.user_data[UserDataKey.STATUS] = Status.FAIL
-                context.user_data[UserDataKey.BOOKING_CODE] = BookingCodeStatus.NA
-                context.user_data[UserDataKey.FAIL_AT] = datetime.now(
-                    ZoneInfo("Europe/Rome")
-                )
-                context.user_data[UserDataKey.UPDATED_AT] = datetime.now(
-                    ZoneInfo("Europe/Rome")
+                _set_user_data_status(
+                    context,
+                    status=Status.FAIL,
+                    booking_code=BookingCodeStatus.NA,
+                    retries="1",
+                    fail_at=True,
                 )
                 request_status_message = (
                     "⚠️ Reservation *retrying*! *Slot not available*."

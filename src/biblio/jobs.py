@@ -458,4 +458,4 @@ def start_jobs(bot: Bot) -> None:  #! except reservation
     schedule_reminder_job(bot)
     schedule_activation_reminder_job(bot)
     schedule_donation_reminder_job(bot)
-    schedule_slot_snapshot_job()
+    # schedule_slot_snapshot_job() #! saving captcha recourses
