@@ -26,4 +26,6 @@ COPY main.py .
 COPY jobs_main.py .
 COPY src/ src/
 
+RUN playwright install --with-deps
+
 CMD ["python", "main.py"]

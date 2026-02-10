@@ -6,6 +6,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import httpx
+from playwright.async_api import async_playwright
 
 from src.biblio.config.config import ReservationConfirmationConflict
 from src.biblio.reservation.slot_datetime import extract_available_seats
@@ -13,6 +14,8 @@ from src.biblio.utils.validation import validate_user_data
 
 CAPTCHA_ITERATION = 24
 CAPTCHA_SLEEP = 5
+COOKIE_CACHE_TTL = 300
+_COOKIE_CACHE: tuple[str, float] | None = None
 
 
 def calculate_timeout(
@@ -29,6 +32,7 @@ async def set_reservation(
     user_data: dict,
     timeout: httpx.Timeout | None = None,
     record: dict | None = None,
+    cookie: str | None = None,
 ) -> dict:
     url = "https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/store"
 
@@ -40,6 +44,8 @@ async def set_reservation(
 
     recaptcha_token = await _solve_recaptcha(record)
     payload = {
+        "reservation_number": 0,
+        "backoffice": {},
         "cliente": "biblio",
         "start_time": start_time,
         "end_time": end_time,
@@ -58,9 +64,21 @@ async def set_reservation(
         "timezone": "Europe/Rome",
     }
 
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9,de;q=0.8,fa;q=0.7",
+        "Origin": "https://prenotabiblio.sba.unimi.it",
+        "Referer": "https://prenotabiblio.sba.unimi.it/portalePlanning/biblio/prenota/Riepilogo",
+        "X-App-Locale": "it",
+        "X-Cliente": "2",
+    }
+    cookie_value = await _resolve_cookie_header(cookie, user_data=user_data)
+    if cookie_value:
+        headers["Cookie"] = cookie_value
+
     async with httpx.AsyncClient(timeout=timeout, verify=False) as client:
         try:
-            response = await client.post(url, json=payload)
+            response = await client.post(url, json=payload, headers=headers)
             response.raise_for_status()
             response_data = response.json()
             if "entry" in response_data:  # entry = NOT Booking Code!
@@ -93,16 +111,31 @@ async def set_reservation(
 
 
 async def confirm_reservation(
-    entry: str, max_retries: int = 3, record: dict | None = None
+    entry: str,
+    max_retries: int = 3,
+    record: dict | None = None,
+    cookie: str | None = None,
 ) -> dict:
     url = f"https://prenotabiblio.sba.unimi.it/portalePlanningAPI/api/entry/confirm/{entry}"
     message = f" for ID {record['id']}" if record else ""
+
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9,de;q=0.8,fa;q=0.7",
+        "Origin": "https://prenotabiblio.sba.unimi.it",
+        "Referer": "https://prenotabiblio.sba.unimi.it/portalePlanning/biblio/prenota/Riepilogo",
+        "X-App-Locale": "it",
+        "X-Cliente": "2",
+    }
+    cookie_value = await _resolve_cookie_header(cookie, user_data=None)
+    if cookie_value:
+        headers["Cookie"] = cookie_value
 
     async with httpx.AsyncClient(verify=False) as client:
         for attempt in range(max_retries):
             timeout = calculate_timeout(retries=attempt, base=5, step=5, max_read=60)
             try:
-                response = await client.post(url, timeout=timeout)
+                response = await client.post(url, timeout=timeout, headers=headers)
                 response.raise_for_status()
                 logging.info(f"[CONFIRM] Success{message} on attempt {attempt + 1}")
                 return response.json()
@@ -226,6 +259,65 @@ async def _solve_recaptcha(record: dict | None = None) -> str:
     duration = time.perf_counter() - start
     logging.error(f"[CAPTCHA] ⏱️ Solve timed out{message} after {duration:.2f}s.")
     raise TimeoutError("Captcha solve timed out")
+
+
+async def _resolve_cookie_header(
+    cookie: str | None, user_data: dict | None
+) -> str | None:
+    if cookie:
+        return cookie
+    cached = _get_cached_cookie_header()
+    if cached:
+        return cached
+    cookie_value = await _fetch_cookie_header(user_data)
+    if cookie_value:
+        _set_cached_cookie_header(cookie_value)
+    return cookie_value
+
+
+def _get_cached_cookie_header() -> str | None:
+    if not _COOKIE_CACHE:
+        return None
+    value, ts = _COOKIE_CACHE
+    if time.time() - ts > COOKIE_CACHE_TTL:
+        return None
+    return value
+
+
+def _set_cached_cookie_header(cookie_value: str) -> None:
+    global _COOKIE_CACHE
+    _COOKIE_CACHE = (cookie_value, time.time())
+
+
+async def _fetch_cookie_header(user_data: dict | None) -> str | None:
+    urls = [
+        "https://prenotabiblio.sba.unimi.it/portalePlanning/biblio",
+        "https://prenotabiblio.sba.unimi.it/portalePlanning/biblio/prenota/servizi",
+        "https://prenotabiblio.sba.unimi.it/portalePlanning/biblio/prenota/calendario/50/25",
+        "https://prenotabiblio.sba.unimi.it/portalePlanning/biblio/prenota/dati",
+        "https://prenotabiblio.sba.unimi.it/portalePlanning/biblio/prenota/Riepilogo",
+    ]
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context()
+        page = await context.new_page()
+        for url in urls:
+            await page.goto(url, wait_until="networkidle")
+            if url.endswith("/prenota/dati") and user_data:
+                await page.fill(
+                    'input[name="codice_fiscale"]', user_data["codice_fiscale"]
+                )
+                await page.fill('input[name="cognome_nome"]', user_data["cognome_nome"])
+                await page.fill('input[name="email"]', user_data["email"])
+                try:
+                    await page.get_by_role("button", name="Avanti").click(timeout=1500)
+                except Exception:
+                    pass
+        cookies = await context.cookies()
+        await browser.close()
+    if not cookies:
+        return None
+    return "; ".join(f"{c['name']}={c['value']}" for c in cookies)
 
 
 async def cancel_reservation(

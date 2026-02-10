@@ -34,7 +34,7 @@ async def start_bot():
     await build_db()
     await sync_user_priorities()
     await app.initialize()
-    await notify_deployment(app.bot)
+    # await notify_deployment(app.bot) #! temporary
     await app.start()
     await app.updater.start_polling()
     try:
