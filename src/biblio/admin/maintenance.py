@@ -85,23 +85,23 @@ async def toggle_maintenance_mode(
             reply_markup=Keyboard.admin_panel(),
             parse_mode="Markdown",
         )
-        try:
+        try:  #! temporary
             await upsert_setting("suppress_deploy_notif", "True")
-            bot_ok = await redeploy_service("BiblioBot")
-            if bot_ok:
-                await asyncio.sleep(10)  # TODO: check deploy status w/ railway
-                try:
-                    await notify_maintenance(context.bot, enabled=new_mode)
-                except Exception as e:
-                    logging.error(f"[MAINTENANCE] Notify failed: {e}")
-            else:
-                logging.error(
-                    "[MAINTENANCE] BiblioBot redeploy failed — skipping notify."
-                )
-                await update.message.reply_text(
-                    "Maintenance redeploy failed — notification skipped.",
-                    reply_markup=Keyboard.admin_panel(),
-                )
+            # bot_ok = await redeploy_service("BiblioBot")
+            # if bot_ok:
+            #     await asyncio.sleep(10)  # TODO: check deploy status w/ railway
+            #     try:
+            #         await notify_maintenance(context.bot, enabled=new_mode)
+            #     except Exception as e:
+            #         logging.error(f"[MAINTENANCE] Notify failed: {e}")
+            # else:
+            #     logging.error(
+            #         "[MAINTENANCE] BiblioBot redeploy failed — skipping notify."
+            #     )
+            #     await update.message.reply_text(
+            #         "Maintenance redeploy failed — notification skipped.",
+            #         reply_markup=Keyboard.admin_panel(),
+            #     )
             return State.ADMIN_PANEL
         except Exception as e:
             logging.error(f"[MAINTENANCE] Redeploy failed: {e}")

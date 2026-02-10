@@ -3,6 +3,8 @@
 ![Users](https://img.shields.io/badge/dynamic/json?url=https://bibliobot-production.up.railway.app/stats&label=Users&query=users&color=blue)
 ![Reservations](https://img.shields.io/badge/dynamic/json?url=https://bibliobot-production.up.railway.app/stats&label=Reservations&query=reservations&color=lightblue)
 
+> 📢 **Important:** The bot is currently under maintenance therefore it will not work until further notice.
+
 # 📚 BiblioBot: Your Biblioteca Slot Assistant
 
 **Biblio** is a Telegram bot designed to automate and simplify the reservation of study slots at the University of Milan's Library of Biology, Computer Science, Chemistry and Physics (BICF).
