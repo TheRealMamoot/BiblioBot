@@ -129,6 +129,6 @@ def build_app():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, restart))
     app.add_error_handler(error)
 
-    start_jobs(bot=app.bot)
+    # start_jobs(bot=app.bot) #! temporary
 
     return app
